@@ -9,11 +9,12 @@
 //! * South (Xbox A / PS Cross): confirm
 //! * East (Xbox B / PS Circle): back
 //! * Start: menu
-//! * LB/RB: previous/next profile (the UI displays this only in the profile view)
+//! * LB/RB (shoulder buttons): previous/next profile (the UI displays this
+//!   only in the profile view)
 
 use std::collections::HashMap;
 use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::mpsc::{self, Receiver};
+use std::sync::mpsc::{self, Receiver, Sender};
 use std::sync::Arc;
 use std::thread::{self, JoinHandle};
 use std::time::{Duration, Instant};
@@ -44,8 +45,16 @@ pub enum ControllerEvent {
     Ready(usize),
 }
 
+enum ControllerCommand {
+    /// The CouchDeck window gained or lost input focus. When inactive, all
+    /// navigation events are suppressed and held-button/stick state is reset so
+    /// a game running in the foreground cannot keep navigating the launcher.
+    SetActive(bool),
+}
+
 pub struct ControllerHandle {
     rx: Receiver<ControllerEvent>,
+    commands: Sender<ControllerCommand>,
     stop: Arc<AtomicBool>,
     join: Option<JoinHandle<()>>,
 }
@@ -53,6 +62,13 @@ pub struct ControllerHandle {
 impl ControllerHandle {
     pub fn drain(&self) -> Vec<ControllerEvent> {
         self.rx.try_iter().collect()
+    }
+
+    /// Enable/disable navigation processing without destroying hotplug
+    /// tracking. The controller thread still reports connect/disconnect events
+    /// while inactive.
+    pub fn set_active(&self, active: bool) {
+        let _ = self.commands.send(ControllerCommand::SetActive(active));
     }
 }
 
@@ -69,10 +85,12 @@ impl Drop for ControllerHandle {
 /// returned (useful for `--no-controller` debugging).
 pub fn spawn(ctx: egui::Context, enabled: bool) -> ControllerHandle {
     let (tx, rx) = mpsc::channel();
+    let (command_tx, command_rx) = mpsc::channel();
     let stop = Arc::new(AtomicBool::new(false));
     if !enabled {
         return ControllerHandle {
             rx,
+            commands: command_tx,
             stop,
             join: None,
         };
@@ -80,12 +98,22 @@ pub fn spawn(ctx: egui::Context, enabled: bool) -> ControllerHandle {
     let stop_thread = stop.clone();
     let join = thread::Builder::new()
         .name("couchdeck-gamepad".to_owned())
-        .spawn(move || run(ctx, tx, stop_thread))
+        .spawn(move || run(ctx, tx, command_rx, stop_thread))
         .ok();
-    ControllerHandle { rx, stop, join }
+    ControllerHandle {
+        rx,
+        commands: command_tx,
+        stop,
+        join,
+    }
 }
 
-fn run(ctx: egui::Context, tx: mpsc::Sender<ControllerEvent>, stop: Arc<AtomicBool>) {
+fn run(
+    ctx: egui::Context,
+    tx: mpsc::Sender<ControllerEvent>,
+    commands: Receiver<ControllerCommand>,
+    stop: Arc<AtomicBool>,
+) {
     let mut gilrs = match Gilrs::new() {
         Ok(gilrs) => gilrs,
         Err(err) => {
@@ -112,8 +140,24 @@ fn run(ctx: egui::Context, tx: mpsc::Sender<ControllerEvent>, stop: Arc<AtomicBo
     let _ = tx.send(ControllerEvent::Ready(initial.len()));
     ctx.request_repaint();
 
+    let mut active = true;
     let mut last_tick = Instant::now();
     while !stop.load(Ordering::Relaxed) {
+        while let Ok(command) = commands.try_recv() {
+            match command {
+                ControllerCommand::SetActive(new_active) => {
+                    if new_active != active {
+                        active = new_active;
+                        // Never carry a held direction or stick deflection
+                        // across a focus transition.
+                        for state in states.values_mut() {
+                            *state = PadState::default();
+                        }
+                    }
+                }
+            }
+        }
+
         let mut produced = false;
         while let Some(event) = gilrs.next_event() {
             match event.event {
@@ -134,7 +178,7 @@ fn run(ctx: egui::Context, tx: mpsc::Sender<ControllerEvent>, stop: Arc<AtomicBo
                     let _ = tx.send(ControllerEvent::Disconnected(name));
                     produced = true;
                 }
-                EventType::ButtonPressed(button, _) => {
+                EventType::ButtonPressed(button, _) if active => {
                     states.entry(event.id).or_default();
                     if let Some(state) = states.get_mut(&event.id) {
                         state.press(button);
@@ -148,16 +192,19 @@ fn run(ctx: egui::Context, tx: mpsc::Sender<ControllerEvent>, stop: Arc<AtomicBo
                         }
                     }
                 }
-                EventType::ButtonReleased(button, _) => {
+                EventType::ButtonReleased(button, _) if active => {
                     if let Some(state) = states.get_mut(&event.id) {
                         state.release(button);
                     }
                 }
-                EventType::AxisChanged(axis, value, _) => {
+                EventType::AxisChanged(axis, value, _) if active => {
                     if let Some(state) = states.get_mut(&event.id) {
                         state.set_axis(axis, value);
                     }
                 }
+                EventType::ButtonPressed(_, _)
+                | EventType::ButtonReleased(_, _)
+                | EventType::AxisChanged(_, _, _) => {}
                 EventType::ButtonChanged(_, _, _)
                 | EventType::ButtonRepeated(_, _)
                 | EventType::Dropped
@@ -168,7 +215,7 @@ fn run(ctx: egui::Context, tx: mpsc::Sender<ControllerEvent>, stop: Arc<AtomicBo
 
         let now = Instant::now();
         let elapsed = now.saturating_duration_since(last_tick);
-        if elapsed >= Duration::from_millis(8) {
+        if active && elapsed >= Duration::from_millis(8) {
             last_tick = now;
             for state in states.values_mut() {
                 if let Some(action) = state.tick_repeat(now, now) {
@@ -197,8 +244,11 @@ fn button_action(button: Button) -> Option<NavAction> {
         Button::South => Some(NavAction::Confirm),
         Button::East => Some(NavAction::Back),
         Button::Start => Some(NavAction::Menu),
-        Button::LeftTrigger2 => Some(NavAction::PrevProfile),
-        Button::RightTrigger2 => Some(NavAction::NextProfile),
+        // gilrs maps BTN_LT/BTN_RT ("leftshoulder"/"rightshoulder") to
+        // LeftTrigger/RightTrigger. The *2 variants are the analog LT/RT
+        // triggers, not LB/RB.
+        Button::LeftTrigger => Some(NavAction::PrevProfile),
+        Button::RightTrigger => Some(NavAction::NextProfile),
         _ => None,
     }
 }
@@ -361,13 +411,15 @@ mod tests {
         assert_eq!(button_action(Button::East), Some(NavAction::Back));
         assert_eq!(button_action(Button::Start), Some(NavAction::Menu));
         assert_eq!(
-            button_action(Button::LeftTrigger2),
+            button_action(Button::LeftTrigger),
             Some(NavAction::PrevProfile)
         );
         assert_eq!(
-            button_action(Button::RightTrigger2),
+            button_action(Button::RightTrigger),
             Some(NavAction::NextProfile)
         );
+        assert_eq!(button_action(Button::LeftTrigger2), None);
+        assert_eq!(button_action(Button::RightTrigger2), None);
     }
 
     #[test]

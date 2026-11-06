@@ -2,7 +2,7 @@
 
 CouchDeck is a native, controller-first fullscreen game launcher for **Bazzite / KDE Plasma / Wayland**. It opens directly into a personal game library – no store, no news, no cloud, no overlay, and no game-platform accounts.
 
-**Current version:** 0.2.0 · **Language:** English · [Deutsch](README-de.md)
+**Current version:** 0.2.5 · **Language:** English · [Deutsch](README-de.md)
 
 **Note:** the application UI and the detailed documents in `docs/` are currently in German.
 
@@ -13,7 +13,7 @@ Games are launched exclusively through existing `.desktop` files and `gio launch
 ## Features
 
 - **Fullscreen library** with a cover grid, 3:4 center crop, focus animation, and fallback order: custom cover → desktop icon → neutral tile.
-- **Gamepad navigation** via `gilrs`: D-pad and left stick with deadzone, hold-repeat, debouncing, and hotplug. South = confirm/start, East = back, Start = menu. LB/RB open the profile overview; profile switching happens there.
+- **Gamepad navigation** via `gilrs`: D-pad and left stick with deadzone, hold-repeat, debouncing, and hotplug. South = confirm/start, East = back, Start = menu. LB/RB (shoulder buttons) open the profile overview; profile switching happens there. Navigation is only processed while CouchDeck has window focus; connect/disconnect events are still handled, and stale input is discarded on focus changes.
 - **Keyboard and mouse in parallel**: arrow keys, Enter/Space, Escape, M, F11, mouse click, and double-click.
 - **Desktop files**: XDG discovery, arbitrary file import, preview of name, path, and raw `Exec` content; support for `NoDisplay`, `Hidden`, `TryExec`, `Path`, `DBusActivatable`, categories, and localized names.
 - **Launch via GIO**: only `gio launch /absolute/path.desktop`. `Exec=` is not interpreted for launching; the raw content is only shown and checked for diagnostics.
@@ -225,7 +225,7 @@ storage.rs     XDG persistence, atomic writes, backups, migration
 paths.rs       XDG resolution, application/icon paths
 desktop.rs     desktop parsing, discovery, icon resolution, Steam/Prism diagnostics
 launch.rs      GIO launch in a background thread, error diagnostics
-power.rs       systemctl reboot/shutdown, Polkit error handling
+system.rs      system actions, systemctl reboot/shutdown, Polkit error handling
 controller.rs  gilrs thread, deadzone, repeat, hotplug, input normalization
 artwork.rs     image import, center crop, thumbnail cache, textures
 ui/            library, profiles, admin, dialogs/overlays
@@ -248,12 +248,12 @@ Data flow: `UI → AppState → Library/Profiles → GIO (gio launch)`.
 - **Fullscreen minimize**: the “leave fullscreen → minimize” flow is implemented, but `ViewportCommand::Minimized` behavior under Bazzite/KDE Wayland still needs testing.
 - **System power**: shutdown/reboot uses `systemctl` and requires a suitable Polkit permission. The actual action was not executed in the development environment to avoid shutting down the system; command construction, confirmation dialog, and error handling were tested.
 - **Multiple instances**: there is no single-instance lock yet. Autostart plus a manual start can create two instances.
-- **No Flatpak for CouchDeck itself** in v0.2, as specified. Release packaging consists of the user install script plus binary, not RPM/AppImage.
+- **No Flatpak for CouchDeck itself** in v0.2.5, as specified. Release packaging consists of the user install script plus binary, not RPM/AppImage.
 - **Target session is the KDE Plasma desktop under Wayland**, not Steam Gaming Mode/Gamescope. Gamescope/Steam Input conflicts have not been tested.
 
 ## Tests and acceptance
 
-- Unit/integration tests: **47 tests passing** (`cargo test`, including the GIO integration test and v0.2 autostart/power tests).
+- Unit/integration tests: **49 tests passing** (`cargo test`, including the GIO integration test and v0.2.5 autostart/power tests).
 - `cargo clippy --all-targets -- -D warnings`: clean.
 - `cargo fmt --check`: clean.
 - Release build: `cargo build --release --locked`.
@@ -262,6 +262,7 @@ Data flow: `UI → AppState → Library/Profiles → GIO (gio launch)`.
 
 ## Changelog
 
+- **v0.2.5**: controller focus gating/input-buffer reset, correct LB/RB shoulder mapping, system actions moved to `system.rs`.
 - **v0.2.0**: KDE autostart, “Minimize to KDE”, shutdown/reboot power menu, more robust quit/fullscreen behavior.
 - **v0.1.0**: first MVP with library, profiles, admin PIN, artwork, and Steam/Prism integration.
 

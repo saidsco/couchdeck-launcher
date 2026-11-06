@@ -694,7 +694,7 @@ fn draw_message(ctx: &egui::Context, dialog: MessageDialog) -> Outcome {
 }
 
 pub fn draw_power(app: &CouchDeckApp, ctx: &egui::Context) {
-    let Some(state) = &app.power else {
+    let Some(state) = app.system.state() else {
         return;
     };
     let scale = ui::ui_scale(ctx);

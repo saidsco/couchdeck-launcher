@@ -2,7 +2,7 @@
 
 CouchDeck ist ein nativer, controller-first Fullscreen-Game-Launcher für **Bazzite / KDE Plasma / Wayland**. Die App startet direkt in eine persönliche Spielebibliothek – kein Shop, keine News, keine Cloud, kein Overlay und keine Spieleplattform-Accounts.
 
-**Aktuelle Version:** 0.2.0 · **Sprache:** Deutsch · [English](README.md)
+**Aktuelle Version:** 0.2.5 · **Sprache:** Deutsch · [English](README.md)
 
 Gespielt wird ausschließlich über vorhandene `.desktop`-Dateien und `gio launch`. Coverbilder werden getrennt von den Desktop-Dateien in CouchDeck verwaltet; die Originaldateien werden nie verändert.
 
@@ -11,7 +11,7 @@ Gespielt wird ausschließlich über vorhandene `.desktop`-Dateien und `gio launc
 ## Funktionsumfang
 
 - **Fullscreen-Bibliothek** mit Cover-Grid, 3:4-Center-Crop, Fokusanimation und Fallback-Reihenfolge eigenes Cover → Desktop-Icon → neutrale Kachel.
-- **Gamepad-Navigation** über `gilrs`: D-Pad und linker Stick mit Deadzone, Hold-Repeat, Debouncing und Hotplug. South = bestätigen/starten, East = zurück, Start = Menü. LB/RB öffnen die Profilübersicht; dort wird zwischen Profilen gewechselt.
+- **Gamepad-Navigation** über `gilrs`: D-Pad und linker Stick mit Deadzone, Hold-Repeat, Debouncing und Hotplug. South = bestätigen/starten, East = zurück, Start = Menü. LB/RB (Schultertasten) öffnen die Profilübersicht; dort wird zwischen Profilen gewechselt. Navigation wird nur verarbeitet, solange CouchDeck den Fensterfokus hat; Connect/Disconnect werden weiterhin erkannt, alte Eingaben werden beim Fokuswechsel verworfen.
 - **Tastatur und Maus parallel**: Pfeiltasten, Enter/Leertaste, Escape, M, F11, Mausklick und Doppelklick.
 - **Desktop-Dateien**: XDG-Discovery, Import beliebiger Dateien, Vorschau von Name, Pfad und rohem `Exec`-Inhalt, Unterstützung für `NoDisplay`, `Hidden`, `TryExec`, `Path`, `DBusActivatable`, Kategorien und lokalisierte Namen.
 - **Start über GIO**: ausschließlich `gio launch /absoluter/pfad.desktop`. `Exec=` wird nicht zum Starten interpretiert; der rohe Inhalt dient nur der Anzeige und Diagnose.
@@ -223,7 +223,7 @@ storage.rs     XDG-Persistenz, atomisches Schreiben, Backups, Migration
 paths.rs       XDG-Auflösung, Applikations-/Icon-Pfade
 desktop.rs     Desktop-Parsing, Discovery, Icon-Auflösung, Steam-/Prism-Diagnose
 launch.rs      GIO-Launch im Hintergrundthread, Fehlerdiagnose
-power.rs       systemctl-Neustart/Herunterfahren, Polkit-Fehlerbehandlung
+system.rs      Systemaktionen, systemctl-Neustart/Herunterfahren, Polkit-Fehlerbehandlung
 controller.rs  gilrs-Thread, Deadzone, Repeat, Hotplug, Input-Normalisierung
 artwork.rs     Bildimport, Center-Crop, Thumbnail-Cache, Texturen
 ui/            Bibliothek, Profile, Admin, Dialoge/Overlays
@@ -246,12 +246,12 @@ Datenfluss: `UI → AppState → Library/Profiles → GIO (gio launch)`.
 - **Minimieren aus Fullscreen**: Der Ablauf „Fullscreen verlassen → minimieren“ ist implementiert, aber das Wayland-Verhalten von `ViewportCommand::Minimized` muss auf Bazzite/KDE geprüft werden.
 - **System Power**: Shutdown/Reboot nutzt `systemctl` und benötigt eine passende Polkit-Berechtigung. Die tatsächliche Ausführung wurde in der Entwicklungsumgebung nicht gestartet, um das System nicht herunterzufahren; geprüft sind Befehlskonstruktion, Bestätigungsdialog und Fehlerbehandlung.
 - **Mehrfachstart**: Es gibt noch keine Single-Instance-Sperre. Autostart plus manueller Start kann zwei Instanzen erzeugen.
-- **Kein Flatpak für CouchDeck selbst** in v0.2, wie spezifiziert. Release-Packaging besteht aus User-Install-Skript plus Binary, nicht aus RPM/AppImage.
+- **Kein Flatpak für CouchDeck selbst** in v0.2.5, wie spezifiziert. Release-Packaging besteht aus User-Install-Skript plus Binary, nicht aus RPM/AppImage.
 - **Zielsession ist der KDE-Plasma-Desktop unter Wayland**, nicht Steam Gaming Mode/Gamescope. Gamescope-/Steam-Input-Konflikte wurden nicht geprüft.
 
 ## Tests und Abnahme
 
-- Unit-/Integrationstests: **47 Tests grün** (`cargo test`, inkl. GIO-Integrationstest sowie v0.2-Autostart-/Power-Tests).
+- Unit-/Integrationstests: **49 Tests grün** (`cargo test`, inkl. GIO-Integrationstest sowie v0.2.5-Autostart-/Power-Tests).
 - `cargo clippy --all-targets -- -D warnings`: sauber.
 - `cargo fmt --check`: sauber.
 - Release-Build: `cargo build --release --locked`.
@@ -260,6 +260,7 @@ Datenfluss: `UI → AppState → Library/Profiles → GIO (gio launch)`.
 
 ## Changelog
 
+- **v0.2.5**: Controller-Fokus-Gating/Input-Puffer-Reset, korrektes LB/RB-Schultertasten-Mapping, Systemaktionen in `system.rs`.
 - **v0.2.0**: KDE-Autostart, „Zu KDE minimieren“, Shutdown/Reboot-Power-Menü, robustere Beenden-/Vollbildlogik.
 - **v0.1.0**: erster MVP mit Bibliothek, Profilen, Admin-PIN, Artwork, Steam-/Prism-Integration.
 

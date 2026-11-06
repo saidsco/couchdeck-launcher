@@ -10,7 +10,7 @@ Legende:
 - [ ] Reproduzierbarer Build in Distrobox auf passendem Fedora-Release — Befehle dokumentiert, aber nicht auf Bazzite ausgeführt (Entwicklungsumgebung: Manjaro).
 - [x] `cargo fmt --check` erfolgreich.
 - [x] `cargo clippy --all-targets -- -D warnings` erfolgreich.
-- [x] `cargo test` erfolgreich: 45 Unit-Tests + 2 GIO-Integrationstests.
+- [x] `cargo test` erfolgreich: 47 Unit-Tests + 2 GIO-Integrationstests.
 - [x] `cargo build --release` erfolgreich.
 - [~] Wayland/KDE Fullscreen + `--windowed` — Fensterbetrieb geprüft; Wayland-Fullscreen und KDE-Fokus auf Zielhardware offen.
 - [x] Install/Uninstall ohne sudo, kein `rpm-ostree`-Layer — in temporärem `$HOME` getestet.
@@ -39,6 +39,8 @@ Legende:
 
 - [x] D-Pad + linker Stick mit Deadzone/Hysterese und Hold-Repeat implementiert und unit-getestet.
 - [x] A/South = bestätigen/starten, B/East = zurück, Start = Menü, LB/RB = Profilübersicht.
+- [x] LB/RB korrekt auf die Schultertasten (`Button::LeftTrigger`/`RightTrigger`) gemappt; Unit-Test vorhanden.
+- [x] Navigation nur bei fokussiertem CouchDeck-Fenster; Connect/Disconnect weiterhin verarbeitet, Eingabepuffer bei Fokuswechsel verworfen.
 - [x] Hotplug-Events (Connected/Disconnected) implementiert.
 - [x] Doppelstart-Schutz: Start-Overlay, Cooldown, laufender Start blockiert weitere Starts.
 - [x] Tastatur und Maus parallel bedienbar.

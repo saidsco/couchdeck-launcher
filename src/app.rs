@@ -14,8 +14,8 @@ use crate::launch::{self, LaunchOutcome};
 use crate::logging::{log_error, log_info, log_warn};
 use crate::model::{new_id, resolve_data_path, AdminSecrets, GameEntry, Library, Settings};
 use crate::paths::XdgPaths;
-use crate::power::{self, PowerOutcome, SystemAction};
 use crate::storage::{self, LibraryLoad, SecretsLoad, SettingsLoad};
+use crate::system::{SystemAction, SystemController};
 
 pub const APP_NAME: &str = "CouchDeck";
 pub const APP_VERSION: &str = env!("CARGO_PKG_VERSION");
@@ -185,13 +185,6 @@ pub struct LaunchState {
     pub completed_at: Option<Instant>,
 }
 
-pub struct PowerState {
-    pub action: SystemAction,
-    pub started: Instant,
-    pub outcome: Option<PowerOutcome>,
-    pub completed_at: Option<Instant>,
-}
-
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ToastKind {
     Info,
@@ -279,11 +272,14 @@ pub struct CouchDeckApp {
     pub launch: Option<LaunchState>,
     pub launch_rx: Option<Receiver<LaunchOutcome>>,
     pub last_launch_started: Option<Instant>,
-    pub power: Option<PowerState>,
-    pub power_rx: Option<Receiver<PowerOutcome>>,
+    pub system: SystemController,
     /// Set when leaving fullscreen so the minimised command is sent on the next
     /// frame, after the compositor has processed the fullscreen exit.
     pub pending_minimize: bool,
+    pub window_focused: Option<bool>,
+    /// Drop queued controller navigation for the first frame after the window
+    /// regains focus, so buffered input from a running game cannot leak in.
+    pub discard_controller_nav: bool,
     pub toast: Option<Toast>,
     pub fatal: Option<FatalState>,
     pub fullscreen: bool,
@@ -390,9 +386,10 @@ impl CouchDeckApp {
             launch: None,
             launch_rx: None,
             last_launch_started: None,
-            power: None,
-            power_rx: None,
+            system: SystemController::new(),
             pending_minimize: false,
+            window_focused: None,
+            discard_controller_nav: false,
             toast: None,
             fatal,
             fullscreen: !options.windowed,
@@ -1520,69 +1517,27 @@ impl CouchDeckApp {
         ctx.request_repaint();
     }
 
-    pub fn start_system_action(&mut self, action: SystemAction) {
-        self.overlay = Overlay::None;
-        self.power = Some(PowerState {
-            action,
-            started: Instant::now(),
-            outcome: None,
-            completed_at: None,
-        });
-        self.power_rx = Some(power::spawn(action));
-        log_info("power", action.label());
-    }
-
-    fn poll_power(&mut self) {
-        let result = self.power_rx.as_ref().map(Receiver::try_recv);
-        match result {
-            Some(Ok(outcome)) => {
-                self.power_rx = None;
-                if outcome.success {
-                    log_info("power", &outcome.message);
-                    if let Some(state) = &mut self.power {
-                        state.outcome = Some(outcome);
-                        state.completed_at = Some(Instant::now());
-                    }
-                } else {
-                    log_warn("power", &outcome.message);
-                    self.power = None;
-                    self.message_dialog(
-                        "Systembefehl fehlgeschlagen",
-                        outcome.message,
-                        MessageSeverity::Error,
-                    );
-                }
-            }
-            Some(Err(std::sync::mpsc::TryRecvError::Empty)) => {}
-            Some(Err(std::sync::mpsc::TryRecvError::Disconnected)) => {
-                self.power_rx = None;
-                self.power = None;
+    fn poll_system(&mut self) {
+        if let Some(outcome) = self.system.poll() {
+            if outcome.success {
+                log_info("power", &outcome.message);
+            } else {
+                log_warn("power", &outcome.message);
                 self.message_dialog(
-                    "Systembefehl abgebrochen",
-                    "Der Power-Thread wurde unerwartet beendet.",
+                    "Systembefehl fehlgeschlagen",
+                    outcome.message,
                     MessageSeverity::Error,
                 );
             }
-            None => {}
         }
     }
 
-    fn tick_power(&mut self, ctx: &egui::Context) {
-        if self.power.is_none() {
-            return;
-        }
-        let completed = self
-            .power
-            .as_ref()
-            .and_then(|state| state.completed_at)
-            .map(|at| at.elapsed() > Duration::from_millis(1400))
-            .unwrap_or(false);
-        if completed {
+    fn tick_system(&mut self, ctx: &egui::Context) {
+        if self.system.tick() {
             // systemctl accepted the job. The system is going down/rebooting;
             // closing the launcher releases the session UI in any case.
-            self.power = None;
             self.should_quit = true;
-        } else {
+        } else if self.system.is_active() {
             ctx.request_repaint_after(Duration::from_millis(120));
         }
     }
@@ -1716,7 +1671,44 @@ impl CouchDeckApp {
     // Controller / input
     // ---------------------------------------------------------------------
 
+    fn update_window_focus(&mut self, ctx: &egui::Context) {
+        let focused = ctx.input(|input| input.focused);
+        let changed = match self.window_focused {
+            None => {
+                self.window_focused = Some(focused);
+                self.controller.set_active(focused);
+                true
+            }
+            Some(previous) if previous != focused => {
+                self.window_focused = Some(focused);
+                self.controller.set_active(focused);
+                true
+            }
+            _ => false,
+        };
+        if changed {
+            if focused {
+                self.discard_controller_nav = true;
+                log_info(
+                    "controller",
+                    "Fensterfokus gewonnen; Eingabepuffer wird verworfen.",
+                );
+            } else {
+                // A confirm that was queued by the controller must not fire
+                // into an unfocused admin view.
+                self.admin.pending_steps = 0;
+                self.admin.pending_confirm = false;
+                log_info(
+                    "controller",
+                    "Fensterfokus verloren; Gamepad-Navigation pausiert.",
+                );
+            }
+        }
+    }
+
     fn poll_controller(&mut self, ctx: &egui::Context) {
+        let window_focused = ctx.input(|input| input.focused);
+        let discard_nav = std::mem::take(&mut self.discard_controller_nav);
         for event in self.controller.drain() {
             match event {
                 ControllerEvent::Ready(count) => {
@@ -1730,7 +1722,9 @@ impl CouchDeckApp {
                 ControllerEvent::Connected(name) => {
                     log_info("controller", format!("Verbunden: {name}"));
                     self.controllers.push(name.clone());
-                    self.notify(format!("Controller verbunden: {name}"));
+                    if window_focused {
+                        self.notify(format!("Controller verbunden: {name}"));
+                    }
                 }
                 ControllerEvent::Disconnected(name) => {
                     let message =
@@ -1739,14 +1733,22 @@ impl CouchDeckApp {
                     if let Some(index) = self.controllers.iter().position(|n| n == &name) {
                         self.controllers.remove(index);
                     }
-                    self.notify_warning(message);
+                    if window_focused {
+                        self.notify_warning(message);
+                    }
                 }
                 ControllerEvent::Error(err) => {
                     log_warn("controller", &err);
                     self.controller_error = Some(err.clone());
-                    self.notify_warning(err);
+                    if window_focused {
+                        self.notify_warning(err);
+                    }
                 }
-                ControllerEvent::Nav(action) => self.handle_nav(ctx, action),
+                ControllerEvent::Nav(action) => {
+                    if accept_controller_nav(window_focused, discard_nav) {
+                        self.handle_nav(ctx, action);
+                    }
+                }
             }
         }
     }
@@ -1783,7 +1785,8 @@ impl CouchDeckApp {
     }
 
     fn flush_admin_confirm(&mut self, ctx: &egui::Context) {
-        if self.screen != Screen::Admin
+        if !self.window_focused.unwrap_or(false)
+            || self.screen != Screen::Admin
             || !matches!(self.overlay, Overlay::None)
             || !self.admin.pending_confirm
             || self.admin.pending_steps != 0
@@ -1799,7 +1802,7 @@ impl CouchDeckApp {
             self.handle_fatal_nav(action);
             return;
         }
-        if self.power.is_some() {
+        if self.system.is_active() {
             return;
         }
         if self.launch.is_some() {
@@ -2210,8 +2213,14 @@ impl CouchDeckApp {
                 self.apply_steam_repair(&id);
                 self.admin.view = AdminView::Integrations;
             }
-            ConfirmAction::Reboot => self.start_system_action(SystemAction::Reboot),
-            ConfirmAction::PowerOff => self.start_system_action(SystemAction::PowerOff),
+            ConfirmAction::Reboot => {
+                self.overlay = Overlay::None;
+                self.system.start(SystemAction::Reboot);
+            }
+            ConfirmAction::PowerOff => {
+                self.overlay = Overlay::None;
+                self.system.start(SystemAction::PowerOff);
+            }
             ConfirmAction::Quit => {
                 self.overlay = Overlay::None;
                 self.should_quit = true;
@@ -2266,7 +2275,7 @@ impl CouchDeckApp {
         if quit {
             self.should_quit = true;
         }
-        if self.power.is_none() {
+        if !self.system.is_active() {
             let fullscreen = ctx.input_mut(|input| input.consume_key(Modifiers::NONE, Key::F11));
             if fullscreen {
                 self.fullscreen = !self.fullscreen;
@@ -2299,7 +2308,7 @@ impl CouchDeckApp {
         // During a confirmed power action, do not let controller/keyboard input
         // start games or change the underlying screen. Ctrl+Q remains available
         // through handle_global_keys.
-        if self.power.is_some() {
+        if self.system.is_active() {
             return;
         }
 
@@ -2412,15 +2421,16 @@ impl CouchDeckApp {
 impl eframe::App for CouchDeckApp {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         self.frame_count += 1;
+        self.update_window_focus(ctx);
         self.poll_controller(ctx);
         self.flush_admin_confirm(ctx);
         self.poll_launch();
-        self.poll_power();
+        self.poll_system();
         self.finish_pending_minimize(ctx);
         self.handle_global_keys(ctx);
         self.handle_keyboard(ctx);
         self.tick_launch_auto_close();
-        self.tick_power(ctx);
+        self.tick_system(ctx);
         crate::ui::draw(self, ctx);
         self.tick_toast(ctx);
         if self.should_quit {
@@ -2434,6 +2444,10 @@ impl eframe::App for CouchDeckApp {
             let _ = storage::save_settings(&self.paths, &self.settings);
         }
     }
+}
+
+fn accept_controller_nav(window_focused: bool, discard_buffered: bool) -> bool {
+    window_focused && !discard_buffered
 }
 
 pub fn now_unix() -> u64 {
@@ -2493,4 +2507,17 @@ pub fn refresh_picker(state: &mut FilePickerState) {
         state.selected = state.entries.len().saturating_sub(1);
     }
     state.path_input = dir.to_string_lossy().to_string();
+}
+
+#[cfg(test)]
+mod tests {
+    use super::accept_controller_nav;
+
+    #[test]
+    fn controller_nav_requires_window_focus_and_no_stale_buffer() {
+        assert!(accept_controller_nav(true, false));
+        assert!(!accept_controller_nav(false, false));
+        assert!(!accept_controller_nav(true, true));
+        assert!(!accept_controller_nav(false, true));
+    }
 }

@@ -11,7 +11,7 @@ pub mod launch;
 pub mod logging;
 pub mod model;
 pub mod paths;
-pub mod power;
 pub mod security;
 pub mod storage;
+pub mod system;
 pub mod ui;

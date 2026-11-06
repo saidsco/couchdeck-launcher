@@ -1,5 +1,22 @@
 # Changelog
 
+## 0.2.5 – 2026-11-06
+
+### Review-Fixes
+
+- Gamepad-Navigation wird nur bei aktivem CouchDeck-Fenster verarbeitet.
+- Connect/Disconnect-Ereignisse werden auch ohne Fokus verarbeitet.
+- Beim Fokusverlust werden gehaltene D-Pad-/Stick-Zustände zurückgesetzt; beim Fokusgewinn wird gepufferte Navigation verworfen.
+- Admin-Fokus/Confirm kann bei Fensterfokusverlust nicht mehr in die UI feuern.
+- LB/RB sind korrekt auf die Schultertasten (`Button::LeftTrigger`/`RightTrigger`) gemappt, nicht auf die analogen LT/RT-Trigger.
+- Systemaktionen in eigenes Modul `system.rs` verschoben (`app.rs` entlastet).
+- Tests für Fokus-Gating, Schultertasten-Mapping und SystemController ergänzt.
+
+### Tests / Doku
+
+- 47 Unit-Tests + 2 GIO-Integrationstests.
+- Deutsche und englische README auf v0.2.5 aktualisiert.
+
 ## 0.2.0 – 2026-11-06
 
 ### Autostart / Kiosk
