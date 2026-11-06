@@ -119,6 +119,7 @@ Die UI wurde zusätzlich mit dem X11-Backend (Xwayland) gestartet, damit Fenster
 | AppImage-Release (v0.3.1) | OK; `--version` und Start unter Xvfb bis zur Bibliothek, keine fehlenden Bibliotheken |
 | ldd/glibc-Report (v0.3.1) | OK; Build-glibc 2.41, max. referenziertes Symbol `GLIBC_2.39`, keine `not found`-Einträge |
 | Installation/Update in temporärem `$HOME` (v0.3.1) | Installer installiert Binary/Entry/Icon; XDG-Datenordner werden nicht angefasst |
+| GitHub Release v0.3.1 (v0.3.1) | Assets veröffentlicht; erneut heruntergeladen und mit `SHA256SUMS` geprüft, AppImage `--version` OK |
 | AppImage/Archiv auf frischer Bazzite-KDE-Installation (v0.3.1) | **Nicht ausgeführt**; manuelle Checkliste in `docs/BAZZITE-RELEASE-TEST.md` |
 
 Screenshots: [Zeitkontingent verbraucht](screenshots/time-budget.png), [Bibliothek](screenshots/library.png), [Bibliothek als Mia](screenshots/library-profile-mia.png), [Profile](screenshots/profiles.png), [Admin](screenshots/admin.png), [Spieleeditor](screenshots/game-editor.png), [Import](screenshots/import.png), [PIN](screenshots/pinpad.png), [Start-Overlay](screenshots/launch.png), [Power-Menü](screenshots/menu.png), [Autostart-Einstellungen](screenshots/autostart-settings.png), [Fatal](screenshots/corrupt-data.png).

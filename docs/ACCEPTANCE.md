@@ -117,6 +117,7 @@ Legende:
 - [x] Installation über `~/.local/bin/couchdeck` und XDG-Desktop-Entry weiterhin unterstützt.
 - [x] Installer überschreibt keine Profile, Artwork oder Einstellungen; Update ist derselbe Aufruf.
 - [x] AppImage/Archiv im Fedora-42-Container gebaut, per `--version` und Xvfb-Start geprüft.
+- [x] GitHub Release `v0.3.1` mit allen Assets veröffentlicht; Download und SHA256-Prüfung erneut verifiziert.
 - [~] AppImage und Archiv auf einer frischen Bazzite-KDE-Installation inkl. Controller, GIO-Spielstart und Systemaktionen getestet — manuelle Checkliste offen.
 
 ## Nicht Teil des MVP
