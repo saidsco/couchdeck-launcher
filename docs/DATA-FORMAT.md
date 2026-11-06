@@ -14,14 +14,20 @@ Alle Dateien sind menschenlesbar und versioniert. CouchDeck schreibt Bibliothek 
       "name": "Chris",
       "role": "admin",
       "avatar": "assets/avatars/admin-1234567890.png",
-      "favorites": []
+      "favorites": [],
+      "background": null,
+      "is_child": false,
+      "daily_limit_minutes": null
     },
     {
       "id": "mia",
       "name": "Mia",
       "role": "player",
       "avatar": null,
-      "favorites": []
+      "favorites": [],
+      "background": "assets/backgrounds/mia-1234567890.jpg",
+      "is_child": true,
+      "daily_limit_minutes": 60
     }
   ],
   "games": [
@@ -53,6 +59,9 @@ Alle Dateien sind menschenlesbar und versioniert. CouchDeck schreibt Bibliothek 
 | `profiles[].role` | `admin` oder `player`. Mindestens ein Admin-Profil bleibt erhalten. |
 | `profiles[].avatar` | Relativer Pfad unterhalb des CouchDeck-Datenordners oder absoluter Pfad. |
 | `profiles[].favorites` | Reserviertes Feld; im MVP noch ohne eigene UI. |
+| `profiles[].background` | Optionales Profil-Hintergrundbild, relativ zum CouchDeck-Datenordner. Fallback: globales Hintergrundbild. |
+| `profiles[].is_child` | Aktiviert die Zeitbudget-/Elternfreigabe-Regeln. Kinderprofile erhalten keinen Admin-UI-Zugriff. |
+| `profiles[].daily_limit_minutes` | Tägliches Budget in Minuten; `null` = kein Limit. |
 | `games[].desktop_file` | **Absoluter** Pfad zur Original- oder verwalteten `.desktop`-Datei. Wird nie von CouchDeck editiert. |
 | `games[].title_override` | Optionaler Anzeigename; leer/NULL = Name aus Desktop-Datei bzw. gespeicherter `desktop_name`. |
 | `games[].desktop_name` | Zwischengespeicherter Name, damit ein Eintrag auch bei entfernter Desktop-Datei lesbar bleibt. |
@@ -94,6 +103,8 @@ background = "assets/backgrounds/global-1234567890.png"
 columns = 6
 show_controller_hints = true
 show_backgrounds = true
+language = "auto"
+alarm_sound = true
 ```
 
 | Feld | Bedeutung |
@@ -103,8 +114,42 @@ show_backgrounds = true
 | `columns` | Optionale feste Spaltenzahl 3–6; ohne Wert automatisch nach Fensterbreite. |
 | `show_controller_hints` | Blendet Controller-Hinweise in Bibliothek/Profilen ein. |
 | `show_backgrounds` | Hintergrundbilder an/aus. |
+| `language` | `auto`, `de` oder `en`. `auto` nutzt `LANGUAGE`/`LC_ALL`/`LC_MESSAGES`/`LANG`; Fallback ist Englisch. Live umschaltbar. |
+| `alarm_sound` | Best-Effort-Warnton bei 5-/1-Minuten-Warnungen und bei erschöpftem Budget. |
 
 Ungültige `settings.toml` führt zu Standardwerten im Speicher und einer Sicherungskopie; die Datei wird erst bei einer expliziten Einstellungsänderung neu geschrieben.
+
+## `$XDG_DATA_HOME/couchdeck/timekeeping.json`
+
+Getrennt von `library.json`, weil die Nutzung häufig aktualisiert wird (alle 30 Sekunden, bei Warnungen, Freigaben, Profilwechseln und beim Beenden).
+
+```json
+{
+  "schema_version": 1,
+  "profiles": {
+    "mia": {
+      "date": "2026-11-06",
+      "used_seconds": 1800,
+      "bonus_minutes": 15,
+      "warned_5": true,
+      "warned_1": false
+    }
+  }
+}
+```
+
+| Feld | Bedeutung |
+|---|---|
+| `profiles.<id>.date` | Lokaler Kalendertag (`YYYY-MM-DD`). Bei Tageswechsel werden Nutzung, Zusatzzeit und Warnflags zurückgesetzt. |
+| `profiles.<id>.used_seconds` | Heute genutzte aktive Profilzeit; wird am Budget gedeckelt. |
+| `profiles.<id>.bonus_minutes` | Heute per Admin-PIN freigegebene Zusatzzeit. Addiert sich; wird beim Tageswechsel und per Admin-Reset gelöscht. |
+| `profiles.<id>.warned_5` / `warned_1` | Persistierte Warnflags, damit 5-/1-Minuten-Warnungen nicht wiederholt werden. |
+
+Hinweise:
+
+- Zusatzzeit gilt nur für den aktuellen Kalendertag und verändert `daily_limit_minutes` nicht.
+- Die Datei wird atomar geschrieben. Bei ungültigem JSON oder neuerem Schema wird vor dem Neuanlegen eine Sicherung erstellt.
+- Erste Stufe: Es wird aktive Profilzeit gemessen, solange CouchDeck läuft. Eine Erkennung tatsächlich laufender Spiele ist nicht enthalten.
 
 ## Verwaltete Desktop-Dateien
 

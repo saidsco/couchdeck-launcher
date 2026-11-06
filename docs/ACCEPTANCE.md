@@ -10,7 +10,7 @@ Legende:
 - [ ] Reproduzierbarer Build in Distrobox auf passendem Fedora-Release — Befehle dokumentiert, aber nicht auf Bazzite ausgeführt (Entwicklungsumgebung: Manjaro).
 - [x] `cargo fmt --check` erfolgreich.
 - [x] `cargo clippy --all-targets -- -D warnings` erfolgreich.
-- [x] `cargo test` erfolgreich: 47 Unit-Tests + 2 GIO-Integrationstests.
+- [x] `cargo test` erfolgreich: 62 Unit-Tests + 2 GIO-Integrationstests.
 - [x] `cargo build --release` erfolgreich.
 - [~] Wayland/KDE Fullscreen + `--windowed` — Fensterbetrieb geprüft; Wayland-Fullscreen und KDE-Fokus auf Zielhardware offen.
 - [x] Install/Uninstall ohne sudo, kein `rpm-ostree`-Layer — in temporärem `$HOME` getestet.
@@ -29,7 +29,9 @@ Legende:
 - [x] Quell-Desktop-Dateien werden nie verändert; verwaltete Dateien liegen separat.
 - [x] Start ausschließlich via `gio launch /absoluter/pfad.desktop`; kein eigener Exec-Parser.
 - [x] GIO-Erfolg wird nicht als „Spiel läuft“ interpretiert.
-- [x] Name, Desktop-Icon, eigenes Cover, optionaler Spiel-/Global-Hintergrund.
+- [x] Name, Desktop-Icon, eigenes Cover, optionaler Spiel-/Global-/Profil-Hintergrund.
+- [x] Profil-Hintergrund mit Fallback auf globales Hintergrundbild; vorhandene Spiel-/Global-Hintergründe bleiben erhalten.
+- [x] Profil-Hintergrund importieren/entfernen ohne Änderung der Desktop-Datei.
 - [x] Fallback: eigenes Cover → Desktop-Icon → neutrale Kachel.
 - [x] Fehlende Desktop-Datei bleibt als Eintrag sichtbar und zeigt „Datei fehlt“.
 - [x] Grid per Tastatur und Maus navigierbar; Gamepad-Logik unit-getestet.
@@ -54,15 +56,42 @@ Legende:
 - [x] Beenden über Menü/Strg+Q beendet nur den Launcher; laufende Spiele werden nicht beendet.
 - [~] System neu starten/herunterfahren mit Bestätigung und festen `systemctl`-Aufrufen; Ausführung auf Zielhardware offen.
 
+## Internationalisierung
+
+- [x] Deutsche und englische UI über Fluent.
+- [x] Automatische Spracherkennung aus `LANGUAGE`/`LC_ALL`/`LC_MESSAGES`/`LANG`, Englisch als Fallback.
+- [x] Sprache live unter Admin → Einstellungen umschaltbar, ohne Neustart.
+- [x] v0.2.5-Settings ohne Sprachfeld laden mit `auto`.
+- [~] Vollständige Sichtprüfung aller Dialoge/Diagnosetexte auf Zielhardware offen; technische Diagnosetexte aus Desktop-Parsing bleiben teilweise deutsch.
+
+## Kinderprofile und Zeitkontingente
+
+- [x] Optionales Kinderprofil mit täglichem Zeitbudget.
+- [x] Aktive Profilzeit wird gemessen, solange CouchDeck läuft; Persistenz in `timekeeping.json`.
+- [x] Restzeitanzeige, 5-/1-Minuten-Warnungen, optionaler Best-Effort-Alarmton.
+- [x] Zentrale Startprüfung für neue Spiele/Medien; laufende Spiele werden nicht beendet.
+- [x] Tageswechsel setzt Nutzung/Zusatzzeit/Warnflags zurück.
+- [x] „Mehr Spielzeit anfragen“ im Startmenü und auf dem Verbraucht-Screen.
+- [x] Admin-PIN pro Freigabe, +5/+15/+30/benutzerdefiniert, Controller-bedienbar.
+- [x] Zusatzzeit nur für den aktuellen Kalendertag, additiv, persistent, unabhängig vom regulären Budget.
+- [x] Admin kann Zusatzzeit einsehen und zurücksetzen.
+- [x] Kinderprofile ohne Admin-UI-Zugriff; Profilwechsel/Minimieren/Beenden/Systemaktionen mit ParentAuth.
+- [x] ParentAuth entsperrt den Admin-Bereich nicht dauerhaft.
+- [x] Tests für Zusatzzeit, Neustart, Tageswechsel, PIN-Prüfung, Profilwechsel und Start-Sperre.
+- [~] Echte Zeitmessung über einen langen Zeitraum, Mitternachtswechsel, WM-Close/-Minimize und Alarmton auf Bazzite offen.
+- [x] Grenzen dokumentiert: keine Spielprozess-Erkennung, kein Schutz gegen Prozess-Kill/TTY/Dateiänderungen im selben Linux-Konto.
+
 ## Verwaltung
 
-- [x] Lokale Profile mit Anzeigename, Rolle und Avatar.
+- [x] Lokale Profile mit Anzeigename, Rolle, Avatar und optionalem Profil-Hintergrund.
 - [x] Profil-spezifische Sichtbarkeit von Spielen.
 - [x] Admin-PIN als Argon2id-Hash, separate Datei mit `0600`.
 - [x] Controllerbedienbares On-Screen-Ziffernfeld für PIN-Eingabe.
 - [x] Nicht-Admin-Profile sehen keine Admin-/Import-/Bearbeitungsfunktionen.
 - [x] Spiele importieren, ausblenden, entfernen, Titel ändern, Cover/Hintergrund ändern.
 - [x] Profil hinzufügen/entfernen, Rolle ändern (letzter Admin geschützt).
+- [x] Kinderprofil-Schalter, Tageslimit, heutige Nutzung/Zusatzzeit, Zusatzzeit-Reset.
+- [x] Letzte Admin-PIN kann nicht entfernt werden, solange Kinderprofile mit Budget existieren.
 - [x] Speicherung über Neustart, atomar.
 - [x] Admin-PIN ist klar als lokale UI-Sperre dokumentiert, nicht als OS-Sicherheitsgrenze.
 

@@ -8,6 +8,8 @@ use std::path::{Path, PathBuf};
 
 use serde::{Deserialize, Serialize};
 
+use crate::i18n::LanguagePreference;
+
 pub const LIBRARY_SCHEMA_VERSION: u32 = 1;
 pub const SETTINGS_SCHEMA_VERSION: u32 = 1;
 pub const SECRETS_SCHEMA_VERSION: u32 = 1;
@@ -62,6 +64,16 @@ pub struct Profile {
     /// UI refinement but persisted now so no data is lost.
     #[serde(default)]
     pub favorites: Vec<String>,
+    /// Optional profile-specific background, relative to the CouchDeck data
+    /// directory. `None` falls back to the global background.
+    #[serde(default)]
+    pub background: Option<PathBuf>,
+    /// Whether parental time budgeting applies to this profile.
+    #[serde(default)]
+    pub is_child: bool,
+    /// Optional daily budget in minutes. `None` means no time limit.
+    #[serde(default)]
+    pub daily_limit_minutes: Option<u32>,
 }
 
 fn default_role() -> ProfileRole {
@@ -76,6 +88,9 @@ impl Profile {
             role: ProfileRole::Admin,
             avatar: None,
             favorites: Vec::new(),
+            background: None,
+            is_child: false,
+            daily_limit_minutes: None,
         }
     }
 
@@ -302,6 +317,12 @@ pub struct Settings {
     pub show_controller_hints: bool,
     #[serde(default = "default_true")]
     pub show_backgrounds: bool,
+    /// UI language. `auto` follows the POSIX locale environment.
+    #[serde(default)]
+    pub language: LanguagePreference,
+    /// Play a best-effort alert sound at time-budget warnings.
+    #[serde(default = "default_true")]
+    pub alarm_sound: bool,
 }
 
 impl Default for Settings {
@@ -313,6 +334,8 @@ impl Default for Settings {
             columns: None,
             show_controller_hints: true,
             show_backgrounds: true,
+            language: LanguagePreference::Auto,
+            alarm_sound: true,
         }
     }
 }
@@ -380,6 +403,9 @@ mod tests {
             role: ProfileRole::Player,
             avatar: None,
             favorites: vec![],
+            background: None,
+            is_child: false,
+            daily_limit_minutes: None,
         });
         lib.games.push(GameEntry {
             id: "g1".into(),
@@ -413,6 +439,39 @@ mod tests {
         assert_eq!(lib.games_for_profile("kid").len(), 1);
         lib.games[0].hidden = true;
         assert_eq!(lib.games_for_profile("admin").len(), 1);
+    }
+
+    #[test]
+    fn v025_data_defaults_new_fields() {
+        let profile: Profile =
+            serde_json::from_str(r#"{"id":"old","name":"Old","role":"player","favorites":[]}"#)
+                .unwrap();
+        assert!(profile.background.is_none());
+        assert!(!profile.is_child);
+        assert!(profile.daily_limit_minutes.is_none());
+
+        let settings: Settings =
+            serde_json::from_str(r#"{"schema_version":1,"animations":true}"#).unwrap();
+        assert_eq!(settings.language, LanguagePreference::Auto);
+        assert!(settings.alarm_sound);
+    }
+
+    #[test]
+    fn profile_background_and_child_fields_roundtrip() {
+        let profile: Profile = serde_json::from_str(
+            r#"{"id":"mia","name":"Mia","role":"player","background":"assets/backgrounds/mia.jpg","is_child":true,"daily_limit_minutes":60}"#,
+        )
+        .unwrap();
+        assert_eq!(
+            profile.background.as_deref(),
+            Some(Path::new("assets/backgrounds/mia.jpg"))
+        );
+        assert!(profile.is_child);
+        assert_eq!(profile.daily_limit_minutes, Some(60));
+        let json = serde_json::to_string(&profile).unwrap();
+        let again: Profile = serde_json::from_str(&json).unwrap();
+        assert_eq!(again.background, profile.background);
+        assert_eq!(again.daily_limit_minutes, profile.daily_limit_minutes);
     }
 
     #[test]

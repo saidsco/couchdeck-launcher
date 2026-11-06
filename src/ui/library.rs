@@ -181,7 +181,13 @@ fn draw_grid(
                 }
 
                 if metrics.page_count > 1 {
-                    let label = format!("Seite {} / {}", metrics.page, metrics.page_count);
+                    let label = app.tf(
+                        "library-page",
+                        &[
+                            ("page", metrics.page.into()),
+                            ("count", metrics.page_count.into()),
+                        ],
+                    );
                     ui.painter().text(
                         egui::pos2(rect.right(), rect.top() - 6.0 * scale),
                         Align2::RIGHT_BOTTOM,
@@ -288,7 +294,7 @@ fn draw_tile(
         painter.text(
             badge.center(),
             Align2::CENTER_CENTER,
-            "Datei fehlt",
+            app.t("library-file-missing"),
             FontId::proportional(12.0 * scale),
             Color32::WHITE,
         );
@@ -339,7 +345,7 @@ fn draw_empty(ui: &mut egui::Ui, app: &mut CouchDeckApp, rect: Rect, scale: f32)
     painter.text(
         egui::pos2(card.center().x, card.top() + 58.0 * scale),
         Align2::CENTER_CENTER,
-        "Deine Bibliothek ist leer",
+        app.t("library-empty-title"),
         FontId::proportional(27.0 * scale),
         TEXT,
     );
@@ -347,9 +353,9 @@ fn draw_empty(ui: &mut egui::Ui, app: &mut CouchDeckApp, rect: Rect, scale: f32)
         egui::pos2(card.center().x, card.top() + 102.0 * scale),
         Align2::CENTER_CENTER,
         if app.is_admin() {
-            "Importiere eine vorhandene .desktop-Datei – Quelle, Name und Exec werden vorher angezeigt."
+            app.t("library-empty-admin")
         } else {
-            "Ein Admin-Profil kann Spiele hinzufügen. Mit A gelangt man nur mit Adminrechten zum Import."
+            app.t("library-empty-player")
         },
         FontId::proportional(15.0 * scale),
         MUTED,
@@ -368,7 +374,7 @@ fn draw_empty(ui: &mut egui::Ui, app: &mut CouchDeckApp, rect: Rect, scale: f32)
                     if ui
                         .add_sized(
                             Vec2::new(230.0 * scale, 46.0 * scale),
-                            primary_button("Desktop-Datei importieren"),
+                            primary_button(app.t("library-import")),
                         )
                         .clicked()
                     {
@@ -377,7 +383,7 @@ fn draw_empty(ui: &mut egui::Ui, app: &mut CouchDeckApp, rect: Rect, scale: f32)
                     if ui
                         .add_sized(
                             Vec2::new(190.0 * scale, 46.0 * scale),
-                            secondary_button("Profil wechseln"),
+                            secondary_button(app.t("library-profile-switch")),
                         )
                         .clicked()
                     {
@@ -386,7 +392,7 @@ fn draw_empty(ui: &mut egui::Ui, app: &mut CouchDeckApp, rect: Rect, scale: f32)
                 } else if ui
                     .add_sized(
                         Vec2::new(220.0 * scale, 46.0 * scale),
-                        secondary_button("Profil wechseln"),
+                        secondary_button(app.t("library-profile-switch")),
                     )
                     .clicked()
                 {
@@ -428,52 +434,50 @@ fn draw_footer(
                                     .color(TEXT),
                             );
                             let mut hint = if app.settings.show_controller_hints {
-                                "A Starten   ·   B Zurück   ·   Start Menü   ·   LB/RB Profile"
-                                    .to_owned()
+                                app.t("library-hints")
                             } else {
                                 String::new()
                             };
                             if !game.desktop_exists() {
-                                hint = "Desktop-Datei fehlt – Start nicht möglich".to_owned();
+                                hint = app.t("library-missing-launch");
                             } else if page_count > 1 {
                                 if !hint.is_empty() {
                                     hint.push_str("   ·   ");
                                 }
-                                hint.push_str(&format!("Seite {page}/{page_count}"));
+                                hint.push_str(&app.tf(
+                                    "library-page",
+                                    &[("page", page.into()), ("count", page_count.into())],
+                                ));
                             }
                             if !hint.is_empty() {
                                 ui.label(RichText::new(hint).size(13.0 * scale).color(MUTED));
                             }
                         } else if app.is_admin() {
                             ui.label(
-                                RichText::new("Noch keine Spiele")
+                                RichText::new(app.t("library-no-games"))
                                     .size(23.0 * scale)
                                     .strong()
                                     .color(TEXT),
                             );
                             if app.settings.show_controller_hints {
                                 ui.label(
-                                    RichText::new(
-                                        "A Importieren   ·   Start Menü   ·   Maus/Tastatur",
-                                    )
-                                    .size(13.0 * scale)
-                                    .color(MUTED),
+                                    RichText::new(app.t("library-no-games-hint"))
+                                        .size(13.0 * scale)
+                                        .color(MUTED),
                                 );
                             }
                         } else {
                             ui.label(
-                                RichText::new("Keine Spiele für dieses Profil")
+                                RichText::new(app.t("library-no-games-profile"))
                                     .size(23.0 * scale)
                                     .strong()
                                     .color(TEXT),
                             );
                             if app.settings.show_controller_hints {
                                 ui.label(
-                                    RichText::new(
-                                        "B Zurück   ·   Start Menü   ·   Profil wechseln",
-                                    )
-                                    .size(13.0 * scale)
-                                    .color(MUTED),
+                                    RichText::new(app.t("library-no-games-profile-hint"))
+                                        .size(13.0 * scale)
+                                        .color(MUTED),
                                 );
                             }
                         }
@@ -484,12 +488,14 @@ fn draw_footer(
                     if let Some(game) = &game {
                         let enabled = game.desktop_exists();
                         let button = if enabled {
-                            primary_button("Starten  (A)")
+                            primary_button(app.t("library-start"))
                         } else {
-                            egui::Button::new(RichText::new("Datei fehlt").color(MUTED))
-                                .fill(CARD)
-                                .stroke(Stroke::new(1.0, Color32::from_rgb(70, 70, 70)))
-                                .corner_radius(12)
+                            egui::Button::new(
+                                RichText::new(app.t("library-file-missing")).color(MUTED),
+                            )
+                            .fill(CARD)
+                            .stroke(Stroke::new(1.0, Color32::from_rgb(70, 70, 70)))
+                            .corner_radius(12)
                         };
                         let response = ui.add_sized(Vec2::new(210.0 * scale, 50.0 * scale), button);
                         if response.clicked() && enabled {
@@ -498,7 +504,7 @@ fn draw_footer(
                         if ui
                             .add_sized(
                                 Vec2::new(150.0 * scale, 50.0 * scale),
-                                secondary_button("Menü"),
+                                secondary_button(app.t("common-menu")),
                             )
                             .clicked()
                         {
@@ -508,7 +514,7 @@ fn draw_footer(
                         if ui
                             .add_sized(
                                 Vec2::new(210.0 * scale, 50.0 * scale),
-                                primary_button("Importieren  (A)"),
+                                primary_button(app.t("library-import-action")),
                             )
                             .clicked()
                         {
@@ -517,7 +523,7 @@ fn draw_footer(
                     } else if ui
                         .add_sized(
                             Vec2::new(210.0 * scale, 50.0 * scale),
-                            secondary_button("Profil wechseln"),
+                            secondary_button(app.t("library-profile-switch")),
                         )
                         .clicked()
                     {

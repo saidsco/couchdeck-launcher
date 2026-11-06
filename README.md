@@ -2,9 +2,9 @@
 
 CouchDeck is a native, controller-first fullscreen game launcher for **Bazzite / KDE Plasma / Wayland**. It opens directly into a personal game library – no store, no news, no cloud, no overlay, and no game-platform accounts.
 
-**Current version:** 0.2.5 · **Language:** English · [Deutsch](README-de.md)
+**Current version:** 0.3.0 · **Language:** English · [Deutsch](README-de.md)
 
-**Note:** the application UI and the detailed documents in `docs/` are currently in German.
+The application UI is available in **German and English** via Fluent, with automatic locale detection and English as fallback. Some detailed documents under `docs/` are still in German.
 
 Games are launched exclusively through existing `.desktop` files and `gio launch`. Cover images are managed separately from the desktop files; the original files are never modified.
 
@@ -12,13 +12,16 @@ Games are launched exclusively through existing `.desktop` files and `gio launch
 
 ## Features
 
+- **Bilingual UI (de/en)** via Fluent: automatic detection from `LANGUAGE`/`LC_ALL`/`LC_MESSAGES`/`LANG`, English fallback, switchable live under Admin → Settings.
 - **Fullscreen library** with a cover grid, 3:4 center crop, focus animation, and fallback order: custom cover → desktop icon → neutral tile.
 - **Gamepad navigation** via `gilrs`: D-pad and left stick with deadzone, hold-repeat, debouncing, and hotplug. South = confirm/start, East = back, Start = menu. LB/RB (shoulder buttons) open the profile overview; profile switching happens there. Navigation is only processed while CouchDeck has window focus; connect/disconnect events are still handled, and stale input is discarded on focus changes.
 - **Keyboard and mouse in parallel**: arrow keys, Enter/Space, Escape, M, F11, mouse click, and double-click.
 - **Desktop files**: XDG discovery, arbitrary file import, preview of name, path, and raw `Exec` content; support for `NoDisplay`, `Hidden`, `TryExec`, `Path`, `DBusActivatable`, categories, and localized names.
 - **Launch via GIO**: only `gio launch /absolute/path.desktop`. `Exec=` is not interpreted for launching; the raw content is only shown and checked for diagnostics.
-- **Custom artwork management**: cover, per-game background, and global background via a file picker; imports go to `$XDG_DATA_HOME/couchdeck/assets/`, thumbnail cache to `$XDG_CACHE_HOME/couchdeck/`.
-- **Local profiles**: display name, role (admin/player), avatar, and per-profile game visibility. No Linux accounts, no cloud.
+- **Custom artwork management**: cover, per-game background, global background, avatar, and **per-profile background** via a file picker. Profile backgrounds fall back to the global background; game backgrounds and existing data are preserved. Imports go to `$XDG_DATA_HOME/couchdeck/assets/`, thumbnail cache to `$XDG_CACHE_HOME/couchdeck/`.
+- **Local profiles**: display name, role (admin/player), avatar, optional child-profile flag, daily time budget, per-profile background, and per-profile game visibility. No Linux accounts, no cloud.
+- **Child profiles and time budgets**: accumulate active profile time while CouchDeck is running, show remaining time, warning toasts at 5/1 minutes, optional best-effort alert sound, and centrally block new game starts when the budget is exhausted. Running games are not force-closed. Profile switching, minimize, quit, and power actions require the admin PIN for child profiles.
+- **Parent extra time**: “Request more play time” from the Start menu or the “Time budget exhausted” screen, admin PIN, then +5/+15/+30 or custom minutes. Extra time is stored per local calendar day, adds up, never changes the regular budget, and is resettable by an admin.
 - **Admin area**: import/hide/remove/sort games, edit titles and artwork, manage profiles, per-profile visibility, settings, and PIN management.
 - **Admin PIN**: Argon2id hash in a separate file with mode `0600`; input via keyboard and an on-screen numpad with a controller. Profile switching itself is not authentication; admin actions are unlocked separately when a PIN is set.
 - **Steam Flatpak repair**: detects `Exec=steam steam://rungameid/ID`, never changes anything automatically, and after explicit confirmation creates a **separate managed** file using `flatpak run com.valvesoftware.Steam …`.
@@ -28,7 +31,7 @@ Games are launched exclusively through existing `.desktop` files and `gio launch
 - **Power menu**: quit CouchDeck, reboot the system, or shut down the system – with a confirmation dialog and fixed `systemctl` calls (no shell).
 - **Robust persistence**: atomic writes, backups for damaged files, no silent overwrites, logs under `$XDG_STATE_HOME/couchdeck/`.
 
-More screenshots: [Profiles](docs/screenshots/profiles.png), [Library as a player profile](docs/screenshots/library-profile-mia.png), [Admin](docs/screenshots/admin.png), [Game editor](docs/screenshots/game-editor.png), [Import](docs/screenshots/import.png), [PIN pad](docs/screenshots/pinpad.png), [Launch overlay](docs/screenshots/launch.png), [Power menu](docs/screenshots/menu.png), [Autostart settings](docs/screenshots/autostart-settings.png), [Damaged data](docs/screenshots/corrupt-data.png).
+More screenshots: [Time budget exhausted](docs/screenshots/time-budget.png), [Profiles](docs/screenshots/profiles.png), [Library as a player profile](docs/screenshots/library-profile-mia.png), [Admin](docs/screenshots/admin.png), [Game editor](docs/screenshots/game-editor.png), [Import](docs/screenshots/import.png), [PIN pad](docs/screenshots/pinpad.png), [Launch overlay](docs/screenshots/launch.png), [Power menu](docs/screenshots/menu.png), [Autostart settings](docs/screenshots/autostart-settings.png), [Damaged data](docs/screenshots/corrupt-data.png).
 
 ## Requirements
 
@@ -80,7 +83,7 @@ curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --profil
 source "$HOME/.cargo/env"
 ```
 
-`Cargo.lock` is included and pins the tested versions (including `eframe 0.32.3`, `gilrs 0.11.2`, `image 0.25.10`, `argon2 0.5.3`).
+`Cargo.lock` is included and pins the tested versions (including `eframe 0.32.3`, `gilrs 0.11.2`, `image 0.25.10`, `argon2 0.5.3`, `fluent-bundle 0.16`, `chrono 0.4`).
 
 ## Rootless installation
 
@@ -135,6 +138,7 @@ Complete removal of library, profiles, PIN hash, artwork, cache, and logs only a
 | Switch profile | LB/RB (opens profile view; switch there) | PageUp/PageDown |
 | Minimize to KDE | Menu → Minimize to KDE | Menu |
 | Toggle fullscreen | – | F11 |
+| Request more play time (child profile) | Start → Request more play time | Menu |
 | Reboot / shut down system | Menu → System … | Menu |
 | Quit CouchDeck | Menu → Quit CouchDeck | Ctrl+Q |
 
@@ -198,6 +202,7 @@ Example files are in `examples/`: `prism-minecraft.desktop`, `steam-game-flatpak
 | Settings | `$XDG_CONFIG_HOME/couchdeck/settings.toml` |
 | KDE autostart | `$XDG_CONFIG_HOME/autostart/couchdeck.desktop` |
 | Library/profiles/games | `$XDG_DATA_HOME/couchdeck/library.json` |
+| Daily usage/extra time | `$XDG_DATA_HOME/couchdeck/timekeeping.json` |
 | PIN hashes | `$XDG_DATA_HOME/couchdeck/secrets.json` (mode `0600`) |
 | Imported images | `$XDG_DATA_HOME/couchdeck/assets/{covers,backgrounds,avatars}/` |
 | Managed desktop files | `$XDG_DATA_HOME/couchdeck/managed-desktop/` |
@@ -210,9 +215,10 @@ Details: [docs/DATA-FORMAT.md](docs/DATA-FORMAT.md) (currently in German).
 
 - CouchDeck **only** launches files that an admin has explicitly imported. During import, name, path, and `Exec` are shown.
 - `Exec=` is never executed by CouchDeck or split into arguments for launching. The file is passed unchanged to `gio launch`; the raw content is only displayed and checked for diagnostic hints.
-- The admin area and all modification actions are only visible to admin profiles.
+- The admin area and all modification actions are only visible to admin profiles; child profiles never get admin UI access.
 - The PIN protects against accidental UI changes. It is **not a real OS security boundary**: anyone with access to the same Linux user account can modify the JSON files directly. Use separate Linux accounts for real isolation.
 - Power actions are only triggered after a confirmation dialog. Fixed, argument-separated `systemctl` calls are used; no shell, no arbitrary command chaining.
+- Parental time limits are a family convenience, **not an OS-level sandbox**. A user who can kill the process, switch to a TTY, edit files in the same Linux account, or use compositor shortcuts is outside the protection model.
 - No network dependency, no cloud, no telemetry, no external downloads.
 
 ## Architecture
@@ -226,9 +232,12 @@ paths.rs       XDG resolution, application/icon paths
 desktop.rs     desktop parsing, discovery, icon resolution, Steam/Prism diagnostics
 launch.rs      GIO launch in a background thread, error diagnostics
 system.rs      system actions, systemctl reboot/shutdown, Polkit error handling
+timekeeping.rs daily usage, extra minutes, day rollover, persistence
+i18n.rs        Fluent bundles, locale detection, live language switching
+sound.rs       best-effort warning sound via system players
 controller.rs  gilrs thread, deadzone, repeat, hotplug, input normalization
 artwork.rs     image import, center crop, thumbnail cache, textures
-ui/            library, profiles, admin, dialogs/overlays
+ui/            library, profiles, admin, dialogs/overlays, time dialogs
 ```
 
 Data flow: `UI → AppState → Library/Profiles → GIO (gio launch)`.
@@ -236,8 +245,10 @@ Data flow: `UI → AppState → Library/Profiles → GIO (gio launch)`.
 ## Known limitations / still to be tested on target hardware
 
 - **Not tested on Bazzite**: Development and automated tests ran on Manjaro/KDE/Wayland. Wayland fullscreen, KDE focus behavior, real controller hotplug scenarios, 4K/DPI, and NVIDIA Wayland rendering on Bazzite must be verified on the target device.
-- **No controller in the test environment**: The logic is unit-tested (`gilrs` mapping, deadzone, repeat); a real Xbox/PlayStation controller was not connected here. `--no-controller` and the “no controller found” case were tested.
-- **No game lifecycle tracking**: `gio launch` is only a start command. CouchDeck does not reliably know whether a game is running or when it ends. Steam/Prism may continue running in the background.
+- **Controller hardware**: an 8BitDo Ultimate was detected and usable on Manjaro/KDE/Wayland (USB/Bluetooth mode details still to be recorded). Xbox/PlayStation controllers and Bazzite hotplug/reconnect remain to be verified. `--no-controller` and the “no controller found” case were tested.
+- **No game lifecycle tracking**: `gio launch` is only a start command. CouchDeck does not reliably know whether a game is running or when it ends. Steam/Prism may continue running in the background. Time budgets therefore measure **active profile time while CouchDeck is running**, not actual game process time; game detection is a later step.
+- **Time-budget edge cases**: usage is saved every 30 seconds, on warnings, on grants, on profile switches, and on exit. A hard kill/power loss can lose up to the last interval. If the launcher is not running, no time is counted. The child guard covers app-level minimize/quit/power/profile switching and best-effort WM close/minimize paths, but cannot prevent TTY switching, killing the process, or editing files in the same Linux account.
+- **Notifications/alarm best effort**: warnings are shown in the CouchDeck window. Under Wayland there is no guaranteed overlay above fullscreen games; the optional sound uses `canberra-gtk-play`/`paplay`/`pw-play`/`aplay` if available and is silently skipped otherwise.
 - **Focus after game start/exit**: Plasma is expected to bring the game window to the foreground. This has not been verified on the target device. CouchDeck never terminates games and offers an explicit “Minimize to KDE”.
 - **SVG desktop icons** are not rasterized (no SVG decoder is bundled). PNG/WebP/JPEG icons and custom covers work; otherwise the neutral tile is used.
 - **No cover scraping, no Steam API, no store integration**, no automatic search.
@@ -247,13 +258,13 @@ Data flow: `UI → AppState → Library/Profiles → GIO (gio launch)`.
 - **Autostart**: the XDG autostart entry is KDE-only and has not yet been verified in a real Bazzite KDE login session. It starts fullscreen by default.
 - **Fullscreen minimize**: the “leave fullscreen → minimize” flow is implemented, but `ViewportCommand::Minimized` behavior under Bazzite/KDE Wayland still needs testing.
 - **System power**: shutdown/reboot uses `systemctl` and requires a suitable Polkit permission. The actual action was not executed in the development environment to avoid shutting down the system; command construction, confirmation dialog, and error handling were tested.
-- **Multiple instances**: there is no single-instance lock yet. Autostart plus a manual start can create two instances.
-- **No Flatpak for CouchDeck itself** in v0.2.5, as specified. Release packaging consists of the user install script plus binary, not RPM/AppImage.
+- **Multiple instances**: there is no single-instance lock yet. Autostart plus a manual start can create two instances; this can also interfere with time-budget accounting.
+- **No Flatpak for CouchDeck itself** in v0.3.0, as specified. Release packaging consists of the user install script plus binary, not RPM/AppImage.
 - **Target session is the KDE Plasma desktop under Wayland**, not Steam Gaming Mode/Gamescope. Gamescope/Steam Input conflicts have not been tested.
 
 ## Tests and acceptance
 
-- Unit/integration tests: **49 tests passing** (`cargo test`, including the GIO integration test and v0.2.5 autostart/power tests).
+- Unit/integration tests: **64 tests passing** (`cargo test`: 62 unit tests including timekeeping, i18n, parent-PIN/switch/start guards, plus 2 GIO integration tests).
 - `cargo clippy --all-targets -- -D warnings`: clean.
 - `cargo fmt --check`: clean.
 - Release build: `cargo build --release --locked`.
@@ -262,6 +273,7 @@ Data flow: `UI → AppState → Library/Profiles → GIO (gio launch)`.
 
 ## Changelog
 
+- **v0.3.0**: German/English Fluent UI with live switching, per-profile backgrounds, child profiles with daily time budgets, parent extra-time grants, central launch blocking, warning sounds.
 - **v0.2.5**: controller focus gating/input-buffer reset, correct LB/RB shoulder mapping, system actions moved to `system.rs`.
 - **v0.2.0**: KDE autostart, “Minimize to KDE”, shutdown/reboot power menu, more robust quit/fullscreen behavior.
 - **v0.1.0**: first MVP with library, profiles, admin PIN, artwork, and Steam/Prism integration.

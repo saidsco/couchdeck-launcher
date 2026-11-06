@@ -143,6 +143,10 @@ impl XdgPaths {
         self.data_dir().join("secrets.json")
     }
 
+    pub fn timekeeping_path(&self) -> PathBuf {
+        self.data_dir().join("timekeeping.json")
+    }
+
     pub fn assets_dir(&self) -> PathBuf {
         self.data_dir().join("assets")
     }

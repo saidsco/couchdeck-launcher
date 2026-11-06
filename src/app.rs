@@ -10,12 +10,44 @@ use eframe::egui::{Key, Modifiers, ViewportCommand};
 use crate::artwork::{self, ArtworkCache, ArtworkKind};
 use crate::controller::{self, ControllerEvent, ControllerHandle, NavAction};
 use crate::desktop::{self, DesktopFile, IconResolver};
+use crate::i18n::{ArgValue, I18n, LanguagePreference};
 use crate::launch::{self, LaunchOutcome};
 use crate::logging::{log_error, log_info, log_warn};
 use crate::model::{new_id, resolve_data_path, AdminSecrets, GameEntry, Library, Settings};
 use crate::paths::XdgPaths;
 use crate::storage::{self, LibraryLoad, SecretsLoad, SettingsLoad};
 use crate::system::{SystemAction, SystemController};
+use crate::timekeeping::{self, TimeStatus, TimeWarning, Timekeeping};
+
+fn profile_switch_requires_parent(
+    active_is_child: bool,
+    active_id: Option<&str>,
+    target_id: &str,
+) -> bool {
+    active_is_child && active_id.is_some_and(|active| active != target_id)
+}
+
+fn take_usage_seconds(delta: Duration, remainder: &mut Duration) -> u64 {
+    let total = remainder.saturating_add(delta);
+    let seconds = total.as_secs();
+    *remainder = total.saturating_sub(Duration::from_secs(seconds));
+    seconds
+}
+
+fn start_is_blocked(status: Option<&TimeStatus>) -> bool {
+    status.is_some_and(|status| status.limited && status.exhausted)
+}
+
+fn admin_pin_matches(
+    profiles: &[crate::model::Profile],
+    secrets: &AdminSecrets,
+    pin: &str,
+) -> bool {
+    profiles
+        .iter()
+        .filter(|profile| profile.is_admin() && !profile.is_child)
+        .any(|profile| secrets.verify(&profile.id, pin))
+}
 
 pub const APP_NAME: &str = "CouchDeck";
 pub const APP_VERSION: &str = env!("CARGO_PKG_VERSION");
@@ -42,6 +74,7 @@ pub enum MenuAction {
     Import,
     ToggleFullscreen,
     Minimize,
+    ExtraTime,
     Reboot,
     PowerOff,
     About,
@@ -108,17 +141,19 @@ pub enum PickerPurpose {
     Background(String),
     GlobalBackground,
     Avatar(String),
+    ProfileBackground(String),
     ImportDesktop,
 }
 
 impl PickerPurpose {
-    pub fn title(&self) -> &'static str {
+    pub fn title_key(&self) -> &'static str {
         match self {
-            Self::Cover(_) => "Cover auswählen",
-            Self::Background(_) => "Spiel-Hintergrund auswählen",
-            Self::GlobalBackground => "Globales Hintergrundbild auswählen",
-            Self::Avatar(_) => "Profil-Avatar auswählen",
-            Self::ImportDesktop => "Desktop-Datei auswählen",
+            Self::Cover(_) => "picker-cover",
+            Self::Background(_) => "picker-game-background",
+            Self::GlobalBackground => "picker-global-background",
+            Self::Avatar(_) => "picker-avatar",
+            Self::ProfileBackground(_) => "picker-profile-background",
+            Self::ImportDesktop => "picker-desktop",
         }
     }
 }
@@ -140,10 +175,32 @@ pub struct FilePickerState {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+pub enum ParentAction {
+    GrantExtraTime { profile_id: String },
+    Minimize,
+    Quit,
+    Reboot,
+    PowerOff,
+    ActivateProfile(String),
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum PinPurpose {
-    Unlock { profile_id: String },
-    Set { profile_id: String },
-    ConfirmSet { profile_id: String, first: String },
+    Unlock {
+        profile_id: String,
+    },
+    Set {
+        profile_id: String,
+    },
+    ConfirmSet {
+        profile_id: String,
+        first: String,
+    },
+    /// Verify any admin PIN for a single child-profile action without keeping
+    /// the admin area unlocked.
+    ParentAuth {
+        action: ParentAction,
+    },
 }
 
 pub struct PinPad {
@@ -155,17 +212,32 @@ pub struct PinPad {
 }
 
 impl PinPad {
-    pub fn title(&self) -> &'static str {
+    pub fn title_key(&self) -> &'static str {
         match self.purpose {
-            PinPurpose::Unlock { .. } => "Admin-PIN eingeben",
-            PinPurpose::Set { .. } => "Neue Admin-PIN festlegen",
-            PinPurpose::ConfirmSet { .. } => "Admin-PIN wiederholen",
+            PinPurpose::Unlock { .. } => "pin-title-unlock",
+            PinPurpose::Set { .. } => "pin-title-set",
+            PinPurpose::ConfirmSet { .. } => "pin-title-confirm",
+            PinPurpose::ParentAuth { .. } => "pin-title-parent",
         }
     }
 
     pub fn masked(&self) -> String {
         "*".repeat(self.digits.len())
     }
+}
+
+pub struct TimeExpiredState {
+    pub profile_id: String,
+    /// 0 = request extra time, 1 = back to library.
+    pub focus: usize,
+}
+
+pub struct ExtraTimeDialog {
+    pub profile_id: String,
+    pub focus: usize,
+    pub custom_mode: bool,
+    pub custom_minutes: u32,
+    pub error: Option<String>,
 }
 
 pub enum Overlay {
@@ -176,6 +248,8 @@ pub enum Overlay {
     Pin(PinPad),
     Confirm(ConfirmDialog),
     Message(MessageDialog),
+    TimeExpired(TimeExpiredState),
+    ExtraTime(ExtraTimeDialog),
 }
 
 pub struct LaunchState {
@@ -252,6 +326,7 @@ pub struct CouchDeckApp {
     pub paths: XdgPaths,
     pub library: Library,
     pub settings: Settings,
+    pub i18n: I18n,
     pub secrets: AdminSecrets,
     pub controller: ControllerHandle,
     pub controllers: Vec<String>,
@@ -273,6 +348,15 @@ pub struct CouchDeckApp {
     pub launch_rx: Option<Receiver<LaunchOutcome>>,
     pub last_launch_started: Option<Instant>,
     pub system: SystemController,
+    pub timekeeping: Timekeeping,
+    pub last_time_tick: Instant,
+    pub last_time_save: Instant,
+    pub time_remainder: Duration,
+    pub last_budget_exhausted: bool,
+    pub time_expired_pending: bool,
+    /// Set only after a parent-authorized minimisation or application close.
+    pub allow_child_minimize: bool,
+    pub allow_close: bool,
     /// Set when leaving fullscreen so the minimised command is sent on the next
     /// frame, after the compositor has processed the fullscreen exit.
     pub pending_minimize: bool,
@@ -329,6 +413,24 @@ impl CouchDeckApp {
                 Settings::default()
             }
         };
+        let i18n = I18n::new(settings.language);
+        let timekeeping = match timekeeping::load(&paths) {
+            timekeeping::TimekeepingLoad::Missing => Timekeeping::new(),
+            timekeeping::TimekeepingLoad::Loaded(mut value) => {
+                value.normalize();
+                value
+            }
+            timekeeping::TimekeepingLoad::Corrupt { message, backup } => {
+                notices.push(match backup {
+                    Some(path) => format!(
+                        "{message}\n\nEine Sicherung wurde angelegt: {}",
+                        path.display()
+                    ),
+                    None => message,
+                });
+                Timekeeping::new()
+            }
+        };
         let secrets = match storage::load_secrets(&paths) {
             SecretsLoad::Missing => AdminSecrets::new(),
             SecretsLoad::Loaded(secrets) => secrets,
@@ -368,6 +470,7 @@ impl CouchDeckApp {
             paths,
             library,
             settings,
+            i18n,
             secrets,
             controller,
             controllers: Vec::new(),
@@ -387,6 +490,14 @@ impl CouchDeckApp {
             launch_rx: None,
             last_launch_started: None,
             system: SystemController::new(),
+            timekeeping,
+            last_time_tick: Instant::now(),
+            last_time_save: Instant::now(),
+            time_remainder: Duration::ZERO,
+            last_budget_exhausted: false,
+            time_expired_pending: false,
+            allow_child_minimize: false,
+            allow_close: false,
             pending_minimize: false,
             window_focused: None,
             discard_controller_nav: false,
@@ -402,10 +513,10 @@ impl CouchDeckApp {
 
         if app.fatal.is_none() && !notices.is_empty() {
             app.overlay = Overlay::Message(MessageDialog {
-                title: "Hinweis zum Start".to_owned(),
+                title: app.t("app-startup-notice-title"),
                 message: notices.join("\n\n"),
                 severity: MessageSeverity::Warning,
-                close_label: "Weiter".to_owned(),
+                close_label: app.t("common-continue"),
             });
         }
         log_info(
@@ -428,6 +539,27 @@ impl CouchDeckApp {
     }
 
     // ---------------------------------------------------------------------
+    // Localization
+    // ---------------------------------------------------------------------
+
+    pub fn t(&self, key: &str) -> String {
+        self.i18n.text(key)
+    }
+
+    pub fn tf(&self, key: &str, values: &[(&str, ArgValue)]) -> String {
+        self.i18n.format(key, values)
+    }
+
+    pub fn set_language(&mut self, preference: LanguagePreference) {
+        if self.settings.language == preference {
+            return;
+        }
+        self.settings.language = preference;
+        self.i18n.set_preference(preference);
+        self.save_settings();
+    }
+
+    // ---------------------------------------------------------------------
     // Data helpers
     // ---------------------------------------------------------------------
 
@@ -440,7 +572,17 @@ impl CouchDeckApp {
     }
 
     pub fn is_admin(&self) -> bool {
-        self.library.is_active_admin()
+        // A profile marked as a child profile never gets admin UI access, even
+        // if a hand-edited role says otherwise.
+        self.active_profile()
+            .map(|profile| profile.is_admin() && !profile.is_child)
+            .unwrap_or(false)
+    }
+
+    pub fn is_active_child(&self) -> bool {
+        self.active_profile()
+            .map(|profile| profile.is_child)
+            .unwrap_or(false)
     }
 
     pub fn visible_games(&self) -> Vec<GameEntry> {
@@ -480,6 +622,178 @@ impl CouchDeckApp {
 
     pub fn profile_avatar_path(&self, profile: &crate::model::Profile) -> Option<PathBuf> {
         profile.avatar.as_ref().map(|p| self.resolve_data_path(p))
+    }
+
+    pub fn profile_background_path(&self, profile: &crate::model::Profile) -> Option<PathBuf> {
+        profile
+            .background
+            .as_ref()
+            .map(|p| self.resolve_data_path(p))
+    }
+
+    pub fn active_profile_background_path(&self) -> Option<PathBuf> {
+        self.active_profile()
+            .and_then(|profile| self.profile_background_path(profile))
+    }
+
+    pub fn time_status_for(&mut self, profile: &crate::model::Profile) -> TimeStatus {
+        let today = timekeeping::today_string();
+        self.timekeeping
+            .status(&profile.id, profile.daily_limit_minutes, &today)
+    }
+
+    pub fn active_time_status(&mut self) -> Option<TimeStatus> {
+        let profile = self.active_profile().cloned()?;
+        profile.is_child.then(|| self.time_status_for(&profile))
+    }
+
+    /// Central gate for every new game/media launch. `launch_game` calls this;
+    /// future media launchers must do the same.
+    pub fn check_start_allowed(&mut self) -> bool {
+        if start_is_blocked(self.active_time_status().as_ref()) {
+            self.time_expired_pending = true;
+            self.maybe_show_time_expired();
+            return false;
+        }
+        true
+    }
+
+    fn save_timekeeping(&mut self) {
+        if let Err(err) = timekeeping::save(&self.paths, &self.timekeeping) {
+            log_error("timekeeping", &err);
+            self.notify_error(err);
+        }
+        self.last_time_save = Instant::now();
+    }
+
+    fn tick_time_budget(&mut self, ctx: &egui::Context) {
+        let now = Instant::now();
+        let delta = now.saturating_duration_since(self.last_time_tick);
+        self.last_time_tick = now;
+
+        let Some(profile) = self.active_profile().cloned() else {
+            self.last_budget_exhausted = false;
+            self.time_remainder = Duration::ZERO;
+            return;
+        };
+        if !profile.is_child || profile.daily_limit_minutes.is_none() {
+            self.last_budget_exhausted = false;
+            self.time_remainder = Duration::ZERO;
+            return;
+        }
+
+        let elapsed_seconds = take_usage_seconds(delta, &mut self.time_remainder);
+        let today = timekeeping::today_string();
+        let status = self.timekeeping.add_usage(
+            &profile.id,
+            elapsed_seconds,
+            profile.daily_limit_minutes,
+            &today,
+        );
+        let warning =
+            self.timekeeping
+                .warning_to_emit(&profile.id, profile.daily_limit_minutes, &today);
+
+        if let Some(warning) = warning {
+            let message = match warning {
+                TimeWarning::FiveMinutes => self.t("time-warning-five"),
+                TimeWarning::OneMinute => self.t("time-warning-one"),
+                TimeWarning::Exhausted => self.t("time-warning-exhausted"),
+            };
+            self.notify_warning(message);
+            if self.settings.alarm_sound && warning != TimeWarning::Exhausted {
+                crate::sound::play_alert();
+            }
+            self.save_timekeeping();
+        }
+
+        if status.exhausted {
+            if !self.last_budget_exhausted {
+                self.last_budget_exhausted = true;
+                self.time_expired_pending = true;
+                if self.settings.alarm_sound {
+                    crate::sound::play_alert();
+                }
+            }
+        } else {
+            self.last_budget_exhausted = false;
+            if matches!(self.overlay, Overlay::TimeExpired(_)) {
+                self.overlay = Overlay::None;
+            }
+        }
+
+        if self.last_time_save.elapsed() >= Duration::from_secs(30) {
+            self.save_timekeeping();
+        }
+        self.maybe_show_time_expired();
+        if !status.exhausted {
+            ctx.request_repaint_after(Duration::from_secs(5));
+        }
+    }
+
+    fn maybe_show_time_expired(&mut self) {
+        if !self.time_expired_pending
+            || self.fatal.is_some()
+            || self.launch.is_some()
+            || self.system.is_active()
+            || !matches!(self.overlay, Overlay::None)
+        {
+            return;
+        }
+        let Some(profile) = self.active_profile().cloned() else {
+            return;
+        };
+        if !profile.is_child {
+            self.time_expired_pending = false;
+            return;
+        }
+        self.overlay = Overlay::TimeExpired(TimeExpiredState {
+            profile_id: profile.id,
+            focus: 0,
+        });
+        self.time_expired_pending = false;
+    }
+
+    pub fn grant_extra_minutes(&mut self, profile_id: &str, minutes: u32) -> Result<(), String> {
+        if minutes == 0 || minutes > 240 {
+            return Err(self.t("app-extra-invalid"));
+        }
+        let Some(profile) = self
+            .library
+            .profiles
+            .iter()
+            .find(|profile| profile.id == profile_id)
+        else {
+            return Err(self.t("app-profile-not-found"));
+        };
+        if !profile.is_child {
+            return Err(self.t("app-extra-child-only"));
+        }
+        let name = profile.name.clone();
+        let today = timekeeping::today_string();
+        self.timekeeping
+            .add_extra_minutes(profile_id, minutes, &today);
+        self.save_timekeeping();
+        self.last_budget_exhausted = false;
+        self.time_expired_pending = false;
+        self.last_time_tick = Instant::now();
+        self.time_remainder = Duration::ZERO;
+        self.overlay = Overlay::None;
+        self.screen = Screen::Library;
+        let message = self.tf(
+            "app-extra-granted",
+            &[("minutes", minutes.into()), ("name", name.into())],
+        );
+        self.notify(message);
+        Ok(())
+    }
+
+    pub fn reset_extra_minutes(&mut self, profile_id: &str) {
+        let today = timekeeping::today_string();
+        self.timekeeping.reset_extra_minutes(profile_id, &today);
+        self.save_timekeeping();
+        self.last_time_tick = Instant::now();
+        self.notify_key("app-extra-reset");
     }
 
     pub fn save_library(&mut self) {
@@ -533,6 +847,22 @@ impl CouchDeckApp {
         });
     }
 
+    pub fn notify_key(&mut self, key: &str) {
+        let message = self.t(key);
+        self.notify(message);
+    }
+
+    pub fn notify_warning_key(&mut self, key: &str) {
+        let message = self.t(key);
+        self.notify_warning(message);
+    }
+
+    pub fn message_key(&mut self, title_key: &str, message_key: &str, severity: MessageSeverity) {
+        let title = self.t(title_key);
+        let message = self.t(message_key);
+        self.message_dialog(title, message, severity);
+    }
+
     pub fn message_dialog(
         &mut self,
         title: impl Into<String>,
@@ -543,7 +873,7 @@ impl CouchDeckApp {
             title: title.into(),
             message: message.into(),
             severity,
-            close_label: "Schließen".to_owned(),
+            close_label: self.t("common-close"),
         });
     }
 
@@ -600,7 +930,23 @@ impl CouchDeckApp {
         self.overlay = Overlay::None;
     }
 
-    pub fn activate_profile(&mut self, index: usize) {
+    pub fn request_activate_profile(&mut self, index: usize) {
+        let Some(target) = self.library.profiles.get(index) else {
+            return;
+        };
+        let target_id = target.id.clone();
+        if profile_switch_requires_parent(
+            self.is_active_child(),
+            self.active_profile_id(),
+            &target_id,
+        ) {
+            self.request_parent_action(ParentAction::ActivateProfile(target_id));
+            return;
+        }
+        self.activate_profile_now(index);
+    }
+
+    fn activate_profile_now(&mut self, index: usize) {
         let Some(profile) = self.library.profiles.get(index) else {
             return;
         };
@@ -611,10 +957,121 @@ impl CouchDeckApp {
         self.profile_focus = index;
         self.admin_unlocked = false;
         self.pending_admin_view = None;
+        self.last_time_tick = Instant::now();
+        self.time_remainder = Duration::ZERO;
+        self.last_budget_exhausted = false;
+        self.time_expired_pending = false;
+        self.allow_child_minimize = false;
+        self.allow_close = false;
         self.screen = Screen::Library;
         self.overlay = Overlay::None;
         self.save_library();
-        self.notify(format!("Profil aktiv: {name}"));
+        self.save_timekeeping();
+        self.notify(self.tf("app-profile-active", &[("name", name.into())]));
+    }
+
+    pub fn has_admin_pin_configured(&self) -> bool {
+        self.has_any_admin_pin()
+    }
+
+    fn has_any_admin_pin(&self) -> bool {
+        self.library
+            .profiles
+            .iter()
+            .filter(|profile| profile.is_admin() && !profile.is_child)
+            .any(|profile| self.secrets.has_pin(&profile.id))
+    }
+
+    fn verify_any_admin_pin(&self, pin: &str) -> bool {
+        admin_pin_matches(&self.library.profiles, &self.secrets, pin)
+    }
+
+    fn request_parent_action(&mut self, action: ParentAction) {
+        if !self.has_any_admin_pin() {
+            self.message_key(
+                "app-no-admin-pin-title",
+                "app-no-admin-pin-message",
+                MessageSeverity::Warning,
+            );
+            return;
+        }
+        self.overlay = Overlay::Pin(PinPad {
+            digits: String::new(),
+            purpose: PinPurpose::ParentAuth { action },
+            focus: 0,
+            error: None,
+        });
+    }
+
+    fn execute_parent_action(&mut self, ctx: &egui::Context, action: ParentAction) {
+        match action {
+            ParentAction::GrantExtraTime { profile_id } => {
+                self.overlay = Overlay::ExtraTime(ExtraTimeDialog {
+                    profile_id,
+                    focus: 0,
+                    custom_mode: false,
+                    custom_minutes: 15,
+                    error: None,
+                });
+            }
+            ParentAction::Minimize => {
+                self.allow_child_minimize = true;
+                self.minimize_to_desktop(ctx);
+            }
+            ParentAction::Quit => {
+                self.overlay = Overlay::Confirm(ConfirmDialog {
+                    title: self.t("confirm-quit-title"),
+                    message: self.t("confirm-quit-message"),
+                    confirm_label: self.t("confirm-quit-label"),
+                    danger: false,
+                    action: ConfirmAction::Quit,
+                    focus: 0,
+                });
+            }
+            ParentAction::Reboot => {
+                self.overlay = Overlay::Confirm(ConfirmDialog {
+                    title: self.t("confirm-reboot-title"),
+                    message: self.t("confirm-power-message"),
+                    confirm_label: self.t("confirm-reboot-label"),
+                    danger: true,
+                    action: ConfirmAction::Reboot,
+                    focus: 0,
+                });
+            }
+            ParentAction::PowerOff => {
+                self.overlay = Overlay::Confirm(ConfirmDialog {
+                    title: self.t("confirm-poweroff-title"),
+                    message: self.t("confirm-power-message"),
+                    confirm_label: self.t("confirm-poweroff-label"),
+                    danger: true,
+                    action: ConfirmAction::PowerOff,
+                    focus: 0,
+                });
+            }
+            ParentAction::ActivateProfile(profile_id) => {
+                if let Some(index) = self
+                    .library
+                    .profiles
+                    .iter()
+                    .position(|profile| profile.id == profile_id)
+                {
+                    self.activate_profile_now(index);
+                }
+            }
+        }
+    }
+
+    pub fn request_extra_time(&mut self) {
+        let Some(profile) = self.active_profile().cloned() else {
+            return;
+        };
+        if !profile.is_child {
+            self.notify_warning_key("app-extra-child-only");
+            return;
+        }
+        self.request_parent_action(ParentAction::GrantExtraTime {
+            profile_id: profile.id,
+        });
     }
 
     pub fn open_admin(&mut self) {
@@ -627,7 +1084,7 @@ impl CouchDeckApp {
 
     fn open_admin_view(&mut self, view: AdminView) {
         if !self.is_admin() {
-            self.notify_warning("Nur ein Admin-Profil darf den Admin-Bereich öffnen.");
+            self.notify_warning_key("app-admin-only");
             return;
         }
         let Some(profile_id) = self.active_profile_id().map(ToOwned::to_owned) else {
@@ -694,57 +1151,67 @@ impl CouchDeckApp {
         let mut items = Vec::new();
         if self.screen == Screen::Library {
             items.push(MenuItem {
-                label: "Weiter".to_owned(),
+                label: self.t("menu-resume"),
                 action: MenuAction::Resume,
             });
         } else {
             items.push(MenuItem {
-                label: "Zurück zur Bibliothek".to_owned(),
+                label: self.t("menu-back-library"),
                 action: MenuAction::Library,
             });
         }
         items.push(MenuItem {
-            label: "Profil wechseln".to_owned(),
+            label: self.t("menu-profiles"),
             action: MenuAction::Profiles,
         });
+        if self
+            .active_profile()
+            .map(|profile| profile.is_child && profile.daily_limit_minutes.is_some())
+            .unwrap_or(false)
+        {
+            items.push(MenuItem {
+                label: self.t("menu-extra-time"),
+                action: MenuAction::ExtraTime,
+            });
+        }
         if self.is_admin() {
             if self.screen != Screen::Admin {
                 items.push(MenuItem {
-                    label: "Admin-Bereich".to_owned(),
+                    label: self.t("menu-admin"),
                     action: MenuAction::Admin,
                 });
             }
             items.push(MenuItem {
-                label: "Desktop-Datei importieren".to_owned(),
+                label: self.t("menu-import"),
                 action: MenuAction::Import,
             });
         }
         items.push(MenuItem {
             label: if self.fullscreen {
-                "Vollbild verlassen".to_owned()
+                self.t("menu-fullscreen-exit")
             } else {
-                "Vollbild".to_owned()
+                self.t("menu-fullscreen-enter")
             },
             action: MenuAction::ToggleFullscreen,
         });
         items.push(MenuItem {
-            label: "Zu KDE minimieren".to_owned(),
+            label: self.t("menu-minimize"),
             action: MenuAction::Minimize,
         });
         items.push(MenuItem {
-            label: "System neu starten".to_owned(),
+            label: self.t("menu-reboot"),
             action: MenuAction::Reboot,
         });
         items.push(MenuItem {
-            label: "System herunterfahren".to_owned(),
+            label: self.t("menu-poweroff"),
             action: MenuAction::PowerOff,
         });
         items.push(MenuItem {
-            label: "Über CouchDeck".to_owned(),
+            label: self.t("menu-about"),
             action: MenuAction::About,
         });
         items.push(MenuItem {
-            label: "CouchDeck beenden".to_owned(),
+            label: self.t("menu-quit"),
             action: MenuAction::Quit,
         });
         self.menu_focus = 0;
@@ -780,59 +1247,78 @@ impl CouchDeckApp {
                 ctx.send_viewport_cmd(ViewportCommand::Fullscreen(self.fullscreen));
                 self.overlay = Overlay::None;
             }
-            MenuAction::Minimize => self.minimize_to_desktop(ctx),
+            MenuAction::Minimize => self.request_minimize(ctx),
+            MenuAction::ExtraTime => {
+                self.overlay = Overlay::None;
+                self.request_extra_time();
+            }
             MenuAction::Reboot => {
-                self.overlay = Overlay::Confirm(ConfirmDialog {
-                    title: SystemAction::Reboot.confirm_title().to_owned(),
-                    message: "Alle laufenden Anwendungen und Spiele werden beendet. CouchDeck übergibt den Befehl an systemd.".to_owned(),
-                    confirm_label: SystemAction::Reboot.confirm_label().to_owned(),
-                    danger: true,
-                    action: ConfirmAction::Reboot,
-                    focus: 0,
-                });
+                if self.is_active_child() {
+                    self.request_parent_action(ParentAction::Reboot);
+                } else {
+                    self.overlay = Overlay::Confirm(ConfirmDialog {
+                        title: self.t("confirm-reboot-title"),
+                        message: self.t("confirm-power-message"),
+                        confirm_label: self.t("confirm-reboot-label"),
+                        danger: true,
+                        action: ConfirmAction::Reboot,
+                        focus: 0,
+                    });
+                }
             }
             MenuAction::PowerOff => {
-                self.overlay = Overlay::Confirm(ConfirmDialog {
-                    title: SystemAction::PowerOff.confirm_title().to_owned(),
-                    message: "Alle laufenden Anwendungen und Spiele werden beendet. CouchDeck übergibt den Befehl an systemd.".to_owned(),
-                    confirm_label: SystemAction::PowerOff.confirm_label().to_owned(),
-                    danger: true,
-                    action: ConfirmAction::PowerOff,
-                    focus: 0,
-                });
+                if self.is_active_child() {
+                    self.request_parent_action(ParentAction::PowerOff);
+                } else {
+                    self.overlay = Overlay::Confirm(ConfirmDialog {
+                        title: self.t("confirm-poweroff-title"),
+                        message: self.t("confirm-power-message"),
+                        confirm_label: self.t("confirm-poweroff-label"),
+                        danger: true,
+                        action: ConfirmAction::PowerOff,
+                        focus: 0,
+                    });
+                }
             }
             MenuAction::About => {
                 let gio = self
                     .gio_message
                     .as_deref()
-                    .map(|e| format!("GIO: Problem – {e}"))
-                    .unwrap_or_else(|| "GIO: verfügbar".to_owned());
+                    .map(|e| self.tf("menu-gio-problem", &[("error", e.into())]))
+                    .unwrap_or_else(|| self.t("menu-gio-ok"));
+                let data = self.paths.data_dir().display().to_string();
+                let settings = self.paths.settings_path().display().to_string();
+                let cache = self.paths.cache_dir().display().to_string();
+                let log = self.paths.log_path().display().to_string();
                 self.overlay = Overlay::Message(MessageDialog {
                     title: format!("{APP_NAME} {APP_VERSION}"),
-                    message: format!(
-                        "Controller-first Fullscreen-Spielebibliothek für KDE Plasma/Wayland.\n\n\
-                         Daten: {}\nEinstellungen: {}\nCache: {}\nLog: {}\n{gio}\n\n\
-                         Start erfolgt ausschließlich über `gio launch`. CouchDeck erkennt nicht, \
-                         ob ein Spiel noch läuft. Die Admin-PIN ist eine lokale UI-Sperre, keine \
-                         Betriebssystem-Sicherheitsgrenze.",
-                        self.paths.data_dir().display(),
-                        self.paths.settings_path().display(),
-                        self.paths.cache_dir().display(),
-                        self.paths.log_path().display(),
+                    message: self.tf(
+                        "menu-about-text",
+                        &[
+                            ("data", data.into()),
+                            ("settings", settings.into()),
+                            ("cache", cache.into()),
+                            ("log", log.into()),
+                            ("gio", gio.into()),
+                        ],
                     ),
                     severity: MessageSeverity::Info,
-                    close_label: "Schließen".to_owned(),
+                    close_label: self.t("common-close"),
                 });
             }
             MenuAction::Quit => {
-                self.overlay = Overlay::Confirm(ConfirmDialog {
-                    title: "CouchDeck beenden?".to_owned(),
-                    message: "Ein bereits gestartetes Spiel wird nicht beendet.".to_owned(),
-                    confirm_label: "Beenden".to_owned(),
-                    danger: false,
-                    action: ConfirmAction::Quit,
-                    focus: 0,
-                });
+                if self.is_active_child() {
+                    self.request_parent_action(ParentAction::Quit);
+                } else {
+                    self.overlay = Overlay::Confirm(ConfirmDialog {
+                        title: self.t("confirm-quit-title"),
+                        message: self.t("confirm-quit-message"),
+                        confirm_label: self.t("confirm-quit-label"),
+                        danger: false,
+                        action: ConfirmAction::Quit,
+                        focus: 0,
+                    });
+                }
             }
         }
     }
@@ -843,14 +1329,12 @@ impl CouchDeckApp {
 
     pub fn open_import(&mut self) {
         if !self.is_admin() {
-            self.notify_warning("Nur Admins dürfen Desktop-Dateien importieren.");
+            self.notify_warning_key("app-admin-import-only");
             return;
         }
         if let Some(profile_id) = self.active_profile_id() {
             if self.secrets.has_pin(profile_id) && !self.admin_unlocked {
-                self.notify_warning(
-                    "Admin-PIN erforderlich. Nach dem Entsperren findest du den Import unter Spiele.",
-                );
+                self.notify_warning(self.t("app-admin-import-hint"));
                 self.open_admin_games();
                 return;
             }
@@ -881,18 +1365,19 @@ impl CouchDeckApp {
                 });
             }
             Err(err) => {
-                self.message_dialog(
-                    "Desktop-Datei ungültig",
-                    format!("{err}\n\nDie Datei wurde nicht verändert."),
-                    MessageSeverity::Error,
+                let title = self.t("app-desktop-invalid-title");
+                let message = self.tf(
+                    "app-desktop-invalid-message",
+                    &[("error", err.to_string().into())],
                 );
+                self.message_dialog(title, message, MessageSeverity::Error);
             }
         }
     }
 
     pub fn import_entry(&mut self, entry: &DesktopFile) {
         if !self.is_admin() {
-            self.notify_warning("Nur Admins dürfen Einträge importieren.");
+            self.notify_warning_key("app-import-not-admin");
             return;
         }
         let canonical = std::fs::canonicalize(&entry.path).unwrap_or_else(|_| entry.path.clone());
@@ -903,7 +1388,7 @@ impl CouchDeckApp {
         });
         if duplicate {
             self.overlay = Overlay::None;
-            self.notify_warning("Dieser Desktop-Eintrag ist bereits in der Bibliothek.");
+            self.notify_warning_key("app-already-imported");
             return;
         }
         let ids: Vec<String> = self.library.games.iter().map(|g| g.id.clone()).collect();
@@ -933,7 +1418,7 @@ impl CouchDeckApp {
         self.overlay = Overlay::None;
         self.save_library();
         self.focus_on_game(&id);
-        self.notify(format!("Importiert: {}", entry.name));
+        self.notify(self.tf("app-imported", &[("name", entry.name.clone().into())]));
         log_info(
             "import",
             format!("{} -> {}", entry.name, entry.path.display()),
@@ -975,7 +1460,7 @@ impl CouchDeckApp {
             path_input: String::new(),
             error: None,
         };
-        refresh_picker(&mut state);
+        refresh_picker(&mut state, &self.i18n);
         state.path_input = state.dir.to_string_lossy().to_string();
         self.overlay = Overlay::Picker(state);
     }
@@ -986,7 +1471,7 @@ impl CouchDeckApp {
                 state.dir = dir;
                 state.selected = 0;
                 state.error = None;
-                refresh_picker(state);
+                refresh_picker(state, &self.i18n);
                 state.path_input = state.dir.to_string_lossy().to_string();
             } else {
                 state.error = Some(format!("Kein Verzeichnis: {}", dir.display()));
@@ -999,7 +1484,7 @@ impl CouchDeckApp {
             if let Some(parent) = state.dir.parent().map(Path::to_path_buf) {
                 state.dir = parent;
                 state.selected = 0;
-                refresh_picker(state);
+                refresh_picker(state, &self.i18n);
                 state.path_input = state.dir.to_string_lossy().to_string();
             }
         }
@@ -1020,8 +1505,14 @@ impl CouchDeckApp {
             self.picker_navigate(path);
         } else if path.is_file() {
             self.picker_confirm_path(path);
-        } else if let Overlay::Picker(state) = &mut self.overlay {
-            state.error = Some(format!("Pfad nicht gefunden: {}", path.display()));
+        } else {
+            let message = self.tf(
+                "app-picker-path-not-found",
+                &[("path", path.display().to_string().into())],
+            );
+            if let Overlay::Picker(state) = &mut self.overlay {
+                state.error = Some(message);
+            }
         }
     }
 
@@ -1068,28 +1559,28 @@ impl CouchDeckApp {
                     .library
                     .game(game_id)
                     .map(GameEntry::title)
-                    .ok_or_else(|| "Spieleintrag nicht gefunden.".to_owned())?;
+                    .ok_or_else(|| self.t("app-game-not-found"))?;
                 let relative =
                     artwork::import_image(source, &self.paths, ArtworkKind::Cover, game_id)?;
                 if let Some(game) = self.library.game_mut(game_id) {
                     game.cover = Some(relative);
                 }
                 self.save_library();
-                Ok(format!("Cover für {title} aktualisiert."))
+                Ok(self.tf("app-cover-updated", &[("title", title.into())]))
             }
             PickerPurpose::Background(game_id) => {
                 let title = self
                     .library
                     .game(game_id)
                     .map(GameEntry::title)
-                    .ok_or_else(|| "Spieleintrag nicht gefunden.".to_owned())?;
+                    .ok_or_else(|| self.t("app-game-not-found"))?;
                 let relative =
                     artwork::import_image(source, &self.paths, ArtworkKind::Background, game_id)?;
                 if let Some(game) = self.library.game_mut(game_id) {
                     game.background = Some(relative);
                 }
                 self.save_library();
-                Ok(format!("Hintergrund für {title} aktualisiert."))
+                Ok(self.tf("app-game-background-updated", &[("title", title.into())]))
             }
             PickerPurpose::GlobalBackground => {
                 let relative = artwork::import_image(
@@ -1100,7 +1591,7 @@ impl CouchDeckApp {
                 )?;
                 self.settings.background = Some(relative);
                 self.save_settings();
-                Ok("Globales Hintergrundbild aktualisiert.".to_owned())
+                Ok(self.t("app-global-background-updated"))
             }
             PickerPurpose::Avatar(profile_id) => {
                 let name = self
@@ -1109,7 +1600,7 @@ impl CouchDeckApp {
                     .iter()
                     .find(|p| &p.id == profile_id)
                     .map(|p| p.name.clone())
-                    .ok_or_else(|| "Profil nicht gefunden.".to_owned())?;
+                    .ok_or_else(|| self.t("app-profile-not-found"))?;
                 let relative =
                     artwork::import_image(source, &self.paths, ArtworkKind::Avatar, profile_id)?;
                 if let Some(profile) = self
@@ -1121,7 +1612,32 @@ impl CouchDeckApp {
                     profile.avatar = Some(relative);
                 }
                 self.save_library();
-                Ok(format!("Avatar für {name} aktualisiert."))
+                Ok(self.tf("app-avatar-updated", &[("name", name.into())]))
+            }
+            PickerPurpose::ProfileBackground(profile_id) => {
+                let name = self
+                    .library
+                    .profiles
+                    .iter()
+                    .find(|p| &p.id == profile_id)
+                    .map(|p| p.name.clone())
+                    .ok_or_else(|| self.t("app-profile-not-found"))?;
+                let relative = artwork::import_image(
+                    source,
+                    &self.paths,
+                    ArtworkKind::Background,
+                    profile_id,
+                )?;
+                if let Some(profile) = self
+                    .library
+                    .profiles
+                    .iter_mut()
+                    .find(|p| &p.id == profile_id)
+                {
+                    profile.background = Some(relative);
+                }
+                self.save_library();
+                Ok(self.tf("app-profile-background-updated", &[("name", name.into())]))
             }
             PickerPurpose::ImportDesktop => unreachable!(),
         }
@@ -1131,7 +1647,7 @@ impl CouchDeckApp {
         if let Some(game) = self.library.game_mut(game_id) {
             game.cover = None;
             self.save_library();
-            self.notify("Cover-Override entfernt.");
+            self.notify_key("app-cover-removed");
         }
     }
 
@@ -1139,14 +1655,27 @@ impl CouchDeckApp {
         if let Some(game) = self.library.game_mut(game_id) {
             game.background = None;
             self.save_library();
-            self.notify("Spiel-Hintergrund entfernt.");
+            self.notify_key("app-game-background-removed");
         }
     }
 
     pub fn clear_global_background(&mut self) {
         self.settings.background = None;
         self.save_settings();
-        self.notify("Globales Hintergrundbild entfernt.");
+        self.notify_key("app-global-background-removed");
+    }
+
+    pub fn clear_profile_background(&mut self, profile_id: &str) {
+        if let Some(profile) = self
+            .library
+            .profiles
+            .iter_mut()
+            .find(|p| p.id == profile_id)
+        {
+            profile.background = None;
+            self.save_library();
+            self.notify_key("app-profile-background-removed");
+        }
     }
 
     pub fn clear_profile_avatar(&mut self, profile_id: &str) {
@@ -1158,7 +1687,7 @@ impl CouchDeckApp {
         {
             profile.avatar = None;
             self.save_library();
-            self.notify("Avatar entfernt.");
+            self.notify_key("app-avatar-removed");
         }
     }
 
@@ -1172,10 +1701,13 @@ impl CouchDeckApp {
             role: crate::model::ProfileRole::Player,
             avatar: None,
             favorites: Vec::new(),
+            background: None,
+            is_child: false,
+            daily_limit_minutes: None,
         });
         self.admin.selected_profile = Some(id);
         self.save_library();
-        self.notify("Neues lokales Profil angelegt. Name im Feld bearbeiten.");
+        self.notify_key("app-new-profile");
     }
 
     pub fn remove_profile(&mut self, profile_id: &str) {
@@ -1195,7 +1727,18 @@ impl CouchDeckApp {
             .filter(|p| p.is_admin())
             .count();
         if removing_admin && admin_count <= 1 {
-            self.notify_warning("Das letzte Admin-Profil kann nicht entfernt werden.");
+            self.notify_warning_key("app-last-admin-remove-blocked");
+            return;
+        }
+        if self.secrets.has_pin(profile_id)
+            && self.secrets.pins.len() <= 1
+            && self.library.profiles.iter().any(|profile| profile.is_child)
+        {
+            self.message_key(
+                "app-last-pin-title",
+                "app-last-pin-message",
+                MessageSeverity::Error,
+            );
             return;
         }
         let was_active = self
@@ -1206,6 +1749,7 @@ impl CouchDeckApp {
             .unwrap_or(false);
         self.library.profiles.remove(index);
         self.secrets.remove_pin(profile_id);
+        self.timekeeping.remove_profile(profile_id);
         for game in &mut self.library.games {
             if let Some(ids) = &mut game.visible_to_profiles {
                 ids.retain(|id| id != profile_id);
@@ -1231,7 +1775,8 @@ impl CouchDeckApp {
         }
         self.save_library();
         self.save_secrets();
-        self.notify("Profil entfernt.");
+        self.save_timekeeping();
+        self.notify_key("app-profile-removed");
     }
 
     pub fn remove_game(&mut self, game_id: &str) {
@@ -1248,7 +1793,7 @@ impl CouchDeckApp {
         let count = self.visible_games().len();
         self.set_focus(self.focus, count);
         self.save_library();
-        self.notify("Eintrag aus der CouchDeck-Bibliothek entfernt. Desktop-Datei unverändert.");
+        self.notify_key("app-entry-removed");
     }
 
     pub fn toggle_game_hidden(&mut self, game_id: &str) {
@@ -1261,9 +1806,9 @@ impl CouchDeckApp {
         if let Some(hidden) = hidden {
             self.save_library();
             self.notify(if hidden {
-                "Eintrag ausgeblendet."
+                self.t("app-entry-hidden")
             } else {
-                "Eintrag wieder sichtbar."
+                self.t("app-entry-shown")
             });
         }
     }
@@ -1310,9 +1855,9 @@ impl CouchDeckApp {
             return;
         };
         let Ok(entry) = desktop::parse_desktop_file(&game.desktop_file) else {
-            self.message_dialog(
-                "Steam-Reparatur nicht möglich",
-                "Die Desktop-Datei kann nicht gelesen werden.",
+            self.message_key(
+                "app-steam-repair-not-possible-title",
+                "app-desktop-unreadable",
                 MessageSeverity::Error,
             );
             return;
@@ -1321,36 +1866,36 @@ impl CouchDeckApp {
             return;
         };
         let Some(steam) = desktop::detect_steam_shortcut(exec) else {
-            self.notify_warning("Dieser Eintrag ist kein erkannter Steam-Rungameid-Shortcut.");
+            self.notify_warning_key("app-not-steam-shortcut");
             return;
         };
         if steam.flatpak {
-            self.notify("Der Eintrag nutzt bereits Steam als Flatpak.");
+            self.notify_key("app-steam-already-flatpak");
             return;
         }
         if !desktop::flatpak_available() {
-            self.message_dialog(
-                "Flatpak fehlt",
-                "Der Befehl `flatpak` wurde nicht gefunden. Die Reparatur würde einen funktionslosen Eintrag erzeugen.",
+            self.message_key(
+                "app-flatpak-missing-title",
+                "app-flatpak-missing-message",
                 MessageSeverity::Error,
             );
             return;
         }
         if !desktop::flatpak_app_installed(&self.paths, "com.valvesoftware.Steam") {
-            self.message_dialog(
-                "Steam-Flatpak nicht gefunden",
-                "com.valvesoftware.Steam wurde nicht installiert gefunden. Die Reparatur würde einen funktionslosen Eintrag erzeugen.",
+            self.message_key(
+                "app-steam-flatpak-missing-title",
+                "app-steam-flatpak-missing-message",
                 MessageSeverity::Error,
             );
             return;
         }
         self.overlay = Overlay::Confirm(ConfirmDialog {
-            title: "Steam-Flatpak-Variante erzeugen?".to_owned(),
-            message: format!(
-                "Die Originaldatei bleibt unverändert.\n\nNeu erzeugt wird eine separate verwaltete Datei mit:\nflatpak run com.valvesoftware.Steam steam://rungameid/{}\n\nDer neue Eintrag wird zusätzlich in die Bibliothek aufgenommen.",
-                steam.app_id
+            title: self.t("app-confirm-steam-title"),
+            message: self.tf(
+                "app-confirm-steam-message",
+                &[("id", steam.app_id.clone().into())],
             ),
-            confirm_label: "Verwaltete Datei erzeugen".to_owned(),
+            confirm_label: self.t("app-confirm-steam-label"),
             danger: false,
             action: ConfirmAction::RepairSteam(game_id.to_owned()),
             focus: 0,
@@ -1365,7 +1910,7 @@ impl CouchDeckApp {
             Ok(entry) => entry,
             Err(err) => {
                 self.message_dialog(
-                    "Steam-Reparatur fehlgeschlagen",
+                    self.t("app-steam-repair-failed"),
                     err.to_string(),
                     MessageSeverity::Error,
                 );
@@ -1377,14 +1922,13 @@ impl CouchDeckApp {
             .as_deref()
             .and_then(desktop::detect_steam_shortcut)
         else {
-            self.notify_error("Steam-App-ID konnte nicht ermittelt werden.");
             return;
         };
         if steam.flatpak {
-            self.notify("Keine Reparatur nötig.");
+            self.notify_key("app-no-repair");
             return;
         }
-        let title = format!("{} (Steam Flatpak)", game.title());
+        let title = self.tf("app-steam-entry-title", &[("title", game.title().into())]);
         let managed_path = match desktop::write_managed_steam(
             &self.paths,
             &steam.app_id,
@@ -1394,7 +1938,7 @@ impl CouchDeckApp {
             Ok(path) => path,
             Err(err) => {
                 self.message_dialog(
-                    "Steam-Reparatur fehlgeschlagen",
+                    self.t("app-steam-repair-failed"),
                     err,
                     MessageSeverity::Error,
                 );
@@ -1427,26 +1971,18 @@ impl CouchDeckApp {
         self.overlay = Overlay::None;
         self.save_library();
         self.focus_on_game(&id);
-        self.notify("Verwalteter Steam-Flatpak-Eintrag erzeugt. Original unverändert.");
+        self.notify_key("app-steam-managed-created");
     }
 
     pub fn create_prism_entry(&mut self, instance_id: &str, title: &str) -> Result<String, String> {
         let Some(instance_dir) = desktop::find_prism_instance(&self.paths, instance_id) else {
-            return Err(format!(
-                "Prism-Instanzordner '{instance_id}' wurde nicht gefunden. --launch erwartet den Ordnernamen."
-            ));
+            return Err(self.tf("app-prism-instance-missing", &[("id", instance_id.into())]));
         };
         if !desktop::flatpak_available() {
-            return Err(
-                "Der Befehl `flatpak` wurde nicht gefunden. Der erzeugte Eintrag würde nicht starten."
-                    .to_owned(),
-            );
+            return Err(self.t("app-prism-flatpak-missing").to_owned());
         }
         if !desktop::flatpak_app_installed(&self.paths, "org.prismlauncher.PrismLauncher") {
-            return Err(
-                "org.prismlauncher.PrismLauncher ist nicht als Flatpak installiert. Der erzeugte Eintrag würde nicht starten."
-                    .to_owned(),
-            );
+            return Err(self.t("app-prism-not-installed").to_owned());
         }
         let label = if title.trim().is_empty() {
             desktop::prism_instance_label(instance_id, &instance_dir)
@@ -1479,15 +2015,21 @@ impl CouchDeckApp {
         });
         self.save_library();
         self.focus_on_game(&id);
-        self.notify(format!(
-            "Prism-Eintrag für '{instance_id}' erzeugt. Cover kann jetzt zugewiesen werden."
-        ));
+        self.notify(self.tf("app-prism-created", &[("id", instance_id.into())]));
         Ok(id)
     }
 
     // ---------------------------------------------------------------------
     // Desktop mode / system power
     // ---------------------------------------------------------------------
+
+    pub fn request_minimize(&mut self, ctx: &egui::Context) {
+        if self.is_active_child() {
+            self.request_parent_action(ParentAction::Minimize);
+        } else {
+            self.minimize_to_desktop(ctx);
+        }
+    }
 
     /// Leave the borderless fullscreen overlay and minimize to KDE. The
     /// fullscreen exit must be processed by the compositor before minimizing,
@@ -1499,10 +2041,10 @@ impl CouchDeckApp {
             self.pending_minimize = true;
             ctx.send_viewport_cmd(ViewportCommand::Decorations(true));
             ctx.send_viewport_cmd(ViewportCommand::Fullscreen(false));
-            self.notify("Wechsle zu KDE …");
+            self.notify_key("app-minimizing-kde");
         } else {
             ctx.send_viewport_cmd(ViewportCommand::Minimized(true));
-            self.notify("Launcher minimiert. Über die Taskleiste wiederherstellen.");
+            self.notify_key("app-minimized");
         }
         ctx.request_repaint();
     }
@@ -1513,19 +2055,27 @@ impl CouchDeckApp {
         }
         self.pending_minimize = false;
         ctx.send_viewport_cmd(ViewportCommand::Minimized(true));
-        self.notify("Launcher minimiert. Über die Taskleiste wiederherstellen.");
+        self.notify_key("app-minimized");
         ctx.request_repaint();
     }
 
     fn poll_system(&mut self) {
         if let Some(outcome) = self.system.poll() {
             if outcome.success {
-                log_info("power", &outcome.message);
+                log_info("power", "Systembefehl an systemd übergeben.");
             } else {
+                if self.is_active_child() {
+                    self.allow_close = false;
+                }
                 log_warn("power", &outcome.message);
+                let detail = if outcome.message.trim().is_empty() {
+                    self.t("power-disconnected")
+                } else {
+                    outcome.message.clone()
+                };
                 self.message_dialog(
-                    "Systembefehl fehlgeschlagen",
-                    outcome.message,
+                    self.t("power-error-title"),
+                    self.tf("power-error-message", &[("detail", detail.into())]),
                     MessageSeverity::Error,
                 );
             }
@@ -1551,7 +2101,7 @@ impl CouchDeckApp {
             if self.is_admin() {
                 self.open_import();
             } else {
-                self.notify_warning("Die Bibliothek ist leer. Ein Admin kann Spiele hinzufügen.");
+                self.notify_warning_key("app-library-empty");
             }
             return;
         };
@@ -1560,7 +2110,7 @@ impl CouchDeckApp {
 
     pub fn launch_game(&mut self, game: &GameEntry) {
         if self.launch.is_some() || self.launch_rx.is_some() {
-            self.notify_warning("Ein Startvorgang läuft bereits.");
+            self.notify_warning_key("app-launch-running");
             return;
         }
         if let Some(started) = self.last_launch_started {
@@ -1568,24 +2118,25 @@ impl CouchDeckApp {
                 return;
             }
         }
+        if !self.check_start_allowed() {
+            return;
+        }
         if self.gio_message.is_some() {
-            self.message_dialog(
-                "GIO fehlt",
-                "Ohne `gio` (GLib/GIO) können keine Desktop-Einträge gestartet werden. Bitte GLib installieren bzw. die Bazzite-Installation prüfen.",
+            self.message_key(
+                "app-gio-missing-title",
+                "app-gio-missing-message",
                 MessageSeverity::Error,
             );
             return;
         }
         let title = game.title();
         if !game.desktop_file.is_file() {
-            self.message_dialog(
-                "Desktop-Datei fehlt",
-                format!(
-                    "{}\n\nDer Eintrag bleibt in der Bibliothek, kann aber nicht gestartet werden. Ein Admin kann ihn entfernen oder erneut importieren.",
-                    game.desktop_file.display()
-                ),
-                MessageSeverity::Error,
+            let title = self.t("app-desktop-missing-title");
+            let message = self.tf(
+                "app-desktop-missing-message",
+                &[("path", game.desktop_file.display().to_string().into())],
             );
+            self.message_dialog(title, message, MessageSeverity::Error);
             return;
         }
         log_info(
@@ -1622,24 +2173,27 @@ impl CouchDeckApp {
                         state.outcome = Some(outcome);
                         state.completed_at = Some(Instant::now());
                     } else {
-                        self.notify(format!("Startbefehl gesendet: {}", outcome.title));
+                        self.notify(self.tf(
+                            "app-launch-sent",
+                            &[("title", outcome.title.clone().into())],
+                        ));
                     }
                 } else {
                     self.launch = None;
-                    self.message_dialog(
-                        format!("Start fehlgeschlagen: {}", outcome.title),
-                        outcome.message,
-                        MessageSeverity::Error,
+                    let title = self.tf(
+                        "app-launch-failed",
+                        &[("title", outcome.title.clone().into())],
                     );
+                    self.message_dialog(title, outcome.message, MessageSeverity::Error);
                 }
             }
             Some(Err(std::sync::mpsc::TryRecvError::Empty)) => {}
             Some(Err(std::sync::mpsc::TryRecvError::Disconnected)) => {
                 self.launch_rx = None;
                 self.launch = None;
-                self.message_dialog(
-                    "Start-Thread beendet",
-                    "Der Startvorgang wurde unerwartet beendet. Bitte Log prüfen.",
+                self.message_key(
+                    "app-launch-thread-ended-title",
+                    "app-launch-thread-ended-message",
                     MessageSeverity::Error,
                 );
             }
@@ -1661,9 +2215,7 @@ impl CouchDeckApp {
                 .map(|state| state.title.clone())
                 .unwrap_or_default();
             self.launch = None;
-            self.notify(format!(
-                "Startbefehl für {title} gesendet. CouchDeck erkennt das Spielende nicht automatisch."
-            ));
+            self.notify(self.tf("app-launch-note", &[("title", title.into())]));
         }
     }
 
@@ -1689,6 +2241,9 @@ impl CouchDeckApp {
         if changed {
             if focused {
                 self.discard_controller_nav = true;
+                // A previous parent-authorized minimise is over once the user
+                // restores the launcher.
+                self.allow_child_minimize = false;
                 log_info(
                     "controller",
                     "Fensterfokus gewonnen; Eingabepuffer wird verworfen.",
@@ -1703,6 +2258,31 @@ impl CouchDeckApp {
                     "Fensterfokus verloren; Gamepad-Navigation pausiert.",
                 );
             }
+        }
+    }
+
+    fn handle_child_window_controls(&mut self, ctx: &egui::Context) {
+        // Best effort against WM-level close/minimise paths. Alt+F4 and window
+        // buttons are intentionally routed through the same parent PIN as the
+        // in-app actions.
+        if ctx.input(|input| input.viewport().close_requested())
+            && self.is_active_child()
+            && !self.allow_close
+        {
+            ctx.send_viewport_cmd(ViewportCommand::CancelClose);
+            // Do not replace an already open PIN/confirmation dialog when the
+            // compositor keeps reporting the close request for a few frames.
+            if !matches!(self.overlay, Overlay::Pin(_) | Overlay::Confirm(_)) {
+                self.request_parent_action(ParentAction::Quit);
+            }
+        }
+
+        let minimized = ctx
+            .input(|input| input.viewport().minimized)
+            .unwrap_or(false);
+        if minimized && self.is_active_child() && !self.allow_child_minimize {
+            ctx.send_viewport_cmd(ViewportCommand::Minimized(false));
+            self.notify_warning_key("app-minimize-parent-only");
         }
     }
 
@@ -1723,12 +2303,14 @@ impl CouchDeckApp {
                     log_info("controller", format!("Verbunden: {name}"));
                     self.controllers.push(name.clone());
                     if window_focused {
-                        self.notify(format!("Controller verbunden: {name}"));
+                        self.notify(self.tf("app-controller-connected", &[("name", name.into())]));
                     }
                 }
                 ControllerEvent::Disconnected(name) => {
-                    let message =
-                        format!("Controller getrennt: {name}. Andere Eingabegeräte bleiben aktiv.");
+                    let message = self.tf(
+                        "app-controller-disconnected",
+                        &[("name", name.clone().into())],
+                    );
                     log_info("controller", &message);
                     if let Some(index) = self.controllers.iter().position(|n| n == &name) {
                         self.controllers.remove(index);
@@ -1845,7 +2427,7 @@ impl CouchDeckApp {
                         self.focus_changed_at = Instant::now();
                     }
                 }
-                NavAction::Confirm => self.activate_profile(self.profile_focus),
+                NavAction::Confirm => self.request_activate_profile(self.profile_focus),
                 NavAction::Back => {
                     self.screen = Screen::Library;
                 }
@@ -1882,16 +2464,20 @@ impl CouchDeckApp {
                 self.admin_unlocked = false;
                 self.screen = Screen::Library;
                 self.notify(match backup {
-                    Some(path) => format!(
-                        "Neue Bibliothek angelegt. Alte Datei gesichert unter {}.",
-                        path.display()
+                    Some(path) => self.tf(
+                        "app-new-library-backup",
+                        &[("path", path.display().to_string().into())],
                     ),
-                    None => "Neue Bibliothek angelegt.".to_owned(),
+                    None => self.t("app-new-library-created"),
                 });
             }
             Err(err) => {
+                let message = self.tf(
+                    "app-fatal-reset-failed",
+                    &[("error", err.to_string().into())],
+                );
                 if let Some(fatal) = &mut self.fatal {
-                    fatal.message = format!("Zurücksetzen fehlgeschlagen: {err}");
+                    fatal.message = message;
                 }
             }
         }
@@ -2048,7 +2634,7 @@ impl CouchDeckApp {
                 NavAction::Confirm => {
                     let focus = pad.focus;
                     self.overlay = Overlay::Pin(pad);
-                    self.pin_press(focus);
+                    self.pin_press(ctx, focus);
                 }
                 NavAction::Back => {
                     self.overlay = Overlay::None;
@@ -2075,6 +2661,103 @@ impl CouchDeckApp {
                     self.overlay = Overlay::Confirm(dialog);
                 }
             },
+            Overlay::TimeExpired(mut state) => match action {
+                NavAction::Up | NavAction::Left => {
+                    state.focus = 0;
+                    self.overlay = Overlay::TimeExpired(state);
+                }
+                NavAction::Down | NavAction::Right => {
+                    state.focus = 1;
+                    self.overlay = Overlay::TimeExpired(state);
+                }
+                NavAction::Confirm => {
+                    if state.focus == 0 {
+                        self.overlay = Overlay::None;
+                        self.request_extra_time();
+                    } else {
+                        self.overlay = Overlay::None;
+                    }
+                }
+                NavAction::Back | NavAction::Menu => self.overlay = Overlay::None,
+                _ => self.overlay = Overlay::TimeExpired(state),
+            },
+            Overlay::ExtraTime(mut dialog) => match action {
+                NavAction::Left if dialog.custom_mode => {
+                    dialog.custom_minutes = dialog.custom_minutes.saturating_sub(5).max(5);
+                    self.overlay = Overlay::ExtraTime(dialog);
+                }
+                NavAction::Right if dialog.custom_mode => {
+                    dialog.custom_minutes = (dialog.custom_minutes + 5).min(240);
+                    self.overlay = Overlay::ExtraTime(dialog);
+                }
+                NavAction::Up if dialog.custom_mode => {
+                    dialog.custom_minutes = (dialog.custom_minutes + 15).min(240);
+                    self.overlay = Overlay::ExtraTime(dialog);
+                }
+                NavAction::Down if dialog.custom_mode => {
+                    dialog.custom_minutes = dialog.custom_minutes.saturating_sub(15).max(5);
+                    self.overlay = Overlay::ExtraTime(dialog);
+                }
+                NavAction::Up | NavAction::Left if !dialog.custom_mode => {
+                    dialog.focus = if dialog.focus == 0 {
+                        3
+                    } else {
+                        dialog.focus - 1
+                    };
+                    self.overlay = Overlay::ExtraTime(dialog);
+                }
+                NavAction::Down | NavAction::Right if !dialog.custom_mode => {
+                    dialog.focus = (dialog.focus + 1).min(3);
+                    self.overlay = Overlay::ExtraTime(dialog);
+                }
+                NavAction::Confirm => {
+                    if dialog.custom_mode {
+                        match self.grant_extra_minutes(&dialog.profile_id, dialog.custom_minutes) {
+                            Ok(()) => {}
+                            Err(err) => {
+                                dialog.error = Some(err);
+                                self.overlay = Overlay::ExtraTime(dialog);
+                            }
+                        }
+                    } else {
+                        match dialog.focus {
+                            0 => {
+                                if let Err(err) = self.grant_extra_minutes(&dialog.profile_id, 5) {
+                                    dialog.error = Some(err);
+                                    self.overlay = Overlay::ExtraTime(dialog);
+                                }
+                            }
+                            1 => {
+                                if let Err(err) = self.grant_extra_minutes(&dialog.profile_id, 15) {
+                                    dialog.error = Some(err);
+                                    self.overlay = Overlay::ExtraTime(dialog);
+                                }
+                            }
+                            2 => {
+                                if let Err(err) = self.grant_extra_minutes(&dialog.profile_id, 30) {
+                                    dialog.error = Some(err);
+                                    self.overlay = Overlay::ExtraTime(dialog);
+                                }
+                            }
+                            _ => {
+                                dialog.custom_mode = true;
+                                dialog.custom_minutes = 15;
+                                self.overlay = Overlay::ExtraTime(dialog);
+                            }
+                        }
+                    }
+                }
+                NavAction::Back => {
+                    if dialog.custom_mode {
+                        dialog.custom_mode = false;
+                        self.overlay = Overlay::ExtraTime(dialog);
+                    } else {
+                        self.overlay = Overlay::None;
+                    }
+                }
+                NavAction::Menu => self.overlay = Overlay::None,
+                _ => self.overlay = Overlay::ExtraTime(dialog),
+            },
             Overlay::Message(_) => {
                 if matches!(
                     action,
@@ -2086,7 +2769,7 @@ impl CouchDeckApp {
         }
     }
 
-    pub fn pin_press(&mut self, index: usize) {
+    pub fn pin_press(&mut self, ctx: &egui::Context, index: usize) {
         let overlay = std::mem::replace(&mut self.overlay, Overlay::None);
         let Overlay::Pin(mut pad) = overlay else {
             return;
@@ -2111,10 +2794,19 @@ impl CouchDeckApp {
                     ) {
                         let view = self.pending_admin_view.take().unwrap_or(AdminView::Menu);
                         self.enter_admin(view);
-                        self.notify("Admin-Bereich entsperrt.");
+                        self.notify_key("app-admin-unlocked");
                         return;
                     } else {
-                        pad.error = Some("PIN falsch.".to_owned());
+                        pad.error = Some(self.t("app-pin-wrong"));
+                        pad.digits.clear();
+                    }
+                }
+                PinPurpose::ParentAuth { action } => {
+                    if self.verify_any_admin_pin(&pad.digits) {
+                        self.execute_parent_action(ctx, action);
+                        return;
+                    } else {
+                        pad.error = Some(self.t("app-admin-pin-wrong"));
                         pad.digits.clear();
                     }
                 }
@@ -2130,14 +2822,14 @@ impl CouchDeckApp {
                 }
                 PinPurpose::ConfirmSet { profile_id, first } => {
                     if pad.digits != first {
-                        pad.error = Some("Die PINs stimmen nicht überein.".to_owned());
+                        pad.error = Some(self.t("app-pin-mismatch"));
                         pad.digits.clear();
                     } else {
                         match self.secrets.set_pin(&profile_id, &pad.digits) {
                             Ok(()) => {
                                 self.save_secrets();
                                 self.overlay = Overlay::None;
-                                self.notify("Admin-PIN gesetzt (Argon2id, gehasht).");
+                                self.notify_key("app-admin-pin-set");
                                 return;
                             }
                             Err(err) => {
@@ -2180,10 +2872,9 @@ impl CouchDeckApp {
             return;
         };
         self.overlay = Overlay::Confirm(ConfirmDialog {
-            title: "Admin-PIN entfernen?".to_owned(),
-            message: "Danach ist der Admin-Bereich ohne PIN erreichbar. Das ist nur eine lokale UI-Sperre."
-                .to_owned(),
-            confirm_label: "PIN entfernen".to_owned(),
+            title: self.t("app-remove-pin-title"),
+            message: self.t("app-remove-pin-message"),
+            confirm_label: self.t("app-remove-pin-label"),
             danger: true,
             action: ConfirmAction::RemovePin(profile_id),
             focus: 0,
@@ -2203,11 +2894,23 @@ impl CouchDeckApp {
                 self.admin.view = AdminView::Profiles;
             }
             ConfirmAction::RemovePin(profile_id) => {
+                if self.secrets.pins.len() <= 1
+                    && self.library.profiles.iter().any(|profile| profile.is_child)
+                {
+                    self.overlay = Overlay::None;
+                    self.admin.view = AdminView::Pin;
+                    self.message_key(
+                        "app-last-pin-title",
+                        "app-last-pin-message",
+                        MessageSeverity::Error,
+                    );
+                    return;
+                }
                 self.secrets.remove_pin(&profile_id);
                 self.save_secrets();
                 self.overlay = Overlay::None;
                 self.admin.view = AdminView::Pin;
-                self.notify("Admin-PIN entfernt.");
+                self.notify_key("app-pin-removed");
             }
             ConfirmAction::RepairSteam(id) => {
                 self.apply_steam_repair(&id);
@@ -2215,14 +2918,17 @@ impl CouchDeckApp {
             }
             ConfirmAction::Reboot => {
                 self.overlay = Overlay::None;
+                self.allow_close = true;
                 self.system.start(SystemAction::Reboot);
             }
             ConfirmAction::PowerOff => {
                 self.overlay = Overlay::None;
+                self.allow_close = true;
                 self.system.start(SystemAction::PowerOff);
             }
             ConfirmAction::Quit => {
                 self.overlay = Overlay::None;
+                self.allow_close = true;
                 self.should_quit = true;
             }
         }
@@ -2233,13 +2939,14 @@ impl CouchDeckApp {
             .library
             .game(game_id)
             .map(GameEntry::title)
-            .unwrap_or_else(|| "Eintrag".to_owned());
+            .unwrap_or_else(|| self.t("app-entry"));
         self.overlay = Overlay::Confirm(ConfirmDialog {
-            title: "Eintrag entfernen?".to_owned(),
-            message: format!(
-                "'{title}' wird nur aus der CouchDeck-Bibliothek entfernt. Die Desktop-Datei und das Spiel bleiben unverändert."
+            title: self.t("app-remove-entry-title"),
+            message: self.tf(
+                "app-remove-entry-message",
+                &[("title", title.clone().into())],
             ),
-            confirm_label: "Aus Bibliothek entfernen".to_owned(),
+            confirm_label: self.t("app-remove-entry-label"),
             danger: true,
             action: ConfirmAction::RemoveGame(game_id.to_owned()),
             focus: 0,
@@ -2253,13 +2960,14 @@ impl CouchDeckApp {
             .iter()
             .find(|p| p.id == profile_id)
             .map(|p| p.name.clone())
-            .unwrap_or_else(|| "Profil".to_owned());
+            .unwrap_or_else(|| self.t("app-profile"));
         self.overlay = Overlay::Confirm(ConfirmDialog {
-            title: "Profil entfernen?".to_owned(),
-            message: format!(
-                "'{name}' und die zugehörige PIN werden aus der lokalen CouchDeck-Datei entfernt. Linux-Konten und Spiele bleiben unverändert."
+            title: self.t("app-remove-profile-title"),
+            message: self.tf(
+                "app-remove-profile-message",
+                &[("name", name.clone().into())],
             ),
-            confirm_label: "Profil entfernen".to_owned(),
+            confirm_label: self.t("app-remove-profile-label"),
             danger: true,
             action: ConfirmAction::RemoveProfile(profile_id.to_owned()),
             focus: 0,
@@ -2273,7 +2981,11 @@ impl CouchDeckApp {
     fn handle_global_keys(&mut self, ctx: &egui::Context) {
         let quit = ctx.input_mut(|input| input.consume_key(Modifiers::CTRL, Key::Q));
         if quit {
-            self.should_quit = true;
+            if self.is_active_child() {
+                self.request_parent_action(ParentAction::Quit);
+            } else {
+                self.should_quit = true;
+            }
         }
         if !self.system.is_active() {
             let fullscreen = ctx.input_mut(|input| input.consume_key(Modifiers::NONE, Key::F11));
@@ -2364,7 +3076,7 @@ impl CouchDeckApp {
                 }
             }
             if enter {
-                self.pin_press(11);
+                self.pin_press(ctx, 11);
             }
             return;
         }
@@ -2422,6 +3134,7 @@ impl eframe::App for CouchDeckApp {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         self.frame_count += 1;
         self.update_window_focus(ctx);
+        self.handle_child_window_controls(ctx);
         self.poll_controller(ctx);
         self.flush_admin_confirm(ctx);
         self.poll_launch();
@@ -2430,6 +3143,8 @@ impl eframe::App for CouchDeckApp {
         self.handle_global_keys(ctx);
         self.handle_keyboard(ctx);
         self.tick_launch_auto_close();
+        self.tick_time_budget(ctx);
+        self.maybe_show_time_expired();
         self.tick_system(ctx);
         crate::ui::draw(self, ctx);
         self.tick_toast(ctx);
@@ -2442,6 +3157,7 @@ impl eframe::App for CouchDeckApp {
         if self.fatal.is_none() {
             let _ = storage::save_library(&self.paths, &self.library);
             let _ = storage::save_settings(&self.paths, &self.settings);
+            let _ = timekeeping::save(&self.paths, &self.timekeeping);
         }
     }
 }
@@ -2457,7 +3173,7 @@ pub fn now_unix() -> u64 {
         .unwrap_or(0)
 }
 
-pub fn refresh_picker(state: &mut FilePickerState) {
+pub fn refresh_picker(state: &mut FilePickerState, i18n: &I18n) {
     state.entries.clear();
     let dir = state.dir.clone();
     let filter_desktop = state.purpose == PickerPurpose::ImportDesktop;
@@ -2498,7 +3214,10 @@ pub fn refresh_picker(state: &mut FilePickerState) {
             }
         }
     } else {
-        state.error = Some(format!("Verzeichnis nicht lesbar: {}", dir.display()));
+        state.error = Some(i18n.format(
+            "app-picker-dir-unreadable",
+            &[("path", dir.display().to_string().into())],
+        ));
     }
     dirs.sort_by(|a, b| a.name.to_lowercase().cmp(&b.name.to_lowercase()));
     files.sort_by(|a, b| a.name.to_lowercase().cmp(&b.name.to_lowercase()));
@@ -2511,7 +3230,13 @@ pub fn refresh_picker(state: &mut FilePickerState) {
 
 #[cfg(test)]
 mod tests {
-    use super::accept_controller_nav;
+    use super::{
+        accept_controller_nav, admin_pin_matches, profile_switch_requires_parent, start_is_blocked,
+        take_usage_seconds,
+    };
+    use crate::model::{AdminSecrets, Profile};
+    use crate::timekeeping::TimeStatus;
+    use std::time::Duration;
 
     #[test]
     fn controller_nav_requires_window_focus_and_no_stale_buffer() {
@@ -2519,5 +3244,97 @@ mod tests {
         assert!(!accept_controller_nav(false, false));
         assert!(!accept_controller_nav(true, true));
         assert!(!accept_controller_nav(false, true));
+    }
+
+    #[test]
+    fn profile_switch_from_child_requires_parent_pin() {
+        assert!(profile_switch_requires_parent(
+            true,
+            Some("child"),
+            "parent"
+        ));
+        assert!(!profile_switch_requires_parent(
+            true,
+            Some("child"),
+            "child"
+        ));
+        assert!(!profile_switch_requires_parent(
+            false,
+            Some("parent"),
+            "child"
+        ));
+        assert!(!profile_switch_requires_parent(true, None, "parent"));
+    }
+
+    #[test]
+    fn fractional_time_is_not_lost_between_frames() {
+        let mut remainder = Duration::ZERO;
+        assert_eq!(
+            take_usage_seconds(Duration::from_millis(400), &mut remainder),
+            0
+        );
+        assert_eq!(
+            take_usage_seconds(Duration::from_millis(400), &mut remainder),
+            0
+        );
+        assert_eq!(
+            take_usage_seconds(Duration::from_millis(400), &mut remainder),
+            1
+        );
+        assert!(remainder < Duration::from_secs(1));
+        assert_eq!(
+            take_usage_seconds(Duration::from_millis(600), &mut remainder),
+            0
+        );
+        assert_eq!(
+            take_usage_seconds(Duration::from_millis(200), &mut remainder),
+            1
+        );
+    }
+
+    #[test]
+    fn exhausted_budget_blocks_new_starts() {
+        let exhausted = TimeStatus {
+            limited: true,
+            used_seconds: 600,
+            bonus_minutes: 0,
+            remaining_seconds: 0,
+            remaining_minutes: 0,
+            exhausted: true,
+        };
+        assert!(start_is_blocked(Some(&exhausted)));
+        assert!(!start_is_blocked(None));
+        let remaining = TimeStatus {
+            remaining_seconds: 60,
+            remaining_minutes: 1,
+            exhausted: false,
+            ..exhausted
+        };
+        assert!(!start_is_blocked(Some(&remaining)));
+        let unlimited = TimeStatus {
+            limited: false,
+            exhausted: false,
+            ..remaining
+        };
+        assert!(!start_is_blocked(Some(&unlimited)));
+    }
+
+    #[test]
+    fn parent_pin_accepts_any_non_child_admin_pin() {
+        let mut secrets = AdminSecrets::new();
+        secrets.set_pin("admin-a", "4711").unwrap();
+        secrets.set_pin("player", "1234").unwrap();
+        let mut admin = Profile::new_admin("Admin A");
+        admin.id = "admin-a".to_owned();
+        let mut player = Profile::new_admin("Player");
+        player.id = "player".to_owned();
+        player.role = crate::model::ProfileRole::Player;
+        let mut child_admin = Profile::new_admin("Child Admin");
+        child_admin.id = "child-admin".to_owned();
+        child_admin.is_child = true;
+        let profiles = vec![admin, player, child_admin];
+        assert!(admin_pin_matches(&profiles, &secrets, "4711"));
+        assert!(!admin_pin_matches(&profiles, &secrets, "1234"));
+        assert!(!admin_pin_matches(&profiles, &secrets, "0000"));
     }
 }

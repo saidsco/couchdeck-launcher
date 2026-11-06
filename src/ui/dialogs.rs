@@ -45,9 +45,17 @@ pub fn draw_overlay(app: &mut CouchDeckApp, ctx: &egui::Context) {
         Overlay::Menu(state) => draw_menu(ctx, app, state),
         Overlay::Import(state) => draw_import(ctx, app, state),
         Overlay::Picker(state) => draw_picker(ctx, app, state),
-        Overlay::Pin(pad) => draw_pin(ctx, pad),
+        Overlay::Pin(pad) => draw_pin(ctx, app, pad),
         Overlay::Confirm(dialog) => draw_confirm(ctx, app, dialog),
-        Overlay::Message(dialog) => draw_message(ctx, dialog),
+        Overlay::Message(dialog) => draw_message(ctx, app, dialog),
+        Overlay::TimeExpired(state) => match crate::ui::time::draw_time_expired(ctx, app, state) {
+            Some(overlay) => Outcome::Keep(overlay),
+            None => Outcome::Consume(None),
+        },
+        Overlay::ExtraTime(dialog) => match crate::ui::time::draw_extra_time(ctx, app, dialog) {
+            Some(overlay) => Outcome::Keep(overlay),
+            None => Outcome::Consume(None),
+        },
     };
     match outcome {
         Outcome::Keep(overlay) => app.overlay = overlay,
@@ -72,7 +80,7 @@ fn apply_action(app: &mut CouchDeckApp, ctx: &egui::Context, action: OverlayActi
         | OverlayAction::PickerOpenPath => {
             debug_assert!(false, "picker action escaped draw_picker");
         }
-        OverlayAction::Pin(index) => app.pin_press(index),
+        OverlayAction::Pin(index) => app.pin_press(ctx, index),
         OverlayAction::Confirm(action) => app.apply_confirm(action),
         OverlayAction::Close => {}
     }
@@ -86,7 +94,7 @@ fn modal_frame(scale: f32) -> egui::Frame {
         .inner_margin(Margin::same((24.0 * scale) as i8))
 }
 
-fn show_modal<R>(
+pub(crate) fn show_modal<R>(
     ctx: &egui::Context,
     id: &'static str,
     scale: f32,
@@ -99,19 +107,19 @@ fn show_modal<R>(
         .inner
 }
 
-fn draw_menu(ctx: &egui::Context, _app: &mut CouchDeckApp, mut state: MenuState) -> Outcome {
+fn draw_menu(ctx: &egui::Context, app: &mut CouchDeckApp, mut state: MenuState) -> Outcome {
     let scale = ui::ui_scale(ctx);
     let mut clicked = None;
     show_modal(ctx, "menu-modal", scale, |ui| {
         ui.set_min_width(520.0 * scale);
         ui.label(
-            RichText::new("Menü")
+            RichText::new(app.t("menu-title"))
                 .size(28.0 * scale)
                 .strong()
                 .color(TEXT),
         );
         ui.label(
-            RichText::new("A auswählen  ·  B zurück  ·  Start schließt das Menü")
+            RichText::new(app.t("menu-hint"))
                 .size(12.5 * scale)
                 .color(MUTED),
         );
@@ -156,17 +164,15 @@ fn draw_import(ctx: &egui::Context, app: &mut CouchDeckApp, mut state: ImportSta
     show_modal(ctx, "import-modal", scale, |ui| {
         ui.set_min_width(980.0 * scale);
         ui.label(
-            RichText::new("Desktop-Datei importieren")
+            RichText::new(app.t("dialog-import-title"))
                 .size(26.0 * scale)
                 .strong()
                 .color(TEXT),
         );
         ui.label(
-            RichText::new(
-                "Quelle, Name und Exec werden vor der Freigabe angezeigt. Originaldateien werden nie verändert.",
-            )
-            .size(13.0 * scale)
-            .color(MUTED),
+            RichText::new(app.t("dialog-import-subtitle"))
+                .size(13.0 * scale)
+                .color(MUTED),
         );
         ui.add_space(10.0 * scale);
 
@@ -178,13 +184,27 @@ fn draw_import(ctx: &egui::Context, app: &mut CouchDeckApp, mut state: ImportSta
                 egui::Layout::top_down(Align::LEFT),
                 |ui| {
                     ui.set_min_width(list_w);
-                    ui.label(RichText::new(format!("Gefundene Anwendungen ({})", state.entries.len())).size(14.0 * scale).color(MUTED));
+                    ui.label(
+                        RichText::new(app.tf(
+                            "dialog-found-apps",
+                            &[("count", state.entries.len().into())],
+                        ))
+                        .size(14.0 * scale)
+                        .color(MUTED),
+                    );
                     ScrollArea::vertical()
                         .auto_shrink([false, false])
                         .max_height(body_h - 28.0 * scale)
                         .show(ui, |ui| {
                             if state.entries.is_empty() {
-                                ui.label(RichText::new("Keine sichtbaren Anwendungen gefunden.\nNutze 'Andere Datei wählen'.").color(MUTED));
+                                ui.label(
+                                    RichText::new(format!(
+                                        "{}\n{}",
+                                        app.t("dialog-no-apps"),
+                                        app.t("dialog-other-file")
+                                    ))
+                                    .color(MUTED),
+                                );
                             }
                             for (index, entry) in state.entries.iter().enumerate() {
                                 let already = app.library.games.iter().any(|game| {
@@ -195,7 +215,10 @@ fn draw_import(ctx: &egui::Context, app: &mut CouchDeckApp, mut state: ImportSta
                                 });
                                 let mut label = truncate(&entry.name, 38);
                                 if already {
-                                    label.push_str("  ·  bereits importiert");
+                                    label.push_str(&format!(
+                                        "  {}",
+                                        app.t("dialog-already-imported")
+                                    ));
                                 }
                                 let response = ui.add_sized(
                                     Vec2::new(ui.available_width(), 36.0 * scale),
@@ -218,48 +241,88 @@ fn draw_import(ctx: &egui::Context, app: &mut CouchDeckApp, mut state: ImportSta
                 Vec2::new(preview_w, body_h),
                 egui::Layout::top_down(Align::LEFT),
                 |ui| {
-                ui.set_min_width(preview_w.min(560.0 * scale));
-                if let Some(entry) = state.entries.get(state.selected) {
-                    ui.label(RichText::new(truncate(&entry.name, 60)).size(22.0 * scale).strong().color(TEXT));
-                    ui.label(RichText::new(truncate(&entry.path.to_string_lossy(), 100)).monospace().size(11.5 * scale).color(MUTED));
-                    if !entry.executable_for_gio() {
-                        ui.label(RichText::new("Warnung: Kein Exec und keine D-Bus-Aktivierung.").size(13.0 * scale).color(DANGER));
-                    }
-                    ui.add_space(6.0 * scale);
-                    ui.label(RichText::new("Exec (unverändert):").size(12.0 * scale).color(MUTED));
-                    ui.add(
-                        egui::Label::new(
-                            RichText::new(entry.exec.clone().unwrap_or_else(|| "(kein Exec)".to_owned()))
+                    ui.set_min_width(preview_w.min(560.0 * scale));
+                    if let Some(entry) = state.entries.get(state.selected) {
+                        ui.label(
+                            RichText::new(truncate(&entry.name, 60))
+                                .size(22.0 * scale)
+                                .strong()
+                                .color(TEXT),
+                        );
+                        ui.label(
+                            RichText::new(truncate(&entry.path.to_string_lossy(), 100))
+                                .monospace()
+                                .size(11.5 * scale)
+                                .color(MUTED),
+                        );
+                        if !entry.executable_for_gio() {
+                            ui.label(
+                                RichText::new(app.t("dialog-no-exec-warning"))
+                                    .size(13.0 * scale)
+                                    .color(DANGER),
+                            );
+                        }
+                        ui.add_space(6.0 * scale);
+                        ui.label(
+                            RichText::new(app.t("dialog-exec-label"))
+                                .size(12.0 * scale)
+                                .color(MUTED),
+                        );
+                        ui.add(
+                            egui::Label::new(
+                                RichText::new(
+                                    entry.exec.clone().unwrap_or_else(|| app.t("admin-no-exec")),
+                                )
                                 .monospace()
                                 .size(12.0 * scale)
                                 .color(TEXT),
-                        )
-                        .wrap(),
-                    );
-                    if let Some(icon) = &entry.icon {
-                        ui.label(RichText::new(format!("Icon: {icon}")).monospace().size(11.5 * scale).color(MUTED));
-                    }
-                    if let Some(try_exec) = &entry.try_exec {
-                        ui.label(RichText::new(format!("TryExec: {try_exec}")).monospace().size(11.5 * scale).color(MUTED));
-                    }
-                    if let Some(workdir) = &entry.workdir {
-                        ui.label(RichText::new(format!("Arbeitsverzeichnis: {workdir}")).monospace().size(11.5 * scale).color(MUTED));
-                    }
-                    for diagnostic in desktop::analyze_entry(entry, &app.paths) {
-                        ui.label(
-                            RichText::new(diagnostic.message)
-                                .size(12.5 * scale)
-                                .color(match diagnostic.severity {
+                            )
+                            .wrap(),
+                        );
+                        if let Some(icon) = &entry.icon {
+                            ui.label(
+                                RichText::new(
+                                    app.tf("dialog-icon", &[("icon", icon.clone().into())]),
+                                )
+                                .monospace()
+                                .size(11.5 * scale)
+                                .color(MUTED),
+                            );
+                        }
+                        if let Some(try_exec) = &entry.try_exec {
+                            ui.label(
+                                RichText::new(
+                                    app.tf("dialog-tryexec", &[("value", try_exec.clone().into())]),
+                                )
+                                .monospace()
+                                .size(11.5 * scale)
+                                .color(MUTED),
+                            );
+                        }
+                        if let Some(workdir) = &entry.workdir {
+                            ui.label(
+                                RichText::new(
+                                    app.tf("dialog-workdir", &[("value", workdir.clone().into())]),
+                                )
+                                .monospace()
+                                .size(11.5 * scale)
+                                .color(MUTED),
+                            );
+                        }
+                        for diagnostic in desktop::analyze_entry(entry, &app.paths) {
+                            ui.label(RichText::new(diagnostic.message).size(12.5 * scale).color(
+                                match diagnostic.severity {
                                     Severity::Info => MUTED,
                                     Severity::Warning => WARNING,
                                     Severity::Error => DANGER,
-                                }),
-                        );
+                                },
+                            ));
+                        }
+                    } else {
+                        ui.label(RichText::new(app.t("dialog-choose-app")).color(MUTED));
                     }
-                } else {
-                    ui.label(RichText::new("Wähle links eine Anwendung.").color(MUTED));
-                }
-            });
+                },
+            );
         });
 
         if let Some(error) = &state.error {
@@ -284,7 +347,7 @@ fn draw_import(ctx: &egui::Context, app: &mut CouchDeckApp, mut state: ImportSta
             };
             let import = ui.add_sized(
                 Vec2::new(220.0 * scale, 44.0 * scale),
-                action_button("Importieren  (A)", 0),
+                action_button(&app.t("dialog-import"), 0),
             );
             if import.clicked() {
                 if let Some(entry) = state.entries.get(state.selected).cloned() {
@@ -293,21 +356,21 @@ fn draw_import(ctx: &egui::Context, app: &mut CouchDeckApp, mut state: ImportSta
             }
             let other = ui.add_sized(
                 Vec2::new(220.0 * scale, 44.0 * scale),
-                action_button("Andere Datei wählen ...", 1),
+                action_button(&app.t("dialog-other-file"), 1),
             );
             if other.clicked() {
                 action = Some(OverlayAction::ImportOther);
             }
             let cancel = ui.add_sized(
                 Vec2::new(160.0 * scale, 44.0 * scale),
-                action_button("Abbrechen  (B)", 2),
+                action_button(&app.t("dialog-cancel"), 2),
             );
             if cancel.clicked() {
                 action = Some(OverlayAction::Close);
             }
         });
         ui.label(
-            RichText::new("D-Pad: Liste wählen  ·  Rechts: Aktionen  ·  Links: zurück zur Liste  ·  A importiert")
+            RichText::new(app.t("dialog-import-hint"))
                 .size(12.0 * scale)
                 .color(MUTED),
         );
@@ -324,13 +387,13 @@ fn draw_picker(ctx: &egui::Context, app: &mut CouchDeckApp, mut state: FilePicke
     show_modal(ctx, "picker-modal", scale, |ui| {
         ui.set_min_width(940.0 * scale);
         ui.label(
-            RichText::new(state.purpose.title())
+            RichText::new(app.t(state.purpose.title_key()))
                 .size(25.0 * scale)
                 .strong()
                 .color(TEXT),
         );
         ui.label(
-            RichText::new("A öffnet Ordner/Datei  ·  Links: übergeordnet  ·  B abbrechen")
+            RichText::new(app.t("dialog-picker-hint"))
                 .size(12.5 * scale)
                 .color(MUTED),
         );
@@ -339,7 +402,7 @@ fn draw_picker(ctx: &egui::Context, app: &mut CouchDeckApp, mut state: FilePicke
             if ui
                 .add_sized(
                     Vec2::new(170.0 * scale, 38.0 * scale),
-                    secondary_button("Übergeordnet"),
+                    secondary_button(app.t("dialog-picker-parent")),
                 )
                 .clicked()
             {
@@ -348,7 +411,7 @@ fn draw_picker(ctx: &egui::Context, app: &mut CouchDeckApp, mut state: FilePicke
             if ui
                 .add_sized(
                     Vec2::new(120.0 * scale, 38.0 * scale),
-                    secondary_button("Home"),
+                    secondary_button(app.t("dialog-picker-home")),
                 )
                 .clicked()
             {
@@ -359,7 +422,7 @@ fn draw_picker(ctx: &egui::Context, app: &mut CouchDeckApp, mut state: FilePicke
                 && ui
                     .add_sized(
                         Vec2::new(130.0 * scale, 38.0 * scale),
-                        secondary_button("Downloads"),
+                        secondary_button(app.t("dialog-picker-downloads")),
                     )
                     .clicked()
             {
@@ -370,7 +433,7 @@ fn draw_picker(ctx: &egui::Context, app: &mut CouchDeckApp, mut state: FilePicke
                 && ui
                     .add_sized(
                         Vec2::new(160.0 * scale, 38.0 * scale),
-                        secondary_button("Anwendungen"),
+                        secondary_button(app.t("dialog-picker-apps")),
                     )
                     .clicked()
             {
@@ -381,7 +444,7 @@ fn draw_picker(ctx: &egui::Context, app: &mut CouchDeckApp, mut state: FilePicke
             let response = ui.add(
                 TextEdit::singleline(&mut state.path_input)
                     .desired_width(680.0 * scale)
-                    .hint_text("Pfad"),
+                    .hint_text(app.t("dialog-picker-path")),
             );
             if response.lost_focus() && ui.input(|i| i.key_pressed(egui::Key::Enter)) {
                 action = Some(OverlayAction::PickerOpenPath);
@@ -389,7 +452,7 @@ fn draw_picker(ctx: &egui::Context, app: &mut CouchDeckApp, mut state: FilePicke
             if ui
                 .add_sized(
                     Vec2::new(120.0 * scale, 38.0 * scale),
-                    secondary_button("Öffnen"),
+                    secondary_button(app.t("dialog-picker-open")),
                 )
                 .clicked()
             {
@@ -412,7 +475,11 @@ fn draw_picker(ctx: &egui::Context, app: &mut CouchDeckApp, mut state: FilePicke
             .max_height(list_h)
             .show(ui, |ui| {
                 for (index, entry) in state.entries.iter().enumerate() {
-                    let prefix = if entry.is_dir { "[Ordner]" } else { "[Datei]" };
+                    let prefix = if entry.is_dir {
+                        app.t("dialog-picker-folder")
+                    } else {
+                        app.t("dialog-picker-file")
+                    };
                     let label = format!("{prefix}  {}", truncate(&entry.name, 70));
                     let response = ui.add_sized(
                         Vec2::new(ui.available_width(), 34.0 * scale),
@@ -434,9 +501,7 @@ fn draw_picker(ctx: &egui::Context, app: &mut CouchDeckApp, mut state: FilePicke
                     }
                 }
                 if state.entries.is_empty() {
-                    ui.label(
-                        RichText::new("Keine passenden Einträge in diesem Ordner.").color(MUTED),
-                    );
+                    ui.label(RichText::new(app.t("dialog-picker-empty")).color(MUTED));
                 }
             });
         ui.add_space(8.0 * scale);
@@ -444,7 +509,7 @@ fn draw_picker(ctx: &egui::Context, app: &mut CouchDeckApp, mut state: FilePicke
             if ui
                 .add_sized(
                     Vec2::new(160.0 * scale, 42.0 * scale),
-                    secondary_button("Abbrechen  (B)"),
+                    secondary_button(app.t("dialog-cancel")),
                 )
                 .clicked()
             {
@@ -453,7 +518,7 @@ fn draw_picker(ctx: &egui::Context, app: &mut CouchDeckApp, mut state: FilePicke
             if ui
                 .add_sized(
                     Vec2::new(200.0 * scale, 42.0 * scale),
-                    primary_button("Auswählen  (A)"),
+                    primary_button(app.t("dialog-picker-select")),
                 )
                 .clicked()
             {
@@ -496,21 +561,22 @@ fn draw_picker(ctx: &egui::Context, app: &mut CouchDeckApp, mut state: FilePicke
     }
 }
 
-fn draw_pin(ctx: &egui::Context, pad: PinPad) -> Outcome {
+fn draw_pin(ctx: &egui::Context, app: &mut CouchDeckApp, pad: PinPad) -> Outcome {
     let scale = ui::ui_scale(ctx);
     let mut pressed = None;
     show_modal(ctx, "pin-modal", scale, |ui| {
         ui.set_min_width(380.0 * scale);
         ui.label(
-            RichText::new(pad.title())
+            RichText::new(app.t(pad.title_key()))
                 .size(24.0 * scale)
                 .strong()
                 .color(TEXT),
         );
         let subtitle = match &pad.purpose {
-            PinPurpose::Unlock { .. } => "PIN zum Entsperren des Admin-Bereichs",
-            PinPurpose::Set { .. } => "4–12 Ziffern",
-            PinPurpose::ConfirmSet { .. } => "Zur Bestätigung erneut eingeben",
+            PinPurpose::Unlock { .. } => app.t("dialog-pin-unlock"),
+            PinPurpose::Set { .. } => app.t("dialog-pin-set-subtitle"),
+            PinPurpose::ConfirmSet { .. } => app.t("dialog-pin-confirm-subtitle"),
+            PinPurpose::ParentAuth { .. } => app.t("dialog-pin-parent-subtitle"),
         };
         ui.label(RichText::new(subtitle).size(12.5 * scale).color(MUTED));
         ui.add_space(12.0 * scale);
@@ -569,14 +635,14 @@ fn draw_pin(ctx: &egui::Context, pad: PinPad) -> Outcome {
             if ui
                 .add_sized(
                     Vec2::new(200.0 * scale, 38.0 * scale),
-                    secondary_button("Abbrechen  (B)"),
+                    secondary_button(app.t("dialog-cancel")),
                 )
                 .clicked()
             {
                 pressed = Some(usize::MAX);
             }
             ui.label(
-                RichText::new("PIN wird nur als Argon2id-Hash gespeichert.")
+                RichText::new(app.t("dialog-pin-store-hint"))
                     .size(11.5 * scale)
                     .color(MUTED),
             );
@@ -589,7 +655,7 @@ fn draw_pin(ctx: &egui::Context, pad: PinPad) -> Outcome {
     }
 }
 
-fn draw_confirm(ctx: &egui::Context, _app: &mut CouchDeckApp, dialog: ConfirmDialog) -> Outcome {
+fn draw_confirm(ctx: &egui::Context, app: &mut CouchDeckApp, dialog: ConfirmDialog) -> Outcome {
     let scale = ui::ui_scale(ctx);
     let mut action = None;
     show_modal(ctx, "confirm-modal", scale, |ui| {
@@ -608,7 +674,7 @@ fn draw_confirm(ctx: &egui::Context, _app: &mut CouchDeckApp, dialog: ConfirmDia
         );
         ui.add_space(14.0 * scale);
         ui.horizontal(|ui| {
-            let cancel_label = "Abbrechen  (B)";
+            let cancel_label = app.t("dialog-confirm-cancel");
             let mut cancel =
                 secondary_button(cancel_label).min_size(Vec2::new(180.0 * scale, 46.0 * scale));
             if dialog.focus == 0 {
@@ -644,13 +710,13 @@ fn draw_confirm(ctx: &egui::Context, _app: &mut CouchDeckApp, dialog: ConfirmDia
     }
 }
 
-fn draw_message(ctx: &egui::Context, dialog: MessageDialog) -> Outcome {
+fn draw_message(ctx: &egui::Context, app: &CouchDeckApp, dialog: MessageDialog) -> Outcome {
     let scale = ui::ui_scale(ctx);
     let mut close = false;
     let (accent, label) = match dialog.severity {
-        MessageSeverity::Info => (ACCENT, "Hinweis"),
-        MessageSeverity::Warning => (WARNING, "Warnung"),
-        MessageSeverity::Error => (DANGER, "Fehler"),
+        MessageSeverity::Info => (ACCENT, app.t("dialog-severity-info")),
+        MessageSeverity::Warning => (WARNING, app.t("dialog-severity-warning")),
+        MessageSeverity::Error => (DANGER, app.t("dialog-severity-error")),
     };
     show_modal(ctx, "message-modal", scale, |ui| {
         ui.set_min_width(620.0 * scale);
@@ -700,43 +766,36 @@ pub fn draw_power(app: &CouchDeckApp, ctx: &egui::Context) {
     let scale = ui::ui_scale(ctx);
     show_modal(ctx, "power-modal", scale, |ui| {
         ui.set_min_width(560.0 * scale);
-        if let Some(outcome) = &state.outcome {
+        if state.outcome.is_some() {
             ui.label(
-                RichText::new("Systembefehl übergeben")
+                RichText::new(app.t("dialog-power-success"))
                     .size(24.0 * scale)
                     .strong()
                     .color(OK),
             );
             ui.label(
-                RichText::new(&outcome.message)
+                RichText::new(app.t("dialog-power-quit"))
                     .size(13.0 * scale)
-                    .color(MUTED),
-            );
-            ui.label(
-                RichText::new("CouchDeck wird beendet; das System übernimmt.")
-                    .size(12.5 * scale)
                     .color(MUTED),
             );
         } else {
             ui.horizontal(|ui| {
                 ui.spinner();
                 ui.label(
-                    RichText::new(state.action.progress())
+                    RichText::new(app.t(state.action.progress_key()))
                         .size(23.0 * scale)
                         .strong()
                         .color(TEXT),
                 );
             });
             ui.label(
-                RichText::new(
-                    "Der Befehl wird über `systemctl` an systemd übergeben. Falls nötig, kann eine Polkit-Abfrage erscheinen.",
-                )
-                .size(13.0 * scale)
-                .color(MUTED),
+                RichText::new(app.t("dialog-power-hint"))
+                    .size(13.0 * scale)
+                    .color(MUTED),
             );
             if state.started.elapsed().as_secs() > 5 {
                 ui.label(
-                    RichText::new("systemctl antwortet noch. Bitte warten …")
+                    RichText::new(app.t("dialog-power-wait"))
                         .size(12.5 * scale)
                         .color(WARNING),
                 );
@@ -759,29 +818,30 @@ pub fn draw_launch(app: &mut CouchDeckApp, ctx: &egui::Context) {
             ui.horizontal(|ui| {
                 ui.spinner();
                 ui.label(
-                    RichText::new(format!("Starte {}", state.title))
-                        .size(23.0 * scale)
-                        .strong()
-                        .color(TEXT),
+                    RichText::new(app.tf(
+                        "dialog-launch-starting",
+                        &[("title", state.title.clone().into())],
+                    ))
+                    .size(23.0 * scale)
+                    .strong()
+                    .color(TEXT),
                 );
             });
             ui.label(
-                RichText::new(
-                    "GIO wird aufgerufen. Das kann einen Moment dauern. CouchDeck blockiert dabei nicht.",
-                )
-                .size(13.0 * scale)
-                .color(MUTED),
+                RichText::new(app.t("dialog-launch-gio-hint"))
+                    .size(13.0 * scale)
+                    .color(MUTED),
             );
             if state.started.elapsed().as_secs() > 4 {
                 ui.label(
-                    RichText::new("gio launch antwortet noch. Der Launcher bleibt bedienbar.")
+                    RichText::new(app.t("dialog-launch-wait"))
                         .size(12.5 * scale)
                         .color(WARNING),
                 );
             }
         } else if let Some(outcome) = &state.outcome {
             ui.label(
-                RichText::new("Startbefehl gesendet")
+                RichText::new(app.t("dialog-launch-sent"))
                     .size(23.0 * scale)
                     .strong()
                     .color(OK),
@@ -792,11 +852,9 @@ pub fn draw_launch(app: &mut CouchDeckApp, ctx: &egui::Context) {
                     .color(MUTED),
             );
             ui.label(
-                RichText::new(
-                    "CouchDeck zeigt bewusst keinen 'läuft'-Status: Steam/Prism können weiterlaufen und das Spielende ist nicht sicher erkennbar.",
-                )
-                .size(12.0 * scale)
-                .color(MUTED),
+                RichText::new(app.t("dialog-launch-no-status"))
+                    .size(12.0 * scale)
+                    .color(MUTED),
             );
         }
         ui.add_space(12.0 * scale);
@@ -804,7 +862,7 @@ pub fn draw_launch(app: &mut CouchDeckApp, ctx: &egui::Context) {
             if ui
                 .add_sized(
                     Vec2::new(200.0 * scale, 42.0 * scale),
-                    secondary_button("Weiter  (A/B)"),
+                    secondary_button(app.t("dialog-launch-continue")),
                 )
                 .clicked()
             {
@@ -813,7 +871,7 @@ pub fn draw_launch(app: &mut CouchDeckApp, ctx: &egui::Context) {
             if ui
                 .add_sized(
                     Vec2::new(230.0 * scale, 42.0 * scale),
-                    secondary_button("Launcher minimieren"),
+                    secondary_button(app.t("dialog-launch-minimize")),
                 )
                 .clicked()
             {
@@ -826,7 +884,7 @@ pub fn draw_launch(app: &mut CouchDeckApp, ctx: &egui::Context) {
         app.launch = None;
     }
     if minimize {
-        app.minimize_to_desktop(ctx);
+        app.request_minimize(ctx);
     } else if dismiss {
         ctx.request_repaint();
     }
@@ -855,14 +913,20 @@ pub fn draw_fatal(app: &mut CouchDeckApp, ctx: &egui::Context) {
             painter.text(
                 egui::pos2(card.center().x, card.top() + 48.0 * scale),
                 Align2::CENTER_TOP,
-                "Bibliotheksdaten nicht lesbar",
+                app.t("dialog-fatal-title"),
                 FontId::proportional(28.0 * scale),
                 TEXT,
             );
             if let Some(fatal) = &app.fatal {
                 let mut message = fatal.message.clone();
                 if let Some(backup) = &fatal.backup {
-                    message.push_str(&format!("\n\nSicherung: {}", backup.display()));
+                    message.push_str(&format!(
+                        "\n\n{}",
+                        app.tf(
+                            "dialog-fatal-backup",
+                            &[("path", backup.display().to_string().into())]
+                        )
+                    ));
                 }
                 let message_rect = Rect::from_min_max(
                     egui::pos2(card.left() + 44.0 * scale, card.top() + 100.0 * scale),
@@ -897,14 +961,14 @@ pub fn draw_fatal(app: &mut CouchDeckApp, ctx: &egui::Context) {
                         ui.add_space(((ui.available_width() - group_width) * 0.5).max(0.0));
                         let quit_response = ui.add_sized(
                             Vec2::new(180.0 * scale, 48.0 * scale),
-                            secondary_button("Beenden"),
+                            secondary_button(app.t("dialog-fatal-quit")),
                         );
                         if quit_response.clicked() {
                             app.should_quit = true;
                         }
                         let reset_response = ui.add_sized(
                             Vec2::new(340.0 * scale, 48.0 * scale),
-                            danger_button("Backup anlegen & neue Bibliothek"),
+                            danger_button(app.t("dialog-fatal-reset")),
                         );
                         if reset_response.clicked() {
                             app.reset_after_fatal();
@@ -927,7 +991,7 @@ pub fn draw_fatal(app: &mut CouchDeckApp, ctx: &egui::Context) {
             painter.text(
                 egui::pos2(card.center().x, card.bottom() - 18.0 * scale),
                 Align2::CENTER_BOTTOM,
-                "Die beschädigte Datei wird nie still überschrieben. D-Pad/A oder Maus.",
+                app.t("dialog-fatal-hint"),
                 FontId::proportional(11.5 * scale),
                 MUTED,
             );

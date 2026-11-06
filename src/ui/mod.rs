@@ -4,6 +4,7 @@ pub mod admin;
 pub mod dialogs;
 pub mod library;
 pub mod profiles;
+pub mod time;
 
 use eframe::egui::{
     self, Align, Color32, CornerRadius, FontId, Id, Margin, Rect, RichText, Sense, Stroke,
@@ -130,14 +131,34 @@ pub fn paint_background(app: &mut CouchDeckApp, ui: &mut egui::Ui) {
     ui.painter().rect_filled(rect, 0, BACKGROUND);
 
     if app.settings.show_backgrounds {
-        let path = if app.screen == crate::app::Screen::Library {
-            app.focused_game()
-                .and_then(|game| app.game_background_path(&game))
-                .or_else(|| app.global_background_path())
-        } else {
-            app.global_background_path()
+        let active_profile_background = app.active_profile_background_path();
+        let global_background = app.global_background_path();
+        let candidates: Vec<std::path::PathBuf> = match app.screen {
+            crate::app::Screen::Library => [
+                app.focused_game()
+                    .and_then(|game| app.game_background_path(&game)),
+                active_profile_background,
+                global_background,
+            ]
+            .into_iter()
+            .flatten()
+            .collect(),
+            crate::app::Screen::Profiles => [
+                app.library
+                    .profiles
+                    .get(app.profile_focus)
+                    .and_then(|profile| app.profile_background_path(profile)),
+                global_background,
+            ]
+            .into_iter()
+            .flatten()
+            .collect(),
+            crate::app::Screen::Admin => [active_profile_background, global_background]
+                .into_iter()
+                .flatten()
+                .collect(),
         };
-        if let Some(path) = path {
+        for path in candidates {
             if let Some(texture) = app.artwork.texture(
                 &ctx,
                 &app.paths,
@@ -150,6 +171,7 @@ pub fn paint_background(app: &mut CouchDeckApp, ui: &mut egui::Ui) {
                     Rect::from_min_max(egui::pos2(0.0, 0.0), egui::pos2(1.0, 1.0)),
                     Color32::WHITE,
                 );
+                break;
             }
         }
     }
@@ -206,11 +228,11 @@ pub fn header(ui: &mut egui::Ui, app: &mut CouchDeckApp, rect: Rect, scale: f32)
                 }
             }
             ui.add_space(8.0 * scale);
-            let section = match app.screen {
-                crate::app::Screen::Library => "BIBLIOTHEK",
-                crate::app::Screen::Profiles => "PROFILE",
-                crate::app::Screen::Admin => "ADMIN",
-            };
+            let section = app.t(match app.screen {
+                crate::app::Screen::Library => "header-library",
+                crate::app::Screen::Profiles => "header-profiles",
+                crate::app::Screen::Admin => "header-admin",
+            });
             ui.label(
                 RichText::new(section)
                     .size(12.0 * scale)
@@ -221,7 +243,7 @@ pub fn header(ui: &mut egui::Ui, app: &mut CouchDeckApp, rect: Rect, scale: f32)
             ui.with_layout(egui::Layout::right_to_left(Align::Center), |ui| {
                 if ui
                     .add(
-                        secondary_button("Menü  ·  Start")
+                        secondary_button(app.t("header-menu"))
                             .min_size(Vec2::new(150.0 * scale, 42.0 * scale)),
                     )
                     .clicked()
@@ -229,14 +251,43 @@ pub fn header(ui: &mut egui::Ui, app: &mut CouchDeckApp, rect: Rect, scale: f32)
                     app.open_menu();
                 }
                 profile_chip(ui, app, scale);
+                if let Some(time_status) = app.active_time_status() {
+                    let (text, color) = if !time_status.limited {
+                        (app.t("header-time-unlimited"), MUTED)
+                    } else if time_status.exhausted {
+                        (app.t("header-time-exhausted"), DANGER)
+                    } else {
+                        (
+                            app.tf(
+                                "header-time-remaining",
+                                &[("minutes", time_status.remaining_minutes.into())],
+                            ),
+                            if time_status.remaining_seconds <= 300 {
+                                WARNING
+                            } else {
+                                MUTED
+                            },
+                        )
+                    };
+                    ui.label(RichText::new(text).size(12.5 * scale).color(color));
+                }
                 let status = if let Some(err) = &app.controller_error {
-                    format!("Eingabe: Tastatur/Maus ({err})")
+                    app.tf(
+                        "header-input-keyboard-error",
+                        &[("error", err.clone().into())],
+                    )
                 } else if app.controllers.is_empty() {
-                    "Eingabe: Tastatur/Maus".to_owned()
+                    app.t("header-input-keyboard")
                 } else if app.controllers.len() == 1 {
-                    format!("Controller: {}", app.controllers[0])
+                    app.tf(
+                        "header-controller",
+                        &[("name", app.controllers[0].clone().into())],
+                    )
                 } else {
-                    format!("Controller: {} verbunden", app.controllers.len())
+                    app.tf(
+                        "header-controllers",
+                        &[("count", app.controllers.len().into())],
+                    )
                 };
                 ui.label(
                     RichText::new(truncate(&status, 46))
@@ -284,7 +335,7 @@ fn profile_chip(ui: &mut egui::Ui, app: &mut CouchDeckApp, scale: f32) {
     }
     let response = response
         .on_hover_cursor(egui::CursorIcon::PointingHand)
-        .on_hover_text("Profil wechseln");
+        .on_hover_text(app.t("profile-switch"));
     if response.clicked() {
         app.open_profiles();
     }
@@ -294,14 +345,14 @@ fn profile_chip(ui: &mut egui::Ui, app: &mut CouchDeckApp, scale: f32) {
                 RichText::new(format!(
                     "{}  ·  {}",
                     truncate(&profile.name, 22),
-                    profile.role.label()
+                    profile_role_label(app, &profile)
                 ))
                 .size(15.0 * scale)
                 .color(TEXT),
             )
             .frame(false),
         )
-        .on_hover_text("Profil wechseln")
+        .on_hover_text(app.t("profile-switch"))
         .clicked()
     {
         app.open_profiles();
@@ -324,6 +375,16 @@ pub fn draw_focus_ring(ui: &egui::Ui, scale: f32) {
                 );
             }
         }
+    }
+}
+
+pub fn profile_role_label(app: &CouchDeckApp, profile: &crate::model::Profile) -> String {
+    if profile.is_child {
+        app.t("profile-role-child")
+    } else if profile.is_admin() {
+        app.t("profile-role-admin")
+    } else {
+        app.t("profile-role-player")
     }
 }
 

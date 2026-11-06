@@ -13,6 +13,7 @@ use eframe::egui::{
 use crate::app::{AdminView, CouchDeckApp, Overlay, PickerPurpose};
 use crate::artwork::ArtworkKind;
 use crate::desktop::{self, Severity};
+use crate::i18n::LanguagePreference;
 use crate::model::{GameEntry, ProfileRole};
 use crate::ui::{
     self, danger_button, paint_texture, primary_button, secondary_button, truncate, ACCENT, CARD,
@@ -39,7 +40,7 @@ pub fn draw(ui: &mut egui::Ui, app: &mut CouchDeckApp) {
         ui.painter().text(
             screen.center(),
             egui::Align2::CENTER_CENTER,
-            "Admin-Bereich gesperrt",
+            app.t("admin-locked"),
             egui::FontId::proportional(28.0 * scale),
             MUTED,
         );
@@ -83,7 +84,7 @@ fn draw_footer(ui: &mut egui::Ui, app: &mut CouchDeckApp, rect: Rect, scale: f32
         |ui| {
             ui.horizontal_centered(|ui| {
                 ui.label(
-                    RichText::new("B zurück   ·   D-Pad/Enter navigieren   ·   M Menü   ·   Maus/Tastatur parallel")
+                    RichText::new(app.t("admin-footer-hint"))
                         .size(13.0 * scale)
                         .color(MUTED),
                 );
@@ -96,10 +97,15 @@ fn draw_footer(ui: &mut egui::Ui, app: &mut CouchDeckApp, rect: Rect, scale: f32
                         .active_profile_id()
                         .map(|id| app.secrets.has_pin(id))
                         .unwrap_or(false);
+                    let pin_label = if pin {
+                        app.t("admin-pin-status-set")
+                    } else {
+                        app.t("admin-pin-status-not-set")
+                    };
                     ui.label(
-                        RichText::new(format!(
-                            "Admin: {active}   ·   PIN: {}",
-                            if pin { "gesetzt" } else { "nicht gesetzt" }
+                        RichText::new(app.tf(
+                            "admin-footer-status",
+                            &[("name", active.into()), ("pin", pin_label.into())],
                         ))
                         .size(13.0 * scale)
                         .color(if pin { OK } else { WARNING }),
@@ -184,67 +190,73 @@ fn draw_menu(ui: &mut egui::Ui, app: &mut CouchDeckApp, rect: Rect, scale: f32) 
         |ui| {
             heading(
                 ui,
-                "Admin-Bereich",
-                "Nur sichtbar für Admin-Profile. Die PIN ist eine lokale UI-Sperre, keine OS-Sicherheitsgrenze.",
+                &app.t("admin-menu-title"),
+                &app.t("admin-menu-subtitle"),
                 scale,
             );
-            ScrollArea::vertical().auto_shrink([false, false]).show(ui, |ui| {
-                ui.set_max_width(760.0 * scale);
-                let entries: [(String, AdminView); 5] = [
-                    (
-                        format!("Spiele verwalten  ({})", app.library.games.len()),
-                        AdminView::Games,
-                    ),
-                    (
-                        format!("Profile verwalten  ({})", app.library.profiles.len()),
-                        AdminView::Profiles,
-                    ),
-                    ("Steam / Prism".to_owned(), AdminView::Integrations),
-                    ("Einstellungen".to_owned(), AdminView::Settings),
-                    ("PIN & Sicherheit".to_owned(), AdminView::Pin),
-                ];
-                for (label, view) in entries {
+            ScrollArea::vertical()
+                .auto_shrink([false, false])
+                .show(ui, |ui| {
+                    ui.set_max_width(760.0 * scale);
+                    let entries: [(String, AdminView); 5] = [
+                        (
+                            app.tf(
+                                "admin-games-count",
+                                &[("count", app.library.games.len().into())],
+                            ),
+                            AdminView::Games,
+                        ),
+                        (
+                            app.tf(
+                                "admin-profiles-count",
+                                &[("count", app.library.profiles.len().into())],
+                            ),
+                            AdminView::Profiles,
+                        ),
+                        (app.t("admin-steam-prism"), AdminView::Integrations),
+                        (app.t("admin-settings"), AdminView::Settings),
+                        (app.t("admin-pin-security"), AdminView::Pin),
+                    ];
+                    for (label, view) in entries {
+                        let response = ui.add_sized(
+                            Vec2::new(760.0 * scale, 56.0 * scale),
+                            secondary_button(label),
+                        );
+                        note_focus(&response, &mut focus);
+                        if response.clicked() {
+                            enter_view(app, view);
+                        }
+                    }
+                    ui.add_space(12.0 * scale);
+                    if !app
+                        .active_profile_id()
+                        .map(|id| app.secrets.has_pin(id))
+                        .unwrap_or(false)
+                    {
+                        ui.label(
+                            RichText::new(app.t("admin-no-pin-warning"))
+                                .size(13.5 * scale)
+                                .color(WARNING),
+                        );
+                        let response = ui.add_sized(
+                            Vec2::new(280.0 * scale, 44.0 * scale),
+                            primary_button(app.t("admin-set-pin-now")),
+                        );
+                        note_focus(&response, &mut focus);
+                        if response.clicked() {
+                            app.open_set_pin();
+                        }
+                    }
+                    ui.add_space(12.0 * scale);
                     let response = ui.add_sized(
-                        Vec2::new(760.0 * scale, 56.0 * scale),
-                        secondary_button(label),
+                        Vec2::new(320.0 * scale, 48.0 * scale),
+                        secondary_button(app.t("admin-back-library")),
                     );
                     note_focus(&response, &mut focus);
                     if response.clicked() {
-                        enter_view(app, view);
+                        app.leave_admin();
                     }
-                }
-                ui.add_space(12.0 * scale);
-                if !app
-                    .active_profile_id()
-                    .map(|id| app.secrets.has_pin(id))
-                    .unwrap_or(false)
-                {
-                    ui.label(
-                        RichText::new(
-                            "Keine Admin-PIN gesetzt. Jeder mit Zugriff auf dieses Linux-Konto kann Änderungen vornehmen.",
-                        )
-                        .size(13.5 * scale)
-                        .color(WARNING),
-                    );
-                    let response = ui.add_sized(
-                        Vec2::new(280.0 * scale, 44.0 * scale),
-                        primary_button("PIN jetzt setzen"),
-                    );
-                    note_focus(&response, &mut focus);
-                    if response.clicked() {
-                        app.open_set_pin();
-                    }
-                }
-                ui.add_space(12.0 * scale);
-                let response = ui.add_sized(
-                    Vec2::new(320.0 * scale, 48.0 * scale),
-                    secondary_button("Zurück zur Bibliothek  (B)"),
-                );
-                note_focus(&response, &mut focus);
-                if response.clicked() {
-                    app.leave_admin();
-                }
-            });
+                });
         },
     );
     finish_focus(ui.ctx(), app, &focus);
@@ -299,7 +311,7 @@ fn draw_games(ui: &mut egui::Ui, app: &mut CouchDeckApp, rect: Rect, scale: f32)
             ui.horizontal(|ui| {
                 let back = ui.add_sized(
                     Vec2::new(170.0 * scale, 40.0 * scale),
-                    secondary_button("Zurück  (B)"),
+                    secondary_button(app.t("admin-back")),
                 );
                 if back.clicked() {
                     app.admin_back();
@@ -307,28 +319,26 @@ fn draw_games(ui: &mut egui::Ui, app: &mut CouchDeckApp, rect: Rect, scale: f32)
                 }
                 let import = ui.add_sized(
                     Vec2::new(250.0 * scale, 40.0 * scale),
-                    primary_button("Desktop-Datei importieren"),
+                    primary_button(app.t("admin-import-desktop")),
                 );
                 note_focus(&import, &mut focus);
                 if import.clicked() {
                     app.open_import();
                 }
                 ui.label(
-                    RichText::new(format!(
-                        "{} Einträge (Originaldateien werden nie verändert)",
-                        app.library.games.len()
+                    RichText::new(app.tf(
+                        "admin-games-count-label",
+                        &[("count", app.library.games.len().into())],
                     ))
                     .size(13.5 * scale)
                     .color(MUTED),
                 );
             });
             ui.add_space(10.0 * scale);
-            let body = Rect::from_min_max(
-                egui::pos2(rect.left(), rect.top() + top_h),
-                rect.max,
-            );
+            let body = Rect::from_min_max(egui::pos2(rect.left(), rect.top() + top_h), rect.max);
             let left_w = (body.width() * 0.31).clamp(260.0 * scale, 420.0 * scale);
-            let left = Rect::from_min_max(body.min, egui::pos2(body.left() + left_w, body.bottom()));
+            let left =
+                Rect::from_min_max(body.min, egui::pos2(body.left() + left_w, body.bottom()));
             let right = Rect::from_min_max(
                 egui::pos2(left.right() + 22.0 * scale, body.top()),
                 body.max,
@@ -348,61 +358,71 @@ fn draw_games(ui: &mut egui::Ui, app: &mut CouchDeckApp, rect: Rect, scale: f32)
             ui.scope_builder(
                 UiBuilder::new().max_rect(left).id_salt("admin-game-list"),
                 |ui| {
-                    ui.label(RichText::new("Spiele").size(18.0 * scale).strong());
-                    ScrollArea::vertical().auto_shrink([false, false]).show(ui, |ui| {
-                        if games.is_empty() {
-                            ui.label(
-                                RichText::new("Noch keine Einträge importiert.")
-                                    .size(14.0 * scale)
-                                    .color(MUTED),
-                            );
-                        }
-                        for game in &games {
-                            let selected = app.admin.selected_game.as_deref() == Some(&game.id);
-                            let mut suffix = String::new();
-                            if game.hidden {
-                                suffix.push_str("  [ausgeblendet]");
+                    ui.label(
+                        RichText::new(app.t("admin-games-header"))
+                            .size(18.0 * scale)
+                            .strong(),
+                    );
+                    ScrollArea::vertical()
+                        .auto_shrink([false, false])
+                        .show(ui, |ui| {
+                            if games.is_empty() {
+                                ui.label(
+                                    RichText::new(app.t("admin-games-empty"))
+                                        .size(14.0 * scale)
+                                        .color(MUTED),
+                                );
                             }
-                            if !game.desktop_exists() {
-                                suffix.push_str("  [Datei fehlt]");
+                            for game in &games {
+                                let selected = app.admin.selected_game.as_deref() == Some(&game.id);
+                                let mut suffix = String::new();
+                                if game.hidden {
+                                    suffix.push_str(&format!("  {}", app.t("admin-hidden")));
+                                }
+                                if !game.desktop_exists() {
+                                    suffix.push_str(&format!("  {}", app.t("admin-file-missing")));
+                                }
+                                let label = truncate(&format!("{}{}", game.title(), suffix), 42);
+                                let response = ui.add_sized(
+                                    Vec2::new(ui.available_width(), 40.0 * scale),
+                                    egui::Button::selectable(selected, label),
+                                );
+                                note_focus(&response, &mut focus);
+                                if response.has_focus() {
+                                    response.scroll_to_me(Some(Align::Center));
+                                }
+                                if response.clicked() {
+                                    app.admin.selected_game = Some(game.id.clone());
+                                }
                             }
-                            let label = truncate(&format!("{}{}", game.title(), suffix), 42);
-                            let response = ui.add_sized(
-                                Vec2::new(ui.available_width(), 40.0 * scale),
-                                egui::Button::selectable(selected, label),
-                            );
-                            note_focus(&response, &mut focus);
-                            if response.has_focus() {
-                                response.scroll_to_me(Some(Align::Center));
-                            }
-                            if response.clicked() {
-                                app.admin.selected_game = Some(game.id.clone());
-                            }
-                        }
-                    });
+                        });
                 },
             );
 
             ui.scope_builder(
-                UiBuilder::new().max_rect(right).id_salt("admin-game-editor"),
+                UiBuilder::new()
+                    .max_rect(right)
+                    .id_salt("admin-game-editor"),
                 |ui| {
-                    ScrollArea::vertical().auto_shrink([false, false]).show(ui, |ui| {
-                        if let Some(game) = app
-                            .admin
-                            .selected_game
-                            .as_ref()
-                            .and_then(|id| app.library.game(id))
-                            .cloned()
-                        {
-                            draw_game_editor(ui, app, &game, scale, &mut focus);
-                        } else {
-                            ui.label(
-                                RichText::new("Wähle links einen Eintrag oder importiere eine Desktop-Datei.")
-                                    .size(15.0 * scale)
-                                    .color(MUTED),
-                            );
-                        }
-                    });
+                    ScrollArea::vertical()
+                        .auto_shrink([false, false])
+                        .show(ui, |ui| {
+                            if let Some(game) = app
+                                .admin
+                                .selected_game
+                                .as_ref()
+                                .and_then(|id| app.library.game(id))
+                                .cloned()
+                            {
+                                draw_game_editor(ui, app, &game, scale, &mut focus);
+                            } else {
+                                ui.label(
+                                    RichText::new(app.t("admin-select-game"))
+                                        .size(15.0 * scale)
+                                        .color(MUTED),
+                                );
+                            }
+                        });
                 },
             );
         },
@@ -441,9 +461,9 @@ fn draw_game_editor(
             );
             ui.label(
                 RichText::new(if game.managed {
-                    "CouchDeck-verwaltete Desktop-Datei"
+                    app.t("admin-managed-file")
                 } else {
-                    "Original-Desktop-Datei (unverändert)"
+                    app.t("admin-original-file")
                 })
                 .size(12.5 * scale)
                 .color(if game.managed { MUTED } else { OK }),
@@ -456,7 +476,7 @@ fn draw_game_editor(
             );
             if !game.desktop_exists() {
                 ui.label(
-                    RichText::new("Datei fehlt – Start nicht möglich")
+                    RichText::new(app.t("admin-file-missing-start"))
                         .size(13.0 * scale)
                         .color(DANGER),
                 );
@@ -466,7 +486,7 @@ fn draw_game_editor(
     ui.add_space(10.0 * scale);
 
     ui.label(
-        RichText::new("Titel-Override")
+        RichText::new(app.t("admin-title-override"))
             .size(13.0 * scale)
             .color(MUTED),
     );
@@ -474,7 +494,7 @@ fn draw_game_editor(
     let title_response = ui.add(
         TextEdit::singleline(&mut title)
             .desired_width(f32::INFINITY)
-            .hint_text("Leer = Name aus Desktop-Datei"),
+            .hint_text(app.t("admin-title-hint")),
     );
     note_focus(&title_response, focus);
     if title_response.changed() {
@@ -490,7 +510,7 @@ fn draw_game_editor(
     ui.horizontal_wrapped(|ui| {
         let cover = ui.add_sized(
             Vec2::new(180.0 * scale, 40.0 * scale),
-            secondary_button("Cover wählen"),
+            secondary_button(app.t("admin-cover-choose")),
         );
         note_focus(&cover, focus);
         if cover.clicked() {
@@ -499,7 +519,7 @@ fn draw_game_editor(
         if game.cover.is_some() {
             let clear = ui.add_sized(
                 Vec2::new(160.0 * scale, 40.0 * scale),
-                secondary_button("Cover entfernen"),
+                secondary_button(app.t("admin-cover-remove")),
             );
             note_focus(&clear, focus);
             if clear.clicked() {
@@ -508,7 +528,7 @@ fn draw_game_editor(
         }
         let background = ui.add_sized(
             Vec2::new(220.0 * scale, 40.0 * scale),
-            secondary_button("Hintergrund wählen"),
+            secondary_button(app.t("admin-background-choose")),
         );
         note_focus(&background, focus);
         if background.clicked() {
@@ -517,7 +537,7 @@ fn draw_game_editor(
         if game.background.is_some() {
             let clear = ui.add_sized(
                 Vec2::new(190.0 * scale, 40.0 * scale),
-                secondary_button("Hintergrund entfernen"),
+                secondary_button(app.t("admin-background-remove")),
             );
             note_focus(&clear, focus);
             if clear.clicked() {
@@ -528,9 +548,9 @@ fn draw_game_editor(
 
     ui.horizontal_wrapped(|ui| {
         let hidden_label = if game.hidden {
-            "Einblenden"
+            app.t("admin-show")
         } else {
-            "Ausblenden"
+            app.t("admin-hide")
         };
         let hide = ui.add_sized(
             Vec2::new(170.0 * scale, 40.0 * scale),
@@ -542,7 +562,7 @@ fn draw_game_editor(
         }
         let up = ui.add_sized(
             Vec2::new(130.0 * scale, 40.0 * scale),
-            secondary_button("Nach oben"),
+            secondary_button(app.t("admin-move-up")),
         );
         note_focus(&up, focus);
         if up.clicked() {
@@ -550,7 +570,7 @@ fn draw_game_editor(
         }
         let down = ui.add_sized(
             Vec2::new(130.0 * scale, 40.0 * scale),
-            secondary_button("Nach unten"),
+            secondary_button(app.t("admin-move-down")),
         );
         note_focus(&down, focus);
         if down.clicked() {
@@ -558,7 +578,7 @@ fn draw_game_editor(
         }
         let refresh = ui.add_sized(
             Vec2::new(220.0 * scale, 40.0 * scale),
-            secondary_button("Metadaten neu einlesen"),
+            secondary_button(app.t("admin-refresh")),
         );
         note_focus(&refresh, focus);
         if refresh.clicked() {
@@ -569,14 +589,14 @@ fn draw_game_editor(
                         stored.desktop_icon = entry.icon;
                     }
                     app.save_library();
-                    app.notify("Name und Icon aus Desktop-Datei neu eingelesen.");
+                    app.notify_key("admin-refresh-toast");
                 }
                 Err(err) => app.notify_error(err.to_string()),
             }
         }
         let remove = ui.add_sized(
             Vec2::new(170.0 * scale, 40.0 * scale),
-            danger_button("Entfernen"),
+            danger_button(app.t("admin-remove")),
         );
         note_focus(&remove, focus);
         if remove.clicked() {
@@ -588,7 +608,7 @@ fn draw_game_editor(
     ui.separator();
 
     ui.label(
-        RichText::new("Sichtbarkeit für Profile")
+        RichText::new(app.t("admin-visibility"))
             .size(13.0 * scale)
             .color(MUTED),
     );
@@ -624,34 +644,29 @@ fn draw_game_editor(
     ui.add_space(8.0 * scale);
     ui.separator();
     ui.label(
-        RichText::new("Import- und Launch-Prüfung")
+        RichText::new(app.t("admin-launch-check"))
             .size(13.0 * scale)
             .color(MUTED),
     );
     match desktop::parse_desktop_file(&game.desktop_file) {
         Ok(entry) => {
             ui.label(
-                RichText::new("Exec (unverändert, wird von GIO ausgeführt):")
+                RichText::new(app.t("admin-exec-label"))
                     .size(12.0 * scale)
                     .color(MUTED),
             );
             ui.add(
                 egui::Label::new(
-                    RichText::new(
-                        entry
-                            .exec
-                            .clone()
-                            .unwrap_or_else(|| "(kein Exec)".to_owned()),
-                    )
-                    .monospace()
-                    .size(12.0 * scale)
-                    .color(TEXT),
+                    RichText::new(entry.exec.clone().unwrap_or_else(|| app.t("admin-no-exec")))
+                        .monospace()
+                        .size(12.0 * scale)
+                        .color(TEXT),
                 )
                 .wrap(),
             );
             if let Some(try_exec) = &entry.try_exec {
                 ui.label(
-                    RichText::new(format!("TryExec: {try_exec}"))
+                    RichText::new(app.tf("admin-tryexec", &[("value", try_exec.clone().into())]))
                         .monospace()
                         .size(11.5 * scale)
                         .color(MUTED),
@@ -659,7 +674,7 @@ fn draw_game_editor(
             }
             if let Some(workdir) = &entry.workdir {
                 ui.label(
-                    RichText::new(format!("Path: {workdir}"))
+                    RichText::new(app.tf("admin-path", &[("value", workdir.clone().into())]))
                         .monospace()
                         .size(11.5 * scale)
                         .color(MUTED),
@@ -693,7 +708,7 @@ fn draw_game_editor(
             {
                 let repair = ui.add_sized(
                     Vec2::new(330.0 * scale, 42.0 * scale),
-                    primary_button("Steam-Flatpak-Variante erzeugen ..."),
+                    primary_button(app.t("admin-steam-repair-button")),
                 );
                 note_focus(&repair, focus);
                 if repair.clicked() {
@@ -703,9 +718,12 @@ fn draw_game_editor(
         }
         Err(err) => {
             ui.label(
-                RichText::new(format!("Desktop-Datei nicht lesbar: {err}"))
-                    .size(13.0 * scale)
-                    .color(DANGER),
+                RichText::new(app.tf(
+                    "admin-desktop-unreadable",
+                    &[("error", err.to_string().into())],
+                ))
+                .size(13.0 * scale)
+                .color(DANGER),
             );
         }
     }
@@ -723,7 +741,7 @@ fn draw_game_edit(ui: &mut egui::Ui, app: &mut CouchDeckApp, rect: Rect, scale: 
         |ui| {
             let back = ui.add_sized(
                 Vec2::new(190.0 * scale, 40.0 * scale),
-                secondary_button("Zurück  (B)"),
+                secondary_button(app.t("admin-back")),
             );
             note_focus(&back, &mut focus);
             if back.clicked() {
@@ -748,7 +766,7 @@ fn draw_profiles(ui: &mut egui::Ui, app: &mut CouchDeckApp, rect: Rect, scale: f
             ui.horizontal(|ui| {
                 let back = ui.add_sized(
                     Vec2::new(170.0 * scale, 40.0 * scale),
-                    secondary_button("Zurück  (B)"),
+                    secondary_button(app.t("admin-back")),
                 );
                 if back.clicked() {
                     app.admin_back();
@@ -756,14 +774,14 @@ fn draw_profiles(ui: &mut egui::Ui, app: &mut CouchDeckApp, rect: Rect, scale: f
                 }
                 let add = ui.add_sized(
                     Vec2::new(220.0 * scale, 40.0 * scale),
-                    primary_button("Profil hinzufügen"),
+                    primary_button(app.t("admin-add-profile")),
                 );
                 note_focus(&add, &mut focus);
                 if add.clicked() {
                     app.add_profile();
                 }
                 ui.label(
-                    RichText::new("Lokale Profile im selben Linux-Konto")
+                    RichText::new(app.t("admin-local-profiles"))
                         .size(13.5 * scale)
                         .color(MUTED),
                 );
@@ -797,18 +815,24 @@ fn draw_profiles(ui: &mut egui::Ui, app: &mut CouchDeckApp, rect: Rect, scale: f
                     .max_rect(left)
                     .id_salt("admin-profile-list"),
                 |ui| {
-                    ui.label(RichText::new("Profile").size(18.0 * scale).strong());
+                    ui.label(
+                        RichText::new(app.t("admin-profiles-header"))
+                            .size(18.0 * scale)
+                            .strong(),
+                    );
                     ScrollArea::vertical()
                         .auto_shrink([false, false])
                         .show(ui, |ui| {
                             for profile in &profiles {
                                 let selected =
                                     app.admin.selected_profile.as_deref() == Some(&profile.id);
-                                let label = format!(
-                                    "{}{}",
-                                    profile.name,
-                                    if profile.is_admin() { "  [Admin]" } else { "" }
-                                );
+                                let mut label = profile.name.clone();
+                                if profile.is_admin() {
+                                    label.push_str(&format!("  [{}]", app.t("profile-role-admin")));
+                                }
+                                if profile.is_child {
+                                    label.push_str(&format!("  [{}]", app.t("profile-role-child")));
+                                }
                                 let response = ui.add_sized(
                                     Vec2::new(ui.available_width(), 40.0 * scale),
                                     egui::Button::selectable(selected, truncate(&label, 36)),
@@ -842,7 +866,7 @@ fn draw_profiles(ui: &mut egui::Ui, app: &mut CouchDeckApp, rect: Rect, scale: f
                             {
                                 draw_profile_editor(ui, app, &profile, scale, &mut focus);
                             } else {
-                                ui.label(RichText::new("Kein Profil ausgewählt.").color(MUTED));
+                                ui.label(RichText::new(app.t("admin-profile-none")).color(MUTED));
                             }
                         });
                 },
@@ -878,23 +902,31 @@ fn draw_profile_editor(
                     .strong(),
             );
             ui.label(
-                RichText::new(profile.role.label())
+                RichText::new(ui::profile_role_label(app, profile))
                     .size(13.0 * scale)
                     .color(if profile.is_admin() { ACCENT } else { MUTED }),
             );
             if app.active_profile_id() == Some(profile.id.as_str()) {
-                ui.label(RichText::new("Aktives Profil").size(13.0 * scale).color(OK));
+                ui.label(
+                    RichText::new(app.t("admin-active-profile"))
+                        .size(13.0 * scale)
+                        .color(OK),
+                );
             }
         });
     });
     ui.add_space(8.0 * scale);
 
-    ui.label(RichText::new("Anzeigename").size(13.0 * scale).color(MUTED));
+    ui.label(
+        RichText::new(app.t("admin-name-label"))
+            .size(13.0 * scale)
+            .color(MUTED),
+    );
     let mut name = profile.name.clone();
     let name_response = ui.add(
         TextEdit::singleline(&mut name)
             .desired_width(f32::INFINITY)
-            .hint_text("Name"),
+            .hint_text(app.t("admin-name-hint")),
     );
     note_focus(&name_response, focus);
     if name_response.changed() {
@@ -904,8 +936,9 @@ fn draw_profile_editor(
     }
     if name_response.lost_focus() {
         if name.trim().is_empty() {
+            let default_name = app.t("admin-default-profile-name");
             if let Some(stored) = app.library.profiles.iter_mut().find(|p| p.id == profile.id) {
-                stored.name = "Profil".to_owned();
+                stored.name = default_name;
             }
         }
         app.save_library();
@@ -913,10 +946,10 @@ fn draw_profile_editor(
 
     let admin_count = app.library.profiles.iter().filter(|p| p.is_admin()).count();
     let mut is_admin = profile.is_admin();
-    let can_change_role = !(is_admin && admin_count <= 1);
+    let can_change_role = !(profile.is_child || is_admin && admin_count <= 1);
     let role_response = ui.add_enabled(
         can_change_role,
-        egui::Checkbox::new(&mut is_admin, "Admin-Rechte für dieses lokale Profil"),
+        egui::Checkbox::new(&mut is_admin, app.t("admin-role-admin")),
     );
     note_focus(&role_response, focus);
     if role_response.changed() {
@@ -936,10 +969,144 @@ fn draw_profile_editor(
         }
     }
 
+    ui.add_space(12.0 * scale);
+    ui.separator();
+    ui.label(
+        RichText::new(app.t("admin-child-budget"))
+            .size(16.0 * scale)
+            .strong(),
+    );
+    let mut is_child = profile.is_child;
+    let child_response = ui.checkbox(&mut is_child, app.t("admin-child-checkbox"));
+    note_focus(&child_response, focus);
+    if child_response.changed() {
+        if is_child && !app.has_admin_pin_configured() {
+            app.message_key(
+                "admin-pin-required-title",
+                "admin-child-pin-warning",
+                crate::app::MessageSeverity::Error,
+            );
+        } else if let Some(stored) = app.library.profiles.iter_mut().find(|p| p.id == profile.id) {
+            stored.is_child = is_child;
+            if is_child {
+                // A child profile must not expose the admin UI.
+                stored.role = ProfileRole::Player;
+                if stored.daily_limit_minutes.is_none() {
+                    stored.daily_limit_minutes = Some(60);
+                }
+            }
+            app.save_library();
+            if is_child && app.active_profile_id() == Some(profile.id.as_str()) {
+                app.leave_admin();
+                return;
+            }
+        }
+    }
+
+    if is_child {
+        let current = app
+            .library
+            .profiles
+            .iter()
+            .find(|p| p.id == profile.id)
+            .cloned()
+            .unwrap_or_else(|| profile.clone());
+        ui.horizontal_wrapped(|ui| {
+            if let Some(minutes) = current.daily_limit_minutes {
+                let minus =
+                    ui.add_enabled(minutes > 15, secondary_button(app.t("admin-limit-minus")));
+                note_focus(&minus, focus);
+                if minus.clicked() {
+                    if let Some(stored) =
+                        app.library.profiles.iter_mut().find(|p| p.id == profile.id)
+                    {
+                        stored.daily_limit_minutes = Some(minutes.saturating_sub(15).max(15));
+                    }
+                    app.save_library();
+                }
+                ui.label(
+                    RichText::new(app.tf("admin-limit", &[("minutes", minutes.into())]))
+                        .size(15.0 * scale)
+                        .strong()
+                        .color(TEXT),
+                );
+                let plus =
+                    ui.add_enabled(minutes < 720, secondary_button(app.t("admin-limit-plus")));
+                note_focus(&plus, focus);
+                if plus.clicked() {
+                    if let Some(stored) =
+                        app.library.profiles.iter_mut().find(|p| p.id == profile.id)
+                    {
+                        stored.daily_limit_minutes = Some((minutes + 15).min(720));
+                    }
+                    app.save_library();
+                }
+                let clear = ui.add_sized(
+                    Vec2::new(170.0 * scale, 40.0 * scale),
+                    secondary_button(app.t("admin-no-limit")),
+                );
+                note_focus(&clear, focus);
+                if clear.clicked() {
+                    if let Some(stored) =
+                        app.library.profiles.iter_mut().find(|p| p.id == profile.id)
+                    {
+                        stored.daily_limit_minutes = None;
+                    }
+                    app.save_library();
+                }
+            } else {
+                let set = ui.add_sized(
+                    Vec2::new(220.0 * scale, 40.0 * scale),
+                    secondary_button(app.t("admin-set-limit")),
+                );
+                note_focus(&set, focus);
+                if set.clicked() {
+                    if let Some(stored) =
+                        app.library.profiles.iter_mut().find(|p| p.id == profile.id)
+                    {
+                        stored.daily_limit_minutes = Some(60);
+                    }
+                    app.save_library();
+                }
+            }
+        });
+
+        let today = crate::timekeeping::today_string();
+        let status = app
+            .timekeeping
+            .status(&current.id, current.daily_limit_minutes, &today);
+        if status.limited {
+            ui.label(
+                RichText::new(app.tf(
+                    "admin-today-usage",
+                    &[
+                        ("used", (status.used_seconds / 60).into()),
+                        ("bonus", status.bonus_minutes.into()),
+                        ("remaining", status.remaining_minutes.into()),
+                    ],
+                ))
+                .size(13.0 * scale)
+                .color(if status.exhausted { WARNING } else { MUTED }),
+            );
+            if status.bonus_minutes > 0 {
+                let reset = ui.add_sized(
+                    Vec2::new(260.0 * scale, 40.0 * scale),
+                    secondary_button(app.t("admin-reset-extra")),
+                );
+                note_focus(&reset, focus);
+                if reset.clicked() {
+                    app.reset_extra_minutes(&profile.id);
+                }
+            }
+        }
+    }
+
+    ui.add_space(12.0 * scale);
+    ui.separator();
     ui.horizontal_wrapped(|ui| {
         let avatar = ui.add_sized(
             Vec2::new(220.0 * scale, 40.0 * scale),
-            secondary_button("Avatar wählen"),
+            secondary_button(app.t("admin-avatar-choose")),
         );
         note_focus(&avatar, focus);
         if avatar.clicked() {
@@ -948,7 +1115,7 @@ fn draw_profile_editor(
         if profile.avatar.is_some() {
             let clear = ui.add_sized(
                 Vec2::new(180.0 * scale, 40.0 * scale),
-                secondary_button("Avatar entfernen"),
+                secondary_button(app.t("admin-avatar-remove")),
             );
             note_focus(&clear, focus);
             if clear.clicked() {
@@ -960,7 +1127,11 @@ fn draw_profile_editor(
             if app.active_profile_id() == Some(profile.id.as_str()) {
                 let pin = ui.add_sized(
                     Vec2::new(if pin_set { 220.0 } else { 200.0 } * scale, 40.0 * scale),
-                    secondary_button(if pin_set { "PIN ändern" } else { "PIN setzen" }),
+                    secondary_button(if pin_set {
+                        app.t("admin-pin-change")
+                    } else {
+                        app.t("admin-pin-set")
+                    }),
                 );
                 note_focus(&pin, focus);
                 if pin.clicked() {
@@ -969,7 +1140,7 @@ fn draw_profile_editor(
                 if pin_set {
                     let remove = ui.add_sized(
                         Vec2::new(190.0 * scale, 40.0 * scale),
-                        danger_button("PIN entfernen"),
+                        danger_button(app.t("admin-pin-remove")),
                     );
                     note_focus(&remove, focus);
                     if remove.clicked() {
@@ -978,7 +1149,7 @@ fn draw_profile_editor(
                 }
             } else {
                 ui.label(
-                    RichText::new("PIN wird für das aktive Admin-Profil verwaltet.")
+                    RichText::new(app.t("admin-pin-active-hint"))
                         .size(12.0 * scale)
                         .color(MUTED),
                 );
@@ -988,9 +1159,47 @@ fn draw_profile_editor(
 
     ui.add_space(12.0 * scale);
     ui.separator();
+    ui.label(
+        RichText::new(app.t("admin-profile-background"))
+            .size(16.0 * scale)
+            .strong(),
+    );
+    if let Some(path) = app.profile_background_path(profile) {
+        let (rect, _) =
+            ui.allocate_exact_size(Vec2::new(320.0 * scale, 180.0 * scale), Sense::hover());
+        if let Some(texture) =
+            app.artwork
+                .texture(ui.ctx(), &app.paths, &path, ArtworkKind::Background)
+        {
+            paint_texture(ui, &texture, rect, 10);
+        }
+    }
+    ui.horizontal_wrapped(|ui| {
+        let choose = ui.add_sized(
+            Vec2::new(260.0 * scale, 40.0 * scale),
+            secondary_button(app.t("admin-background-choose")),
+        );
+        note_focus(&choose, focus);
+        if choose.clicked() {
+            app.open_picker(PickerPurpose::ProfileBackground(profile.id.clone()));
+        }
+        if profile.background.is_some() {
+            let clear = ui.add_sized(
+                Vec2::new(220.0 * scale, 40.0 * scale),
+                secondary_button(app.t("admin-background-remove")),
+            );
+            note_focus(&clear, focus);
+            if clear.clicked() {
+                app.clear_profile_background(&profile.id);
+            }
+        }
+    });
+
+    ui.add_space(12.0 * scale);
+    ui.separator();
     let remove = ui.add_sized(
         Vec2::new(230.0 * scale, 42.0 * scale),
-        danger_button("Profil entfernen"),
+        danger_button(app.t("admin-profile-remove")),
     );
     note_focus(&remove, focus);
     if remove.clicked() {
@@ -998,11 +1207,9 @@ fn draw_profile_editor(
     }
     if app.active_profile_id() == Some(profile.id.as_str()) {
         ui.label(
-            RichText::new(
-                "Das aktive Profil kann entfernt werden; danach wird ein anderes Profil aktiv.",
-            )
-            .size(12.0 * scale)
-            .color(MUTED),
+            RichText::new(app.t("admin-remove-active-profile-hint"))
+                .size(12.0 * scale)
+                .color(MUTED),
         );
     }
 }
@@ -1010,192 +1217,275 @@ fn draw_profile_editor(
 fn draw_integrations(ui: &mut egui::Ui, app: &mut CouchDeckApp, rect: Rect, scale: f32) {
     let mut focus = FocusOrder::default();
     ui.scope_builder(
-        UiBuilder::new().max_rect(rect).id_salt("admin-integrations"),
+        UiBuilder::new()
+            .max_rect(rect)
+            .id_salt("admin-integrations"),
         |ui| {
             ui.horizontal(|ui| {
                 let back = ui.add_sized(
                     Vec2::new(170.0 * scale, 40.0 * scale),
-                    secondary_button("Zurück  (B)"),
+                    secondary_button(app.t("admin-back")),
                 );
                 if back.clicked() {
                     app.admin_back();
                     return;
                 }
                 ui.label(
-                    RichText::new("GIO startet ausschließlich Dateien – CouchDeck interpretiert Exec nicht.")
+                    RichText::new(app.t("admin-integrations-hint"))
                         .size(13.5 * scale)
                         .color(MUTED),
                 );
             });
             ui.add_space(10.0 * scale);
-            ScrollArea::vertical().auto_shrink([false, false]).show(ui, |ui| {
-                ui.label(RichText::new("Umgebung").size(19.0 * scale).strong());
-                ui.horizontal_wrapped(|ui| {
-                    status_chip(
-                        ui,
-                        "GIO",
-                        app.gio_message.is_none(),
-                        app.gio_message.as_deref().unwrap_or("verfügbar"),
-                        scale,
+            ScrollArea::vertical()
+                .auto_shrink([false, false])
+                .show(ui, |ui| {
+                    ui.label(
+                        RichText::new(app.t("admin-environment"))
+                            .size(19.0 * scale)
+                            .strong(),
                     );
-                    let flatpak = desktop::flatpak_available();
-                    status_chip(ui, "Flatpak", flatpak, if flatpak { "verfügbar" } else { "fehlt" }, scale);
-                    let steam = desktop::flatpak_app_installed(&app.paths, "com.valvesoftware.Steam");
-                    status_chip(ui, "Steam Flatpak", steam, if steam { "installiert" } else { "nicht gefunden" }, scale);
-                    let prism = desktop::flatpak_app_installed(&app.paths, "org.prismlauncher.PrismLauncher");
-                    status_chip(ui, "Prism Flatpak", prism, if prism { "installiert" } else { "nicht gefunden" }, scale);
-                });
-                ui.add_space(14.0 * scale);
-                ui.separator();
-                ui.add_space(8.0 * scale);
-
-                // Steam
-                ui.label(RichText::new("Steam-Flatpak-Reparatur").size(19.0 * scale).strong());
-                ui.label(
-                    RichText::new(
-                        "Erkannte Steam-Rungameid-Shortcuts ohne Flatpak-Aufruf. Es wird nur nach ausdrücklicher Bestätigung eine separate verwaltete Datei erzeugt.",
-                    )
-                    .size(13.0 * scale)
-                    .color(MUTED),
-                );
-                let mut candidates = Vec::new();
-                for game in app.library.games.clone() {
-                    if let Ok(entry) = desktop::parse_desktop_file(&game.desktop_file) {
-                        if let Some(steam) = entry
-                            .exec
-                            .as_deref()
-                            .and_then(desktop::detect_steam_shortcut)
-                        {
-                            if !steam.flatpak {
-                                candidates.push((game, steam));
-                            }
-                        }
-                    }
-                }
-                if candidates.is_empty() {
-                    ui.label(RichText::new("Keine reparaturbedürftigen Steam-Shortcuts gefunden.").size(13.5 * scale).color(MUTED));
-                } else {
-                    if app
-                        .admin
-                        .selected_steam_game
-                        .as_ref()
-                        .map(|id| candidates.iter().all(|(g, _)| &g.id != id))
-                        .unwrap_or(true)
-                    {
-                        app.admin.selected_steam_game = candidates.first().map(|(g, _)| g.id.clone());
-                    }
-                    for (game, steam) in &candidates {
-                        let selected = app.admin.selected_steam_game.as_deref() == Some(&game.id);
-                        let label = format!("{}  ·  Steam-App-ID {}", truncate(&game.title(), 40), steam.app_id);
-                        let response = ui.add_sized(
-                            Vec2::new(ui.available_width().min(900.0 * scale), 40.0 * scale),
-                            egui::Button::selectable(selected, label),
+                    ui.horizontal_wrapped(|ui| {
+                        status_chip(
+                            ui,
+                            &app.t("admin-status-gio"),
+                            app.gio_message.is_none(),
+                            &app.gio_message
+                                .clone()
+                                .unwrap_or_else(|| app.t("admin-gio-available")),
+                            scale,
                         );
-                        note_focus(&response, &mut focus);
-                        if response.clicked() {
-                            app.admin.selected_steam_game = Some(game.id.clone());
-                        }
-                    }
-                    let steam_installed = desktop::flatpak_app_installed(&app.paths, "com.valvesoftware.Steam");
-                    let response = ui.add_enabled(
-                        steam_installed,
-                        egui::Button::new("Verwaltete Steam-Flatpak-Variante erzeugen ...")
-                            .fill(ACCENT)
-                            .corner_radius(10),
-                    );
-                    note_focus(&response, &mut focus);
-                    if response.clicked() {
-                        if let Some(id) = app.admin.selected_steam_game.clone() {
-                            app.request_steam_repair(&id);
-                        }
-                    }
-                    if !steam_installed {
-                        ui.label(RichText::new("com.valvesoftware.Steam ist nicht installiert.").size(12.5 * scale).color(WARNING));
-                    }
-                }
-                ui.add_space(14.0 * scale);
-                ui.separator();
-                ui.add_space(8.0 * scale);
-
-                // Prism
-                ui.label(RichText::new("Prism-Launcher-Instanzen").size(19.0 * scale).strong());
-                ui.label(
-                    RichText::new(
-                        "INSTANCE_ID ist der Ordnername der Instanz, nicht der sichtbare Name. Die erzeugte Datei nutzt:\nflatpak run org.prismlauncher.PrismLauncher --launch INSTANCE_ID",
-                    )
-                    .size(12.5 * scale)
-                    .color(MUTED),
-                );
-                let instances = desktop::list_prism_instances(&app.paths, 100);
-                if instances.is_empty() {
-                    ui.label(RichText::new("Keine Prism-Instanzen gefunden. Geprüfte Ordner:").size(13.0 * scale).color(WARNING));
-                    for path in desktop::prism_instance_dirs(&app.paths) {
-                        ui.label(RichText::new(path.display().to_string()).monospace().size(11.5 * scale).color(MUTED));
-                    }
-                } else {
-                    if app
-                        .admin
-                        .selected_instance
-                        .as_ref()
-                        .map(|id| instances.iter().all(|(i, _)| i != id))
-                        .unwrap_or(true)
-                    {
-                        app.admin.selected_instance = instances.first().map(|(id, _)| id.clone());
-                        if let Some((id, dir)) = instances.first() {
-                            app.admin.prism_title = desktop::prism_instance_label(id, dir);
-                        }
-                    }
-                    for (id, dir) in &instances {
-                        let selected = app.admin.selected_instance.as_deref() == Some(id);
-                        let label = desktop::prism_instance_label(id, dir);
-                        let response = ui.add_sized(
-                            Vec2::new(ui.available_width().min(900.0 * scale), 38.0 * scale),
-                            egui::Button::selectable(selected, truncate(&label, 70)),
+                        let flatpak = desktop::flatpak_available();
+                        status_chip(
+                            ui,
+                            &app.t("admin-status-flatpak"),
+                            flatpak,
+                            &if flatpak {
+                                app.t("admin-status-available")
+                            } else {
+                                app.t("admin-status-missing")
+                            },
+                            scale,
                         );
-                        note_focus(&response, &mut focus);
-                        if response.clicked() {
-                            app.admin.selected_instance = Some(id.clone());
-                            app.admin.prism_title = label;
-                        }
-                    }
-                    ui.label(RichText::new("Titel für den CouchDeck-Eintrag").size(12.5 * scale).color(MUTED));
-                    let title_response = ui.add(
-                        TextEdit::singleline(&mut app.admin.prism_title)
-                            .desired_width((640.0 * scale).min(ui.available_width())),
+                        let steam =
+                            desktop::flatpak_app_installed(&app.paths, "com.valvesoftware.Steam");
+                        status_chip(
+                            ui,
+                            &app.t("admin-status-steam"),
+                            steam,
+                            &if steam {
+                                app.t("admin-status-installed")
+                            } else {
+                                app.t("admin-status-not-found")
+                            },
+                            scale,
+                        );
+                        let prism = desktop::flatpak_app_installed(
+                            &app.paths,
+                            "org.prismlauncher.PrismLauncher",
+                        );
+                        status_chip(
+                            ui,
+                            &app.t("admin-status-prism"),
+                            prism,
+                            &if prism {
+                                app.t("admin-status-installed")
+                            } else {
+                                app.t("admin-status-not-found")
+                            },
+                            scale,
+                        );
+                    });
+                    ui.add_space(14.0 * scale);
+                    ui.separator();
+                    ui.add_space(8.0 * scale);
+
+                    // Steam
+                    ui.label(
+                        RichText::new(app.t("admin-steam-repair"))
+                            .size(19.0 * scale)
+                            .strong(),
                     );
-                    note_focus(&title_response, &mut focus);
-                    let prism_installed = desktop::flatpak_app_installed(
-                        &app.paths,
-                        "org.prismlauncher.PrismLauncher",
+                    ui.label(
+                        RichText::new(app.t("admin-steam-repair-hint"))
+                            .size(13.0 * scale)
+                            .color(MUTED),
                     );
-                    let response = ui.add_enabled(
-                        prism_installed,
-                        egui::Button::new("Prism-Eintrag erzeugen")
-                            .fill(ACCENT)
-                            .corner_radius(10),
-                    );
-                    note_focus(&response, &mut focus);
-                    if response.clicked() {
-                        if let Some(id) = app.admin.selected_instance.clone() {
-                            let title = app.admin.prism_title.clone();
-                            match app.create_prism_entry(&id, &title) {
-                                Ok(new_id) => {
-                                    app.admin.view = AdminView::Games;
-                                    app.admin.selected_game = Some(new_id);
+                    let mut candidates = Vec::new();
+                    for game in app.library.games.clone() {
+                        if let Ok(entry) = desktop::parse_desktop_file(&game.desktop_file) {
+                            if let Some(steam) = entry
+                                .exec
+                                .as_deref()
+                                .and_then(desktop::detect_steam_shortcut)
+                            {
+                                if !steam.flatpak {
+                                    candidates.push((game, steam));
                                 }
-                                Err(err) => app.message_dialog(
-                                    "Prism-Eintrag fehlgeschlagen",
-                                    err,
-                                    crate::app::MessageSeverity::Error,
-                                ),
                             }
                         }
                     }
-                    if !prism_installed {
-                        ui.label(RichText::new("org.prismlauncher.PrismLauncher ist nicht als Flatpak installiert.").size(12.5 * scale).color(WARNING));
+                    if candidates.is_empty() {
+                        ui.label(
+                            RichText::new(app.t("admin-steam-none"))
+                                .size(13.5 * scale)
+                                .color(MUTED),
+                        );
+                    } else {
+                        if app
+                            .admin
+                            .selected_steam_game
+                            .as_ref()
+                            .map(|id| candidates.iter().all(|(g, _)| &g.id != id))
+                            .unwrap_or(true)
+                        {
+                            app.admin.selected_steam_game =
+                                candidates.first().map(|(g, _)| g.id.clone());
+                        }
+                        for (game, steam) in &candidates {
+                            let selected =
+                                app.admin.selected_steam_game.as_deref() == Some(&game.id);
+                            let label = app.tf(
+                                "admin-steam-candidate",
+                                &[
+                                    ("title", truncate(&game.title(), 40).into()),
+                                    ("id", steam.app_id.clone().into()),
+                                ],
+                            );
+                            let response = ui.add_sized(
+                                Vec2::new(ui.available_width().min(900.0 * scale), 40.0 * scale),
+                                egui::Button::selectable(selected, label),
+                            );
+                            note_focus(&response, &mut focus);
+                            if response.clicked() {
+                                app.admin.selected_steam_game = Some(game.id.clone());
+                            }
+                        }
+                        let steam_installed =
+                            desktop::flatpak_app_installed(&app.paths, "com.valvesoftware.Steam");
+                        let response = ui.add_enabled(
+                            steam_installed,
+                            egui::Button::new(app.t("admin-steam-create"))
+                                .fill(ACCENT)
+                                .corner_radius(10),
+                        );
+                        note_focus(&response, &mut focus);
+                        if response.clicked() {
+                            if let Some(id) = app.admin.selected_steam_game.clone() {
+                                app.request_steam_repair(&id);
+                            }
+                        }
+                        if !steam_installed {
+                            ui.label(
+                                RichText::new(app.t("admin-steam-not-installed"))
+                                    .size(12.5 * scale)
+                                    .color(WARNING),
+                            );
+                        }
                     }
-                }
-            });
+                    ui.add_space(14.0 * scale);
+                    ui.separator();
+                    ui.add_space(8.0 * scale);
+
+                    // Prism
+                    ui.label(
+                        RichText::new(app.t("admin-prism-title"))
+                            .size(19.0 * scale)
+                            .strong(),
+                    );
+                    ui.label(
+                        RichText::new(app.t("admin-integrations-prism-hint"))
+                            .size(12.5 * scale)
+                            .color(MUTED),
+                    );
+                    let instances = desktop::list_prism_instances(&app.paths, 100);
+                    if instances.is_empty() {
+                        ui.label(
+                            RichText::new(app.t("admin-prism-none"))
+                                .size(13.0 * scale)
+                                .color(WARNING),
+                        );
+                        for path in desktop::prism_instance_dirs(&app.paths) {
+                            ui.label(
+                                RichText::new(path.display().to_string())
+                                    .monospace()
+                                    .size(11.5 * scale)
+                                    .color(MUTED),
+                            );
+                        }
+                    } else {
+                        if app
+                            .admin
+                            .selected_instance
+                            .as_ref()
+                            .map(|id| instances.iter().all(|(i, _)| i != id))
+                            .unwrap_or(true)
+                        {
+                            app.admin.selected_instance =
+                                instances.first().map(|(id, _)| id.clone());
+                            if let Some((id, dir)) = instances.first() {
+                                app.admin.prism_title = desktop::prism_instance_label(id, dir);
+                            }
+                        }
+                        for (id, dir) in &instances {
+                            let selected = app.admin.selected_instance.as_deref() == Some(id);
+                            let label = desktop::prism_instance_label(id, dir);
+                            let response = ui.add_sized(
+                                Vec2::new(ui.available_width().min(900.0 * scale), 38.0 * scale),
+                                egui::Button::selectable(selected, truncate(&label, 70)),
+                            );
+                            note_focus(&response, &mut focus);
+                            if response.clicked() {
+                                app.admin.selected_instance = Some(id.clone());
+                                app.admin.prism_title = label;
+                            }
+                        }
+                        ui.label(
+                            RichText::new(app.t("admin-prism-entry-title"))
+                                .size(12.5 * scale)
+                                .color(MUTED),
+                        );
+                        let title_response = ui.add(
+                            TextEdit::singleline(&mut app.admin.prism_title)
+                                .desired_width((640.0 * scale).min(ui.available_width())),
+                        );
+                        note_focus(&title_response, &mut focus);
+                        let prism_installed = desktop::flatpak_app_installed(
+                            &app.paths,
+                            "org.prismlauncher.PrismLauncher",
+                        );
+                        let response = ui.add_enabled(
+                            prism_installed,
+                            egui::Button::new(app.t("admin-prism-create"))
+                                .fill(ACCENT)
+                                .corner_radius(10),
+                        );
+                        note_focus(&response, &mut focus);
+                        if response.clicked() {
+                            if let Some(id) = app.admin.selected_instance.clone() {
+                                let title = app.admin.prism_title.clone();
+                                match app.create_prism_entry(&id, &title) {
+                                    Ok(new_id) => {
+                                        app.admin.view = AdminView::Games;
+                                        app.admin.selected_game = Some(new_id);
+                                    }
+                                    Err(err) => app.message_dialog(
+                                        app.t("admin-prism-failed"),
+                                        err,
+                                        crate::app::MessageSeverity::Error,
+                                    ),
+                                }
+                            }
+                        }
+                        if !prism_installed {
+                            ui.label(
+                                RichText::new(app.t("admin-prism-not-installed"))
+                                    .size(12.5 * scale)
+                                    .color(WARNING),
+                            );
+                        }
+                    }
+                });
         },
     );
     finish_focus(ui.ctx(), app, &focus);
@@ -1225,106 +1515,180 @@ fn draw_settings(ui: &mut egui::Ui, app: &mut CouchDeckApp, rect: Rect, scale: f
             ui.horizontal(|ui| {
                 let back = ui.add_sized(
                     Vec2::new(170.0 * scale, 40.0 * scale),
-                    secondary_button("Zurück  (B)"),
+                    secondary_button(app.t("admin-back")),
                 );
                 if back.clicked() {
                     app.admin_back();
                     return;
                 }
-                ui.label(RichText::new("Einstellungen").size(19.0 * scale).strong());
+                ui.label(
+                    RichText::new(app.t("admin-settings"))
+                        .size(19.0 * scale)
+                        .strong(),
+                );
             });
             ui.add_space(10.0 * scale);
             ScrollArea::vertical()
                 .auto_shrink([false, false])
                 .show(ui, |ui| {
+                    ui.label(
+                        RichText::new(app.t("admin-language"))
+                            .size(16.0 * scale)
+                            .strong(),
+                    );
+                    ui.horizontal_wrapped(|ui| {
+                        for (preference, label) in [
+                            (LanguagePreference::Auto, app.t("admin-language-auto")),
+                            (LanguagePreference::De, app.t("admin-language-de")),
+                            (LanguagePreference::En, app.t("admin-language-en")),
+                        ] {
+                            let selected = app.settings.language == preference;
+                            let response = ui.add_sized(
+                                Vec2::new(160.0 * scale, 40.0 * scale),
+                                if selected {
+                                    primary_button(label)
+                                } else {
+                                    secondary_button(label)
+                                },
+                            );
+                            note_focus(&response, &mut focus);
+                            if response.clicked() {
+                                app.set_language(preference);
+                            }
+                        }
+                    });
+                    ui.label(
+                        RichText::new(app.tf(
+                            "admin-language-status",
+                            &[("language", app.i18n.language().label().into())],
+                        ))
+                        .size(11.5 * scale)
+                        .color(MUTED),
+                    );
+
+                    ui.add_space(12.0 * scale);
+                    ui.separator();
                     let mut animations = app.settings.animations;
-                    let response = ui.checkbox(&mut animations, "Dezente Fokus-Animationen");
+                    let response = ui.checkbox(&mut animations, app.t("admin-animations"));
                     note_focus(&response, &mut focus);
                     if response.changed() {
                         app.settings.animations = animations;
                         app.save_settings();
                     }
                     let mut backgrounds = app.settings.show_backgrounds;
-                    let response = ui.checkbox(&mut backgrounds, "Hintergrundbilder anzeigen");
+                    let response = ui.checkbox(&mut backgrounds, app.t("admin-show-backgrounds"));
                     note_focus(&response, &mut focus);
                     if response.changed() {
                         app.settings.show_backgrounds = backgrounds;
                         app.save_settings();
                     }
                     let mut hints = app.settings.show_controller_hints;
-                    let response = ui.checkbox(&mut hints, "Controller-Hinweise in der Bibliothek");
+                    let response = ui.checkbox(&mut hints, app.t("admin-controller-hints"));
                     note_focus(&response, &mut focus);
                     if response.changed() {
                         app.settings.show_controller_hints = hints;
                         app.save_settings();
                     }
+                    let mut alarm_sound = app.settings.alarm_sound;
+                    let response = ui.checkbox(&mut alarm_sound, app.t("admin-alarm-sound"));
+                    note_focus(&response, &mut focus);
+                    if response.changed() {
+                        app.settings.alarm_sound = alarm_sound;
+                        app.save_settings();
+                    }
 
                     ui.add_space(12.0 * scale);
                     ui.separator();
-                    ui.label(RichText::new("Autostart").size(16.0 * scale).strong());
+                    ui.label(
+                        RichText::new(app.t("admin-autostart-header"))
+                            .size(16.0 * scale)
+                            .strong(),
+                    );
                     let autostart_enabled = desktop::autostart_enabled(&app.paths);
                     let mut autostart = autostart_enabled;
-                    let response = ui.checkbox(
-                        &mut autostart,
-                        "Beim Anmelden automatisch starten (nur KDE)",
-                    );
+                    let response = ui.checkbox(&mut autostart, app.t("admin-autostart"));
                     note_focus(&response, &mut focus);
                     if response.changed() {
                         let result = if autostart {
                             std::env::current_exe()
-                                .map_err(|err| format!("Eigener Programmpfad nicht ermittelbar: {err}"))
+                                .map_err(|err| {
+                                    app.tf(
+                                        "admin-autostart-error",
+                                        &[("error", err.to_string().into())],
+                                    )
+                                })
                                 .and_then(|binary| desktop::write_autostart(&app.paths, &binary))
                                 .map(|path| {
-                                    format!("Autostart aktiviert: {}", path.display())
+                                    app.tf(
+                                        "admin-autostart-enabled",
+                                        &[("path", path.display().to_string().into())],
+                                    )
                                 })
                         } else {
                             desktop::remove_autostart(&app.paths)
-                                .map(|_| "Autostart deaktiviert.".to_owned())
+                                .map(|_| app.t("admin-autostart-disabled"))
                         };
                         match result {
                             Ok(message) => app.notify(message),
-                            Err(err) => app.message_dialog(
-                                "Autostart konnte nicht geändert werden",
-                                err,
-                                crate::app::MessageSeverity::Error,
-                            ),
+                            Err(err) => {
+                                let title = app.t("admin-autostart-change-error");
+                                app.message_dialog(title, err, crate::app::MessageSeverity::Error);
+                            }
                         }
                     }
                     ui.label(
-                        RichText::new(format!(
-                            "Status: {}   ·   Datei: {}",
-                            if autostart_enabled { "aktiv" } else { "inaktiv" },
-                            app.paths.autostart_path().display()
-                        ))
+                        RichText::new(
+                            app.tf(
+                                "admin-autostart-status",
+                                &[
+                                    (
+                                        "status",
+                                        if autostart_enabled {
+                                            app.t("admin-autostart-active")
+                                        } else {
+                                            app.t("admin-autostart-inactive")
+                                        }
+                                        .into(),
+                                    ),
+                                    (
+                                        "path",
+                                        app.paths.autostart_path().display().to_string().into(),
+                                    ),
+                                ],
+                            ),
+                        )
                         .monospace()
                         .size(11.5 * scale)
                         .color(MUTED),
                     );
                     if let Ok(binary) = std::env::current_exe() {
                         ui.label(
-                            RichText::new(format!("Autostart-Programm: {}", binary.display()))
-                                .monospace()
-                                .size(11.5 * scale)
-                                .color(if binary.to_string_lossy().contains("/target/") {
+                            RichText::new(app.tf(
+                                "admin-autostart-binary",
+                                &[("path", binary.display().to_string().into())],
+                            ))
+                            .monospace()
+                            .size(11.5 * scale)
+                            .color(
+                                if binary.to_string_lossy().contains("/target/") {
                                     WARNING
                                 } else {
                                     MUTED
-                                }),
+                                },
+                            ),
                         );
                         if binary.to_string_lossy().contains("/target/") {
                             ui.label(
-                                RichText::new(
-                                    "Hinweis: Das ist ein Entwicklungs-Binary. Für den Autostart die installierte Version unter ~/.local/bin verwenden.",
-                                )
-                                .size(12.0 * scale)
-                                .color(WARNING),
+                                RichText::new(app.t("admin-autostart-dev-warning"))
+                                    .size(12.0 * scale)
+                                    .color(WARNING),
                             );
                         }
                     }
 
                     ui.add_space(10.0 * scale);
                     let mut auto_columns = app.settings.columns.is_none();
-                    let response = ui.checkbox(&mut auto_columns, "Automatische Spaltenzahl");
+                    let response = ui.checkbox(&mut auto_columns, app.t("admin-auto-columns"));
                     note_focus(&response, &mut focus);
                     if response.changed() {
                         app.settings.columns = if auto_columns { None } else { Some(6) };
@@ -1332,7 +1696,8 @@ fn draw_settings(ui: &mut egui::Ui, app: &mut CouchDeckApp, rect: Rect, scale: f
                     }
                     if let Some(columns) = app.settings.columns {
                         let mut value = columns as usize;
-                        let response = ui.add(Slider::new(&mut value, 3..=6).text("Spalten"));
+                        let response =
+                            ui.add(Slider::new(&mut value, 3..=6).text(app.t("admin-columns")));
                         note_focus(&response, &mut focus);
                         if response.changed() {
                             app.settings.columns = Some(value as u8);
@@ -1343,7 +1708,7 @@ fn draw_settings(ui: &mut egui::Ui, app: &mut CouchDeckApp, rect: Rect, scale: f
                     ui.add_space(12.0 * scale);
                     ui.separator();
                     ui.label(
-                        RichText::new("Globales Hintergrundbild")
+                        RichText::new(app.t("admin-global-background"))
                             .size(16.0 * scale)
                             .strong(),
                     );
@@ -1366,7 +1731,7 @@ fn draw_settings(ui: &mut egui::Ui, app: &mut CouchDeckApp, rect: Rect, scale: f
                     ui.horizontal_wrapped(|ui| {
                         let choose = ui.add_sized(
                             Vec2::new(260.0 * scale, 40.0 * scale),
-                            secondary_button("Hintergrundbild wählen"),
+                            secondary_button(app.t("admin-background-image-choose")),
                         );
                         note_focus(&choose, &mut focus);
                         if choose.clicked() {
@@ -1375,7 +1740,7 @@ fn draw_settings(ui: &mut egui::Ui, app: &mut CouchDeckApp, rect: Rect, scale: f
                         if has_background {
                             let clear = ui.add_sized(
                                 Vec2::new(220.0 * scale, 40.0 * scale),
-                                secondary_button("Hintergrund entfernen"),
+                                secondary_button(app.t("admin-background-remove")),
                             );
                             note_focus(&clear, &mut focus);
                             if clear.clicked() {
@@ -1386,19 +1751,29 @@ fn draw_settings(ui: &mut egui::Ui, app: &mut CouchDeckApp, rect: Rect, scale: f
 
                     ui.add_space(14.0 * scale);
                     ui.separator();
-                    ui.label(RichText::new("Speicherorte").size(16.0 * scale).strong());
+                    ui.label(
+                        RichText::new(app.t("admin-storage"))
+                            .size(16.0 * scale)
+                            .strong(),
+                    );
                     for (label, path) in [
-                        ("Bibliothek", app.paths.library_path()),
-                        ("Einstellungen", app.paths.settings_path()),
-                        ("Assets", app.paths.assets_dir()),
-                        ("Cache", app.paths.cache_dir()),
-                        ("Log", app.paths.log_path()),
+                        (app.t("admin-storage-library"), app.paths.library_path()),
+                        (app.t("admin-storage-settings"), app.paths.settings_path()),
+                        (app.t("admin-storage-assets"), app.paths.assets_dir()),
+                        (app.t("admin-storage-cache"), app.paths.cache_dir()),
+                        (app.t("admin-storage-log"), app.paths.log_path()),
                     ] {
                         ui.label(
-                            RichText::new(format!("{label}: {}", path.display()))
-                                .monospace()
-                                .size(11.5 * scale)
-                                .color(MUTED),
+                            RichText::new(app.tf(
+                                "admin-storage-line",
+                                &[
+                                    ("label", label.into()),
+                                    ("path", path.display().to_string().into()),
+                                ],
+                            ))
+                            .monospace()
+                            .size(11.5 * scale)
+                            .color(MUTED),
                         );
                     }
                 });
@@ -1409,46 +1784,52 @@ fn draw_settings(ui: &mut egui::Ui, app: &mut CouchDeckApp, rect: Rect, scale: f
 
 fn draw_pin(ui: &mut egui::Ui, app: &mut CouchDeckApp, rect: Rect, scale: f32) {
     let mut focus = FocusOrder::default();
-    ui.scope_builder(
-        UiBuilder::new().max_rect(rect).id_salt("admin-pin"),
-        |ui| {
-            ui.horizontal(|ui| {
-                let back = ui.add_sized(
-                    Vec2::new(170.0 * scale, 40.0 * scale),
-                    secondary_button("Zurück  (B)"),
-                );
-                if back.clicked() {
-                    app.admin_back();
-                    return;
-                }
-                ui.label(RichText::new("PIN & Sicherheit").size(19.0 * scale).strong());
-            });
-            ui.add_space(10.0 * scale);
-            ScrollArea::vertical().auto_shrink([false, false]).show(ui, |ui| {
+    ui.scope_builder(UiBuilder::new().max_rect(rect).id_salt("admin-pin"), |ui| {
+        ui.horizontal(|ui| {
+            let back = ui.add_sized(
+                Vec2::new(170.0 * scale, 40.0 * scale),
+                secondary_button(app.t("admin-back")),
+            );
+            if back.clicked() {
+                app.admin_back();
+                return;
+            }
+            ui.label(
+                RichText::new(app.t("admin-pin-header"))
+                    .size(19.0 * scale)
+                    .strong(),
+            );
+        });
+        ui.add_space(10.0 * scale);
+        ScrollArea::vertical()
+            .auto_shrink([false, false])
+            .show(ui, |ui| {
                 let Some(profile_id) = app.active_profile_id().map(ToOwned::to_owned) else {
                     return;
                 };
                 let has_pin = app.secrets.has_pin(&profile_id);
                 ui.label(
                     RichText::new(if has_pin {
-                        "Für das aktive Admin-Profil ist eine PIN gesetzt."
+                        app.t("admin-pin-set-status")
                     } else {
-                        "Für das aktive Admin-Profil ist keine PIN gesetzt."
+                        app.t("admin-pin-unset-status")
                     })
                     .size(16.0 * scale)
                     .color(if has_pin { OK } else { WARNING }),
                 );
                 ui.label(
-                    RichText::new(
-                        "Die PIN wird als Argon2id-Hash in einer separaten Datei mit Rechten 0600 gespeichert. Sie schützt vor versehentlichen UI-Änderungen, nicht vor Zugriff über dasselbe Linux-Konto.",
-                    )
-                    .size(13.0 * scale)
-                    .color(MUTED),
+                    RichText::new(app.t("admin-pin-storage-hint"))
+                        .size(13.0 * scale)
+                        .color(MUTED),
                 );
                 ui.add_space(10.0 * scale);
                 let set = ui.add_sized(
                     Vec2::new(260.0 * scale, 46.0 * scale),
-                    primary_button(if has_pin { "PIN ändern" } else { "PIN setzen" }),
+                    primary_button(if has_pin {
+                        app.t("admin-pin-change")
+                    } else {
+                        app.t("admin-pin-set")
+                    }),
                 );
                 note_focus(&set, &mut focus);
                 if set.clicked() {
@@ -1457,7 +1838,7 @@ fn draw_pin(ui: &mut egui::Ui, app: &mut CouchDeckApp, rect: Rect, scale: f32) {
                 if has_pin {
                     let remove = ui.add_sized(
                         Vec2::new(240.0 * scale, 46.0 * scale),
-                        danger_button("PIN entfernen"),
+                        danger_button(app.t("admin-pin-remove")),
                     );
                     note_focus(&remove, &mut focus);
                     if remove.clicked() {
@@ -1466,19 +1847,24 @@ fn draw_pin(ui: &mut egui::Ui, app: &mut CouchDeckApp, rect: Rect, scale: f32) {
                 }
                 ui.add_space(12.0 * scale);
                 ui.label(
-                    RichText::new(format!("PIN-Datei: {}", app.paths.secrets_path().display()))
-                        .monospace()
-                        .size(11.5 * scale)
-                        .color(MUTED),
+                    RichText::new(app.tf(
+                        "admin-pin-file",
+                        &[(
+                            "path",
+                            app.paths.secrets_path().display().to_string().into(),
+                        )],
+                    ))
+                    .monospace()
+                    .size(11.5 * scale)
+                    .color(MUTED),
                 );
                 ui.label(
-                    RichText::new("Die PIN-Eingabe ist auch mit Controller über das On-Screen-Ziffernfeld möglich.")
+                    RichText::new(app.t("admin-pin-controller-hint"))
                         .size(12.5 * scale)
                         .color(MUTED),
                 );
             });
-        },
-    );
+    });
     finish_focus(ui.ctx(), app, &focus);
 }
 

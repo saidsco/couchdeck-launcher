@@ -68,17 +68,15 @@ fn draw_cards(
             .id_salt("profiles-heading"),
         |ui| {
             ui.label(
-                RichText::new("Profil wählen")
+                RichText::new(app.t("profiles-title"))
                     .size(34.0 * scale)
                     .strong()
                     .color(TEXT),
             );
             ui.label(
-                RichText::new(
-                    "Lokale Profile im selben Linux-Konto. Keine Cloud, keine Linux-Konten.",
-                )
-                .size(14.0 * scale)
-                .color(MUTED),
+                RichText::new(app.t("profiles-subtitle"))
+                    .size(14.0 * scale)
+                    .color(MUTED),
             );
         },
     );
@@ -91,7 +89,7 @@ fn draw_cards(
         ui.painter().text(
             grid.center(),
             Align2::CENTER_CENTER,
-            "Keine Profile vorhanden",
+            app.t("profiles-empty"),
             FontId::proportional(22.0 * scale),
             MUTED,
         );
@@ -149,7 +147,7 @@ fn draw_cards(
                         .on_hover_cursor(egui::CursorIcon::PointingHand);
                     if response.double_clicked() {
                         app.profile_focus = index;
-                        app.activate_profile(index);
+                        app.request_activate_profile(index);
                         return;
                     } else if response.clicked() {
                         app.profile_focus = index;
@@ -171,7 +169,10 @@ fn draw_cards(
                 ui.painter().text(
                     egui::pos2(grid.right(), grid.top() - 4.0 * scale),
                     Align2::RIGHT_BOTTOM,
-                    format!("Seite {page} / {page_count}"),
+                    app.tf(
+                        "common-page",
+                        &[("page", page.into()), ("count", page_count.into())],
+                    ),
                     FontId::proportional(13.0 * scale),
                     MUTED,
                 );
@@ -263,7 +264,7 @@ fn draw_profile_card(
     painter.text(
         egui::pos2(rect.center().x, avatar_rect.bottom() + 48.0 * scale),
         Align2::CENTER_TOP,
-        profile.role.label(),
+        ui::profile_role_label(app, profile),
         FontId::proportional(13.0 * scale),
         role_color,
     );
@@ -281,7 +282,7 @@ fn draw_profile_card(
         painter.text(
             badge.center(),
             Align2::CENTER_CENTER,
-            "Aktiv",
+            app.t("profile-active"),
             FontId::proportional(12.0 * scale),
             OK,
         );
@@ -295,7 +296,7 @@ fn draw_footer(ui: &mut egui::Ui, app: &mut CouchDeckApp, rect: Rect, scale: f32
             ui.horizontal_centered(|ui| {
                 if app.settings.show_controller_hints {
                     ui.label(
-                        RichText::new("LB/RB wechseln   ·   A Profil wählen   ·   B zurück")
+                        RichText::new(app.t("profiles-hints"))
                             .size(14.0 * scale)
                             .color(MUTED),
                     );
@@ -304,16 +305,16 @@ fn draw_footer(ui: &mut egui::Ui, app: &mut CouchDeckApp, rect: Rect, scale: f32
                     if ui
                         .add_sized(
                             Vec2::new(210.0 * scale, 50.0 * scale),
-                            primary_button("Profil wählen  (A)"),
+                            primary_button(app.t("profiles-choose")),
                         )
                         .clicked()
                     {
-                        app.activate_profile(app.profile_focus);
+                        app.request_activate_profile(app.profile_focus);
                     }
                     if ui
                         .add_sized(
                             Vec2::new(150.0 * scale, 50.0 * scale),
-                            secondary_button("Zurück  (B)"),
+                            secondary_button(app.t("profiles-back")),
                         )
                         .clicked()
                     {

@@ -44,6 +44,13 @@ impl SystemAction {
         }
     }
 
+    pub fn progress_key(self) -> &'static str {
+        match self {
+            Self::Reboot => "power-progress-reboot",
+            Self::PowerOff => "power-progress-poweroff",
+        }
+    }
+
     pub fn argument(self) -> &'static str {
         match self {
             Self::Reboot => "reboot",
@@ -138,7 +145,7 @@ impl SystemController {
                 Some(SystemOutcome {
                     action,
                     success: false,
-                    message: "Der System-Thread wurde unerwartet beendet.".to_owned(),
+                    message: String::new(),
                     duration: Duration::ZERO,
                 })
             }

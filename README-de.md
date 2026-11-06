@@ -2,7 +2,9 @@
 
 CouchDeck ist ein nativer, controller-first Fullscreen-Game-Launcher für **Bazzite / KDE Plasma / Wayland**. Die App startet direkt in eine persönliche Spielebibliothek – kein Shop, keine News, keine Cloud, kein Overlay und keine Spieleplattform-Accounts.
 
-**Aktuelle Version:** 0.2.5 · **Sprache:** Deutsch · [English](README.md)
+**Aktuelle Version:** 0.3.0 · **Sprache:** Deutsch · [English](README.md)
+
+Die Anwendungsoberfläche ist über Fluent **auf Deutsch und Englisch** verfügbar, mit automatischer Spracherkennung und Englisch als Fallback. Einzelne Detaildokumente unter `docs/` sind weiterhin auf Deutsch.
 
 Gespielt wird ausschließlich über vorhandene `.desktop`-Dateien und `gio launch`. Coverbilder werden getrennt von den Desktop-Dateien in CouchDeck verwaltet; die Originaldateien werden nie verändert.
 
@@ -10,13 +12,16 @@ Gespielt wird ausschließlich über vorhandene `.desktop`-Dateien und `gio launc
 
 ## Funktionsumfang
 
+- **Zweisprachige UI (de/en)** über Fluent: automatische Erkennung aus `LANGUAGE`/`LC_ALL`/`LC_MESSAGES`/`LANG`, Englisch als Fallback, live umschaltbar unter Admin → Einstellungen.
 - **Fullscreen-Bibliothek** mit Cover-Grid, 3:4-Center-Crop, Fokusanimation und Fallback-Reihenfolge eigenes Cover → Desktop-Icon → neutrale Kachel.
 - **Gamepad-Navigation** über `gilrs`: D-Pad und linker Stick mit Deadzone, Hold-Repeat, Debouncing und Hotplug. South = bestätigen/starten, East = zurück, Start = Menü. LB/RB (Schultertasten) öffnen die Profilübersicht; dort wird zwischen Profilen gewechselt. Navigation wird nur verarbeitet, solange CouchDeck den Fensterfokus hat; Connect/Disconnect werden weiterhin erkannt, alte Eingaben werden beim Fokuswechsel verworfen.
 - **Tastatur und Maus parallel**: Pfeiltasten, Enter/Leertaste, Escape, M, F11, Mausklick und Doppelklick.
 - **Desktop-Dateien**: XDG-Discovery, Import beliebiger Dateien, Vorschau von Name, Pfad und rohem `Exec`-Inhalt, Unterstützung für `NoDisplay`, `Hidden`, `TryExec`, `Path`, `DBusActivatable`, Kategorien und lokalisierte Namen.
 - **Start über GIO**: ausschließlich `gio launch /absoluter/pfad.desktop`. `Exec=` wird nicht zum Starten interpretiert; der rohe Inhalt dient nur der Anzeige und Diagnose.
-- **Eigene Artwork-Verwaltung**: Cover, Spiel-Hintergrund und globales Hintergrundbild per Dateiauswahl; Import nach `$XDG_DATA_HOME/couchdeck/assets/`, Vorschaucache unter `$XDG_CACHE_HOME/couchdeck/`.
-- **Lokale Profile**: Anzeigename, Rolle (Admin/Spieler), Avatar, profilabhängige Sichtbarkeit von Spielen. Keine Linux-Konten, keine Cloud.
+- **Eigene Artwork-Verwaltung**: Cover, Spiel-Hintergrund, globales Hintergrundbild, Avatar und **Profil-Hintergrund** per Dateiauswahl. Profil-Hintergründe fallen auf das globale Hintergrundbild zurück; Spiel-Hintergründe und vorhandene Daten bleiben erhalten. Import nach `$XDG_DATA_HOME/couchdeck/assets/`, Vorschaucache unter `$XDG_CACHE_HOME/couchdeck/`.
+- **Lokale Profile**: Anzeigename, Rolle (Admin/Spieler), Avatar, optionales Kinderprofil, tägliches Zeitbudget, eigener Profil-Hintergrund und profilabhängige Sichtbarkeit von Spielen. Keine Linux-Konten, keine Cloud.
+- **Kinderprofile und Zeitkontingente**: messen aktive Profilzeit, solange CouchDeck läuft, zeigen Restzeit, Warnungen bei 5/1 Minuten, optionalen Best-Effort-Alarmton und sperren neue Spielstarts zentral bei erschöpftem Budget. Laufende Spiele werden nicht zwangsweise geschlossen. Profilwechsel, Minimieren, Beenden und Systemaktionen erfordern bei Kinderprofilen die Admin-PIN.
+- **Elternfreigabe „Mehr Spielzeit“**: aus dem Startmenü oder dem Bildschirm „Zeitkontingent verbraucht“, Admin-PIN, dann +5/+15/+30 oder benutzerdefinierte Minuten. Zusatzzeit wird pro Kalendertag gespeichert, addiert sich, verändert das reguläre Budget nicht und kann vom Admin zurückgesetzt werden.
 - **Admin-Bereich**: Spiele importieren/ausblenden/entfernen/sortieren, Titel und Artwork ändern, Profile verwalten, Sichtbarkeit je Profil, Einstellungen, PIN-Verwaltung.
 - **Admin-PIN**: Argon2id-Hash in separater Datei mit Modus `0600`; Eingabe per Tastatur und On-Screen-Ziffernfeld mit Controller. Der Profilwechsel selbst ist keine Authentifizierung; Admin-Aktionen werden bei gesetzter PIN separat entsperrt.
 - **Steam-Flatpak-Reparatur**: erkennt `Exec=steam steam://rungameid/ID`, ändert nichts automatisch und erzeugt nach ausdrücklicher Bestätigung eine **separate verwaltete** Datei mit `flatpak run com.valvesoftware.Steam …`.
@@ -26,7 +31,7 @@ Gespielt wird ausschließlich über vorhandene `.desktop`-Dateien und `gio launc
 - **Power-Menü**: CouchDeck beenden, System neu starten oder herunterfahren – mit Bestätigungsdialog und festen `systemctl`-Aufrufen (kein Shell-Einsatz).
 - **Robuste Persistenz**: atomisches Schreiben, Backups bei beschädigten Dateien, keine stillen Überschreibungen, Logs unter `$XDG_STATE_HOME/couchdeck/`.
 
-Weitere Screenshots: [Profilansicht](docs/screenshots/profiles.png), [Bibliothek als Spielerprofil](docs/screenshots/library-profile-mia.png), [Admin](docs/screenshots/admin.png), [Spieleeditor](docs/screenshots/game-editor.png), [Import](docs/screenshots/import.png), [PIN-Pad](docs/screenshots/pinpad.png), [Start-Overlay](docs/screenshots/launch.png), [Power-Menü](docs/screenshots/menu.png), [Autostart-Einstellungen](docs/screenshots/autostart-settings.png), [Beschädigte Daten](docs/screenshots/corrupt-data.png).
+Weitere Screenshots: [Zeitkontingent verbraucht](docs/screenshots/time-budget.png), [Profilansicht](docs/screenshots/profiles.png), [Bibliothek als Spielerprofil](docs/screenshots/library-profile-mia.png), [Admin](docs/screenshots/admin.png), [Spieleeditor](docs/screenshots/game-editor.png), [Import](docs/screenshots/import.png), [PIN-Pad](docs/screenshots/pinpad.png), [Start-Overlay](docs/screenshots/launch.png), [Power-Menü](docs/screenshots/menu.png), [Autostart-Einstellungen](docs/screenshots/autostart-settings.png), [Beschädigte Daten](docs/screenshots/corrupt-data.png).
 
 ## Voraussetzungen
 
@@ -133,6 +138,7 @@ Vollständige Löschung von Bibliothek, Profilen, PIN-Hash, Artwork, Cache und L
 | Profile wechseln | LB/RB (öffnet Profilansicht, dort wechseln) | PageUp/PageDown |
 | Zu KDE minimieren | Menü → Zu KDE minimieren | Menü |
 | Vollbild umschalten | – | F11 |
+| Mehr Spielzeit anfragen (Kinderprofil) | Start → Mehr Spielzeit anfragen | Menü |
 | System neu starten / herunterfahren | Menü → System … | Menü |
 | CouchDeck beenden | Menü → CouchDeck beenden | Strg+Q |
 
@@ -196,6 +202,7 @@ Beispieldateien liegen unter `examples/`: `prism-minecraft.desktop`, `steam-game
 | Einstellungen | `$XDG_CONFIG_HOME/couchdeck/settings.toml` |
 | KDE-Autostart | `$XDG_CONFIG_HOME/autostart/couchdeck.desktop` |
 | Bibliothek/Profile/Spiele | `$XDG_DATA_HOME/couchdeck/library.json` |
+| Tagesnutzung/Zusatzzeit | `$XDG_DATA_HOME/couchdeck/timekeeping.json` |
 | PIN-Hashes | `$XDG_DATA_HOME/couchdeck/secrets.json` (Modus `0600`) |
 | Importierte Bilder | `$XDG_DATA_HOME/couchdeck/assets/{covers,backgrounds,avatars}/` |
 | Verwaltete Desktop-Dateien | `$XDG_DATA_HOME/couchdeck/managed-desktop/` |
@@ -208,9 +215,10 @@ Details: [docs/DATA-FORMAT.md](docs/DATA-FORMAT.md).
 
 - CouchDeck startet **nur** Dateien, die ein Admin explizit importiert hat. Beim Import werden Name, Pfad und `Exec` angezeigt.
 - `Exec=` wird nie von CouchDeck ausgeführt oder zum Starten in Argumente zerlegt. Die Datei geht unverändert an `gio launch`; der rohe Inhalt wird nur lesend angezeigt und für Diagnosehinweise geprüft.
-- Der Admin-Bereich und alle Änderungsaktionen sind nur für Admin-Profile sichtbar.
+- Der Admin-Bereich und alle Änderungsaktionen sind nur für Admin-Profile sichtbar; Kinderprofile erhalten nie Admin-UI-Zugriff.
 - Die PIN schützt vor versehentlichen Änderungen in der UI. Sie ist **keine echte OS-Sicherheitsgrenze**: Wer Zugriff auf dasselbe Linux-Benutzerkonto hat, kann die JSON-Dateien direkt ändern. Für echte Trennung separate Linux-Konten verwenden.
 - Power-Aktionen werden nur nach einem Bestätigungsdialog ausgelöst. Es werden feste, argumentgetrennte `systemctl`-Aufrufe verwendet; keine Shell, keine freie Befehlsverkettung.
+- Zeitlimits sind eine Familienfunktion, **keine OS-Sandbox**. Wer den Prozess beendet, auf eine TTY wechselt, Dateien im selben Linux-Konto ändert oder Compositor-Shortcuts nutzt, liegt außerhalb des Schutzmodells.
 - Keine Netzwerkabhängigkeit, keine Cloud, keine Telemetrie, keine externen Downloads.
 
 ## Architektur
@@ -224,9 +232,12 @@ paths.rs       XDG-Auflösung, Applikations-/Icon-Pfade
 desktop.rs     Desktop-Parsing, Discovery, Icon-Auflösung, Steam-/Prism-Diagnose
 launch.rs      GIO-Launch im Hintergrundthread, Fehlerdiagnose
 system.rs      Systemaktionen, systemctl-Neustart/Herunterfahren, Polkit-Fehlerbehandlung
+timekeeping.rs Tagesnutzung, Zusatzminuten, Tageswechsel, Persistenz
+i18n.rs        Fluent-Bundles, Locale-Erkennung, Live-Sprachwechsel
+sound.rs       Best-Effort-Warnton über System-Player
 controller.rs  gilrs-Thread, Deadzone, Repeat, Hotplug, Input-Normalisierung
 artwork.rs     Bildimport, Center-Crop, Thumbnail-Cache, Texturen
-ui/            Bibliothek, Profile, Admin, Dialoge/Overlays
+ui/            Bibliothek, Profile, Admin, Dialoge/Overlays, Zeitdialoge
 ```
 
 Datenfluss: `UI → AppState → Library/Profiles → GIO (gio launch)`.
@@ -234,8 +245,10 @@ Datenfluss: `UI → AppState → Library/Profiles → GIO (gio launch)`.
 ## Bekannte Einschränkungen / noch auf Zielhardware zu testen
 
 - **Nicht auf Bazzite getestet**: Entwicklung und automatisierte Tests liefen auf Manjaro/KDE/Wayland. Wayland-Fullscreen, KDE-Fokusverhalten, echte Controller-Hotplug-Szenarien, 4K/DPI und die NVIDIA-Wayland-Darstellung auf Bazzite müssen auf dem Zielgerät verifiziert werden.
-- **Kein Controller in der Testumgebung**: Die Logik ist unit-getestet (`gilrs`-Mapping, Deadzone, Repeat); ein realer Xbox-/PlayStation-Controller wurde hier nicht angeschlossen. `--no-controller` und der Fall „kein Controller gefunden“ wurden geprüft.
-- **Kein Spiel-Lebenszyklus**: `gio launch` ist nur ein Startbefehl. CouchDeck erkennt weder zuverlässig, ob ein Spiel läuft, noch wann es endet. Steam/Prism können im Hintergrund weiterlaufen.
+- **Controller-Hardware**: Ein 8BitDo Ultimate wurde unter Manjaro/KDE/Wayland erkannt und war bedienbar (USB-/Bluetooth-Modus noch zu dokumentieren). Xbox-/PlayStation-Controller sowie Hotplug/Reconnect auf Bazzite sind noch zu verifizieren. `--no-controller` und „kein Controller gefunden“ wurden geprüft.
+- **Kein Spiel-Lebenszyklus**: `gio launch` ist nur ein Startbefehl. CouchDeck erkennt weder zuverlässig, ob ein Spiel läuft, noch wann es endet. Steam/Prism können im Hintergrund weiterlaufen. Zeitbudgets messen daher **aktive Profilzeit, solange CouchDeck läuft**, nicht tatsächliche Spielprozesszeit; eine Spielerkennung bleibt ein späterer Schritt.
+- **Zeitbudget-Grenzfälle**: Nutzung wird alle 30 Sekunden, bei Warnungen, Freigaben, Profilwechseln und beim Beenden gespeichert. Ein harter Kill/Stromausfall kann das letzte Intervall verlieren. Läuft der Launcher nicht, wird keine Zeit gezählt. Die Kindersperre umfasst App-Menü-Minimieren/Beenden/Power/Profilwechsel sowie Best-Effort-WM-Close/Minimize, kann aber TTY-Wechsel, Prozess-Kill oder Dateiänderungen im selben Linux-Konto nicht verhindern.
+- **Benachrichtigungen/Alarm Best-Effort**: Warnungen erscheinen im CouchDeck-Fenster. Unter Wayland gibt es kein garantiertes Overlay über Fullscreen-Spielen; der optionale Ton nutzt `canberra-gtk-play`/`paplay`/`pw-play`/`aplay`, falls vorhanden, und wird sonst still übersprungen.
 - **Fokus nach Spielstart/-ende**: Plasma soll das Spielfenster in den Vordergrund holen. Das Verhalten wurde auf dem Zielgerät noch nicht geprüft. CouchDeck beendet keine Spiele und bietet ein explizites „Zu KDE minimieren“.
 - **SVG-Desktop-Icons** werden nicht rasterisiert (kein SVG-Decoder eingebunden). PNG/WebP/JPEG-Icons und eigene Cover funktionieren; sonst greift die neutrale Kachel.
 - **Kein Cover-Scraping, keine Steam-API, keine Shop-Anbindung**, keine automatische Suche.
@@ -245,13 +258,13 @@ Datenfluss: `UI → AppState → Library/Profiles → GIO (gio launch)`.
 - **Autostart**: Der XDG-Autostart-Eintrag ist KDE-only und wurde noch nicht in einer echten Bazzite-KDE-Anmeldesitzung verifiziert. Er startet standardmäßig fullscreen.
 - **Minimieren aus Fullscreen**: Der Ablauf „Fullscreen verlassen → minimieren“ ist implementiert, aber das Wayland-Verhalten von `ViewportCommand::Minimized` muss auf Bazzite/KDE geprüft werden.
 - **System Power**: Shutdown/Reboot nutzt `systemctl` und benötigt eine passende Polkit-Berechtigung. Die tatsächliche Ausführung wurde in der Entwicklungsumgebung nicht gestartet, um das System nicht herunterzufahren; geprüft sind Befehlskonstruktion, Bestätigungsdialog und Fehlerbehandlung.
-- **Mehrfachstart**: Es gibt noch keine Single-Instance-Sperre. Autostart plus manueller Start kann zwei Instanzen erzeugen.
-- **Kein Flatpak für CouchDeck selbst** in v0.2.5, wie spezifiziert. Release-Packaging besteht aus User-Install-Skript plus Binary, nicht aus RPM/AppImage.
+- **Mehrfachstart**: Es gibt noch keine Single-Instance-Sperre. Autostart plus manueller Start kann zwei Instanzen erzeugen; das kann auch die Zeitbudget-Zählung stören.
+- **Kein Flatpak für CouchDeck selbst** in v0.3.0, wie spezifiziert. Release-Packaging besteht aus User-Install-Skript plus Binary, nicht aus RPM/AppImage.
 - **Zielsession ist der KDE-Plasma-Desktop unter Wayland**, nicht Steam Gaming Mode/Gamescope. Gamescope-/Steam-Input-Konflikte wurden nicht geprüft.
 
 ## Tests und Abnahme
 
-- Unit-/Integrationstests: **49 Tests grün** (`cargo test`, inkl. GIO-Integrationstest sowie v0.2.5-Autostart-/Power-Tests).
+- Unit-/Integrationstests: **64 Tests grün** (`cargo test`: 62 Unit-Tests inkl. Zeitkontingent, i18n, Eltern-PIN-/Wechsel-/Start-Sperren, plus 2 GIO-Integrationstests).
 - `cargo clippy --all-targets -- -D warnings`: sauber.
 - `cargo fmt --check`: sauber.
 - Release-Build: `cargo build --release --locked`.
@@ -260,6 +273,7 @@ Datenfluss: `UI → AppState → Library/Profiles → GIO (gio launch)`.
 
 ## Changelog
 
+- **v0.3.0**: Deutsche/englische Fluent-UI mit Live-Wechsel, Profil-Hintergründe, Kinderprofile mit Tagesbudget, Elternfreigabe für Zusatzzeit, zentrale Start-Sperre, Warntöne.
 - **v0.2.5**: Controller-Fokus-Gating/Input-Puffer-Reset, korrektes LB/RB-Schultertasten-Mapping, Systemaktionen in `system.rs`.
 - **v0.2.0**: KDE-Autostart, „Zu KDE minimieren“, Shutdown/Reboot-Power-Menü, robustere Beenden-/Vollbildlogik.
 - **v0.1.0**: erster MVP mit Bibliothek, Profilen, Admin-PIN, Artwork, Steam-/Prism-Integration.
