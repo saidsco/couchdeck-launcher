@@ -1259,6 +1259,69 @@ fn draw_settings(ui: &mut egui::Ui, app: &mut CouchDeckApp, rect: Rect, scale: f
                         app.save_settings();
                     }
 
+                    ui.add_space(12.0 * scale);
+                    ui.separator();
+                    ui.label(RichText::new("Autostart").size(16.0 * scale).strong());
+                    let autostart_enabled = desktop::autostart_enabled(&app.paths);
+                    let mut autostart = autostart_enabled;
+                    let response = ui.checkbox(
+                        &mut autostart,
+                        "Beim Anmelden automatisch starten (nur KDE)",
+                    );
+                    note_focus(&response, &mut focus);
+                    if response.changed() {
+                        let result = if autostart {
+                            std::env::current_exe()
+                                .map_err(|err| format!("Eigener Programmpfad nicht ermittelbar: {err}"))
+                                .and_then(|binary| desktop::write_autostart(&app.paths, &binary))
+                                .map(|path| {
+                                    format!("Autostart aktiviert: {}", path.display())
+                                })
+                        } else {
+                            desktop::remove_autostart(&app.paths)
+                                .map(|_| "Autostart deaktiviert.".to_owned())
+                        };
+                        match result {
+                            Ok(message) => app.notify(message),
+                            Err(err) => app.message_dialog(
+                                "Autostart konnte nicht geändert werden",
+                                err,
+                                crate::app::MessageSeverity::Error,
+                            ),
+                        }
+                    }
+                    ui.label(
+                        RichText::new(format!(
+                            "Status: {}   ·   Datei: {}",
+                            if autostart_enabled { "aktiv" } else { "inaktiv" },
+                            app.paths.autostart_path().display()
+                        ))
+                        .monospace()
+                        .size(11.5 * scale)
+                        .color(MUTED),
+                    );
+                    if let Ok(binary) = std::env::current_exe() {
+                        ui.label(
+                            RichText::new(format!("Autostart-Programm: {}", binary.display()))
+                                .monospace()
+                                .size(11.5 * scale)
+                                .color(if binary.to_string_lossy().contains("/target/") {
+                                    WARNING
+                                } else {
+                                    MUTED
+                                }),
+                        );
+                        if binary.to_string_lossy().contains("/target/") {
+                            ui.label(
+                                RichText::new(
+                                    "Hinweis: Das ist ein Entwicklungs-Binary. Für den Autostart die installierte Version unter ~/.local/bin verwenden.",
+                                )
+                                .size(12.0 * scale)
+                                .color(WARNING),
+                            );
+                        }
+                    }
+
                     ui.add_space(10.0 * scale);
                     let mut auto_columns = app.settings.columns.is_none();
                     let response = ui.checkbox(&mut auto_columns, "Automatische Spaltenzahl");

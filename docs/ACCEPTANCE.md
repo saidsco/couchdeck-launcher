@@ -10,12 +10,13 @@ Legende:
 - [ ] Reproduzierbarer Build in Distrobox auf passendem Fedora-Release — Befehle dokumentiert, aber nicht auf Bazzite ausgeführt (Entwicklungsumgebung: Manjaro).
 - [x] `cargo fmt --check` erfolgreich.
 - [x] `cargo clippy --all-targets -- -D warnings` erfolgreich.
-- [x] `cargo test` erfolgreich: 43 Unit-Tests + 2 GIO-Integrationstests.
+- [x] `cargo test` erfolgreich: 45 Unit-Tests + 2 GIO-Integrationstests.
 - [x] `cargo build --release` erfolgreich.
 - [~] Wayland/KDE Fullscreen + `--windowed` — Fensterbetrieb geprüft; Wayland-Fullscreen und KDE-Fokus auf Zielhardware offen.
 - [x] Install/Uninstall ohne sudo, kein `rpm-ostree`-Layer — in temporärem `$HOME` getestet.
 - [x] Installationsskript installiert Binary, XDG-Desktop-Entry und Icon.
-- [x] Uninstall entfernt Binary/Entry/Icon; `--purge` löscht Benutzerdaten nur nach expliziter Bestätigung.
+- [x] Optionaler KDE-Autostart über `install-user.sh --autostart` oder Admin → Einstellungen.
+- [x] Uninstall entfernt Binary/Entry/Icon/Autostart; `--purge` löscht Benutzerdaten nur nach expliziter Bestätigung.
 - [x] Fehlermeldung bei fehlender Desktop-Datei, fehlendem `Exec`, ungültigem Bild, fehlerhaftem JSON, fehlendem GIO (Code-/UI-Pfad).
 - [x] Beschädigte Bibliothek: Fatal-Screen, Backup, keine stille Überschreibung.
 - [x] Atomare Schreibvorgänge für Bibliothek, Settings und Secrets.
@@ -46,7 +47,10 @@ Legende:
 - [x] Fokusanimation ca. 180 ms; keine Repaint-Schleife im Idle.
 - [x] Idle-CPU-Messung: 0 Ticks über 5 s im Release-Build.
 - [~] Controller-Hotplug/Reconnect mit echtem Gerät.
-- [x] Bewusstes Minimieren über Menü vorhanden; Wayland-Verhalten offen.
+- [x] „Zu KDE minimieren“: Fullscreen verlassen, Dekorationen wiederherstellen, Fenster minimieren; Wayland-Verhalten offen.
+- [~] Autostart als KDE-only XDG-Eintrag; Entry-Erzeugung/Entfernen unit-getestet, echte Anmeldesitzung offen.
+- [x] Beenden über Menü/Strg+Q beendet nur den Launcher; laufende Spiele werden nicht beendet.
+- [~] System neu starten/herunterfahren mit Bestätigung und festen `systemctl`-Aufrufen; Ausführung auf Zielhardware offen.
 
 ## Verwaltung
 

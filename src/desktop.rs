@@ -933,6 +933,53 @@ pub fn managed_steam_path(paths: &XdgPaths, app_id: &str) -> PathBuf {
     ))
 }
 
+// ---------------------------------------------------------------------------
+// XDG autostart
+// ---------------------------------------------------------------------------
+
+pub fn autostart_enabled(paths: &XdgPaths) -> bool {
+    paths.autostart_path().is_file()
+}
+
+/// Write/refresh the KDE-only XDG autostart entry. The entry deliberately uses
+/// `OnlyShowIn=KDE;` so Steam Gaming Mode/Gamescope sessions do not spawn a
+/// second desktop launcher.
+pub fn write_autostart(paths: &XdgPaths, binary: &Path) -> Result<PathBuf, String> {
+    let binary = binary
+        .to_str()
+        .ok_or_else(|| "Der Programmpfad enthält kein gültiges UTF-8.".to_owned())?;
+    let contents = format!(
+        "[Desktop Entry]\n\
+         Type=Application\n\
+         Name=CouchDeck\n\
+         Comment=Controllerfreundliche Fullscreen-Spielebibliothek\n\
+         Exec={} --autostart\n\
+         Icon=couchdeck\n\
+         Terminal=false\n\
+         Categories=Game;\n\
+         StartupNotify=false\n\
+         OnlyShowIn=KDE;\n\
+         X-GNOME-Autostart-enabled=true\n\
+         X-KDE-autostart-after=panel\n\
+         X-CouchDeck-Autostart=true\n",
+        exec_quote(binary)
+    );
+    let path = paths.autostart_path();
+    crate::storage::atomic_write(&path, contents.as_bytes(), false)
+        .map_err(|err| format!("Autostart-Datei konnte nicht geschrieben werden: {err}"))?;
+    Ok(path)
+}
+
+pub fn remove_autostart(paths: &XdgPaths) -> Result<bool, String> {
+    let path = paths.autostart_path();
+    if !path.exists() {
+        return Ok(false);
+    }
+    fs::remove_file(&path)
+        .map_err(|err| format!("Autostart-Datei konnte nicht entfernt werden: {err}"))?;
+    Ok(true)
+}
+
 /// Generate a **separate** managed desktop file for Flatpak Steam. The original
 /// file is never modified. `app_id` must already have been validated as a
 /// numeric Steam app id.
@@ -1199,6 +1246,28 @@ mod tests {
         let mut resolver = IconResolver::new(&paths);
         assert_eq!(resolver.resolve("my-game"), Some(icon));
         assert_eq!(resolver.resolve("does-not-exist"), None);
+    }
+
+    #[test]
+    fn autostart_entry_is_kde_only_and_quotes_binary() {
+        let tmp = tempfile::tempdir().unwrap();
+        let paths = XdgPaths::for_home(tmp.path());
+        assert!(!autostart_enabled(&paths));
+        let binary = tmp.path().join("My Games/couchdeck");
+        let path = write_autostart(&paths, &binary).unwrap();
+        assert_eq!(path, paths.autostart_path());
+        assert!(autostart_enabled(&paths));
+        let entry = parse_desktop_file(&path).unwrap();
+        assert!(entry.exec.as_deref().unwrap().contains("--autostart"));
+        assert!(entry.exec.as_deref().unwrap().contains("\""));
+        assert_eq!(entry.only_show_in, vec!["KDE"]);
+        let text = fs::read_to_string(&path).unwrap();
+        assert!(text.contains("X-CouchDeck-Autostart=true"));
+        assert!(text.contains("X-KDE-autostart-after=panel"));
+
+        assert!(remove_autostart(&paths).unwrap());
+        assert!(!autostart_enabled(&paths));
+        assert!(!remove_autostart(&paths).unwrap());
     }
 
     #[test]

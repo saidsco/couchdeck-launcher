@@ -171,6 +171,11 @@ impl XdgPaths {
         self.state_dir().join("couchdeck.log")
     }
 
+    /// XDG autostart entry. Only KDE sessions execute the generated entry.
+    pub fn autostart_path(&self) -> PathBuf {
+        self.config_home.join("autostart/couchdeck.desktop")
+    }
+
     /// Application directories in XDG precedence order (user first).
     pub fn application_dirs(&self) -> Vec<PathBuf> {
         let mut dirs = Vec::new();

@@ -14,6 +14,7 @@ fi
 rm -f "$HOME/.local/bin/couchdeck"
 rm -f "$HOME/.local/share/applications/couchdeck.desktop"
 rm -f "$HOME/.local/share/icons/hicolor/scalable/apps/couchdeck.svg"
+rm -f "${XDG_CONFIG_HOME:-$HOME/.config}/autostart/couchdeck.desktop"
 
 if command -v update-desktop-database >/dev/null 2>&1; then
   update-desktop-database "$HOME/.local/share/applications" >/dev/null 2>&1 || true
@@ -40,7 +41,7 @@ EOF
   rm -rf "${XDG_STATE_HOME:-$HOME/.local/state}/couchdeck"
   echo "CouchDeck-Benutzerdaten gelöscht."
 else
-  echo "Binary, Menüeintrag und Icon entfernt."
+  echo "Binary, Menüeintrag, Icon und Autostart-Eintrag entfernt."
   echo "Bibliothek, Profile, Artwork und Einstellungen wurden bewusst nicht gelöscht."
   echo "Zum vollständigen Löschen: $0 --purge"
 fi

@@ -46,6 +46,7 @@ pub fn draw(app: &mut CouchDeckApp, ctx: &egui::Context) {
             crate::app::Screen::Admin => admin::draw(ui, app),
         });
     dialogs::draw_overlay(app, ctx);
+    dialogs::draw_power(app, ctx);
     dialogs::draw_launch(app, ctx);
     draw_toast(app, ctx);
 }

@@ -693,6 +693,58 @@ fn draw_message(ctx: &egui::Context, dialog: MessageDialog) -> Outcome {
     }
 }
 
+pub fn draw_power(app: &CouchDeckApp, ctx: &egui::Context) {
+    let Some(state) = &app.power else {
+        return;
+    };
+    let scale = ui::ui_scale(ctx);
+    show_modal(ctx, "power-modal", scale, |ui| {
+        ui.set_min_width(560.0 * scale);
+        if let Some(outcome) = &state.outcome {
+            ui.label(
+                RichText::new("Systembefehl übergeben")
+                    .size(24.0 * scale)
+                    .strong()
+                    .color(OK),
+            );
+            ui.label(
+                RichText::new(&outcome.message)
+                    .size(13.0 * scale)
+                    .color(MUTED),
+            );
+            ui.label(
+                RichText::new("CouchDeck wird beendet; das System übernimmt.")
+                    .size(12.5 * scale)
+                    .color(MUTED),
+            );
+        } else {
+            ui.horizontal(|ui| {
+                ui.spinner();
+                ui.label(
+                    RichText::new(state.action.progress())
+                        .size(23.0 * scale)
+                        .strong()
+                        .color(TEXT),
+                );
+            });
+            ui.label(
+                RichText::new(
+                    "Der Befehl wird über `systemctl` an systemd übergeben. Falls nötig, kann eine Polkit-Abfrage erscheinen.",
+                )
+                .size(13.0 * scale)
+                .color(MUTED),
+            );
+            if state.started.elapsed().as_secs() > 5 {
+                ui.label(
+                    RichText::new("systemctl antwortet noch. Bitte warten …")
+                        .size(12.5 * scale)
+                        .color(WARNING),
+                );
+            }
+        }
+    });
+}
+
 pub fn draw_launch(app: &mut CouchDeckApp, ctx: &egui::Context) {
     let Some(state) = &app.launch else {
         return;
@@ -770,11 +822,12 @@ pub fn draw_launch(app: &mut CouchDeckApp, ctx: &egui::Context) {
             }
         });
     });
-    if minimize {
-        ctx.send_viewport_cmd(egui::ViewportCommand::Minimized(true));
-    }
     if dismiss {
         app.launch = None;
+    }
+    if minimize {
+        app.minimize_to_desktop(ctx);
+    } else if dismiss {
         ctx.request_repaint();
     }
 }

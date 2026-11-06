@@ -13,6 +13,7 @@ VERWENDUNG:
 OPTIONEN:
     --windowed        Fenster statt Vollbild (Entwicklung)
     --no-controller   Gamepad-Thread deaktivieren (Diagnose)
+    --autostart       Wird vom XDG-Autostart-Eintrag verwendet
     --version         Version anzeigen
     -h, --help        Diese Hilfe anzeigen
 
@@ -34,10 +35,12 @@ fn main() -> ExitCode {
 fn run() -> Result<(), String> {
     let mut windowed = false;
     let mut no_controller = false;
+    let mut autostart_launch = false;
     for arg in std::env::args().skip(1) {
         match arg.as_str() {
             "--windowed" => windowed = true,
             "--no-controller" => no_controller = true,
+            "--autostart" => autostart_launch = true,
             "--version" | "-V" => {
                 println!("couchdeck {}", env!("CARGO_PKG_VERSION"));
                 return Ok(());
@@ -56,11 +59,12 @@ fn run() -> Result<(), String> {
     logging::log_info(
         "main",
         format!(
-            "couchdeck {} | Session={} | Wayland={} | XDG_DATA_HOME={}",
+            "couchdeck {} | Session={} | Wayland={} | XDG_DATA_HOME={} | Autostart={}",
             env!("CARGO_PKG_VERSION"),
             std::env::var("XDG_SESSION_TYPE").unwrap_or_else(|_| "unbekannt".into()),
             std::env::var("WAYLAND_DISPLAY").unwrap_or_else(|_| "nicht gesetzt".into()),
-            paths.data_home.display()
+            paths.data_home.display(),
+            autostart_launch
         ),
     );
     storage::ensure_directories(&paths)?;

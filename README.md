@@ -1,56 +1,64 @@
 # CouchDeck
 
-CouchDeck ist ein nativer, controller-first Fullscreen-Game-Launcher für **Bazzite / KDE Plasma / Wayland**. Die App startet direkt in eine persönliche Spielebibliothek – kein Shop, keine News, keine Cloud, kein Overlay und keine Spieleplattform-Accounts.
+CouchDeck is a native, controller-first fullscreen game launcher for **Bazzite / KDE Plasma / Wayland**. It opens directly into a personal game library – no store, no news, no cloud, no overlay, and no game-platform accounts.
 
-Gespielt wird ausschließlich über vorhandene `.desktop`-Dateien und `gio launch`. Coverbilder werden getrennt von den Desktop-Dateien in CouchDeck verwaltet; die Originaldateien werden nie verändert.
+**Current version:** 0.2.0 · **Language:** English · [Deutsch](README-de.md)
 
-![Bibliothek](docs/screenshots/library.png)
+**Note:** the application UI and the detailed documents in `docs/` are currently in German.
 
-## Funktionsumfang
+Games are launched exclusively through existing `.desktop` files and `gio launch`. Cover images are managed separately from the desktop files; the original files are never modified.
 
-- **Fullscreen-Bibliothek** mit Cover-Grid, 3:4-Center-Crop, Fokusanimation und Fallback-Reihenfolge eigenes Cover → Desktop-Icon → neutrale Kachel.
-- **Gamepad-Navigation** über `gilrs`: D-Pad und linker Stick mit Deadzone, Hold-Repeat, Debouncing und Hotplug. South = bestätigen/starten, East = zurück, Start = Menü. LB/RB öffnen die Profilübersicht; dort wird zwischen Profilen gewechselt.
-- **Tastatur und Maus parallel**: Pfeiltasten, Enter/Leertaste, Escape, M, F11, Mausklick und Doppelklick.
-- **Desktop-Dateien**: XDG-Discovery, Import beliebiger Dateien, Vorschau von Name, Pfad und rohem `Exec`-Inhalt, Unterstützung für `NoDisplay`, `Hidden`, `TryExec`, `Path`, `DBusActivatable`, Kategorien und lokalisierte Namen.
-- **Start über GIO**: ausschließlich `gio launch /absoluter/pfad.desktop`. `Exec=` wird nicht zum Starten interpretiert; der rohe Inhalt dient nur der Anzeige und Diagnose.
-- **Eigene Artwork-Verwaltung**: Cover, Spiel-Hintergrund und globales Hintergrundbild per Dateiauswahl; Import nach `$XDG_DATA_HOME/couchdeck/assets/`, Vorschaucache unter `$XDG_CACHE_HOME/couchdeck/`.
-- **Lokale Profile**: Anzeigename, Rolle (Admin/Spieler), Avatar, profilabhängige Sichtbarkeit von Spielen. Keine Linux-Konten, keine Cloud.
-- **Admin-Bereich**: Spiele importieren/ausblenden/entfernen/sortieren, Titel und Artwork ändern, Profile verwalten, Sichtbarkeit je Profil, Einstellungen, PIN-Verwaltung.
-- **Admin-PIN**: Argon2id-Hash in separater Datei mit Modus `0600`; Eingabe per Tastatur und On-Screen-Ziffernfeld mit Controller. Der Profilwechsel selbst ist keine Authentifizierung; Admin-Aktionen werden bei gesetzter PIN separat entsperrt.
-- **Steam-Flatpak-Reparatur**: erkennt `Exec=steam steam://rungameid/ID`, ändert nichts automatisch und erzeugt nach ausdrücklicher Bestätigung eine **separate verwaltete** Datei mit `flatpak run com.valvesoftware.Steam …`.
-- **Prism-Launcher**: Import vorhandener Instanz-Desktop-Dateien; zusätzlich kann CouchDeck eine verwaltete Datei mit `flatpak run org.prismlauncher.PrismLauncher --launch INSTANCE_ID` erzeugen. `INSTANCE_ID` ist der Instanzordner, nicht der sichtbare Name.
-- **Robuste Persistenz**: atomisches Schreiben, Backups bei beschädigten Dateien, keine stillen Überschreibungen, Logs unter `$XDG_STATE_HOME/couchdeck/`.
+![Library](docs/screenshots/library.png)
 
-Weitere Screenshots: [Profilansicht](docs/screenshots/profiles.png), [Bibliothek als Spielerprofil](docs/screenshots/library-profile-mia.png), [Admin](docs/screenshots/admin.png), [Spieleeditor](docs/screenshots/game-editor.png), [Import](docs/screenshots/import.png), [PIN-Pad](docs/screenshots/pinpad.png), [Start-Overlay](docs/screenshots/launch.png), [Beschädigte Daten](docs/screenshots/corrupt-data.png).
+## Features
 
-## Voraussetzungen
+- **Fullscreen library** with a cover grid, 3:4 center crop, focus animation, and fallback order: custom cover → desktop icon → neutral tile.
+- **Gamepad navigation** via `gilrs`: D-pad and left stick with deadzone, hold-repeat, debouncing, and hotplug. South = confirm/start, East = back, Start = menu. LB/RB open the profile overview; profile switching happens there.
+- **Keyboard and mouse in parallel**: arrow keys, Enter/Space, Escape, M, F11, mouse click, and double-click.
+- **Desktop files**: XDG discovery, arbitrary file import, preview of name, path, and raw `Exec` content; support for `NoDisplay`, `Hidden`, `TryExec`, `Path`, `DBusActivatable`, categories, and localized names.
+- **Launch via GIO**: only `gio launch /absolute/path.desktop`. `Exec=` is not interpreted for launching; the raw content is only shown and checked for diagnostics.
+- **Custom artwork management**: cover, per-game background, and global background via a file picker; imports go to `$XDG_DATA_HOME/couchdeck/assets/`, thumbnail cache to `$XDG_CACHE_HOME/couchdeck/`.
+- **Local profiles**: display name, role (admin/player), avatar, and per-profile game visibility. No Linux accounts, no cloud.
+- **Admin area**: import/hide/remove/sort games, edit titles and artwork, manage profiles, per-profile visibility, settings, and PIN management.
+- **Admin PIN**: Argon2id hash in a separate file with mode `0600`; input via keyboard and an on-screen numpad with a controller. Profile switching itself is not authentication; admin actions are unlocked separately when a PIN is set.
+- **Steam Flatpak repair**: detects `Exec=steam steam://rungameid/ID`, never changes anything automatically, and after explicit confirmation creates a **separate managed** file using `flatpak run com.valvesoftware.Steam …`.
+- **Prism Launcher**: import existing instance desktop files; CouchDeck can also generate a managed file using `flatpak run org.prismlauncher.PrismLauncher --launch INSTANCE_ID`. `INSTANCE_ID` is the instance folder, not the visible name.
+- **Autostart (opt-in)**: CouchDeck can register itself as a KDE-only XDG autostart entry and then start borderless in fullscreen. Steam Gaming Mode/Gamescope is deliberately not started thanks to `OnlyShowIn=KDE;`. The entry can be managed via Admin → Settings or `install-user.sh --autostart`.
+- **Minimize to KDE**: exits fullscreen first and then minimizes the window so KDE/panel/taskbar remain reliably reachable.
+- **Power menu**: quit CouchDeck, reboot the system, or shut down the system – with a confirmation dialog and fixed `systemctl` calls (no shell).
+- **Robust persistence**: atomic writes, backups for damaged files, no silent overwrites, logs under `$XDG_STATE_HOME/couchdeck/`.
 
-- Bazzite mit KDE Plasma auf Wayland (Zielsystem).
-- GLib/GIO (`gio`), ein funktionierendes OpenGL-Setup und udev/libudev für `gilrs`.
-- Rust stable **≥ 1.85**. Getestet mit Rust 1.89.
-- Kein root, kein `rpm-ostree`-Layer, kein Flatpak für CouchDeck selbst.
-- Für Steam-/Prism-Integrationen müssen die jeweiligen Flatpaks auf dem Host installiert sein.
+More screenshots: [Profiles](docs/screenshots/profiles.png), [Library as a player profile](docs/screenshots/library-profile-mia.png), [Admin](docs/screenshots/admin.png), [Game editor](docs/screenshots/game-editor.png), [Import](docs/screenshots/import.png), [PIN pad](docs/screenshots/pinpad.png), [Launch overlay](docs/screenshots/launch.png), [Power menu](docs/screenshots/menu.png), [Autostart settings](docs/screenshots/autostart-settings.png), [Damaged data](docs/screenshots/corrupt-data.png).
 
-## Build auf Bazzite (Distrobox)
+## Requirements
 
-Bitte ein Fedora-Basisimage passend zur **Host-Fedora-Version** verwenden, damit die glibc im Container nicht neuer ist als auf dem Host.
+- Bazzite with KDE Plasma on Wayland (target system).
+- GLib/GIO (`gio`), a working OpenGL setup, and udev/libudev for `gilrs`.
+- systemd/logind with `systemctl` for reboot/shutdown (present on Bazzite); Polkit must allow the action for the active session.
+- Rust stable **≥ 1.85**. Tested with Rust 1.89.
+- No root, no `rpm-ostree` layer, no Flatpak for CouchDeck itself.
+- The respective Flatpaks must be installed on the host for Steam/Prism integration.
+
+## Building on Bazzite (Distrobox)
+
+Use a Fedora base image that matches the **host Fedora version**, so the glibc inside the container is not newer than on the host.
 
 ```bash
-# Auf dem Host
+# On the host
 grep -E '^(NAME|VERSION_ID)=' /etc/os-release
 
-# Beispiel: Host ist Fedora 42
+# Example: host is Fedora 42
 distrobox create \
   --name couchdeck-build \
   --image registry.fedoraproject.org/fedora-toolbox:42
 
-# Falls der toolbox-Tag für euer Release fehlt:
+# If the toolbox tag for your release is unavailable:
 #   --image registry.fedoraproject.org/fedora:42
 
 distrobox enter couchdeck-build
 ```
 
-Im Container:
+Inside the container:
 
 ```bash
 sudo dnf install -y \
@@ -58,177 +66,207 @@ sudo dnf install -y \
   systemd-devel libxkbcommon-devel wayland-devel mesa-libGL-devel \
   libX11-devel libXcursor-devel libXrandr-devel libXi-devel
 
-cd /pfad/zu/couchdeck
+cd /path/to/couchdeck
 cargo build --release
 cargo test
 cargo clippy --all-targets -- -D warnings
 cargo fmt --check
 ```
 
-Falls das Fedora-`rust`-Paket älter als 1.85 ist, im Container rustup verwenden:
+If the Fedora `rust` package is older than 1.85, use rustup inside the container:
 
 ```bash
 curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --profile minimal
 source "$HOME/.cargo/env"
 ```
 
-`Cargo.lock` wird mitgeliefert und pinnt die getesteten Versionen (u. a. `eframe 0.32.3`, `gilrs 0.11.2`, `image 0.25.10`, `argon2 0.5.3`).
+`Cargo.lock` is included and pins the tested versions (including `eframe 0.32.3`, `gilrs 0.11.2`, `image 0.25.10`, `argon2 0.5.3`).
 
-## Installation ohne root
+## Rootless installation
 
-Nach dem Release-Build auf dem **Host** (nicht im Container) aus dem Repo:
+After the release build on the **host** (not in the container), run this from the repository:
 
 ```bash
 ./scripts/install-user.sh
+# optionally enable KDE autostart right away:
+./scripts/install-user.sh --autostart
 ```
 
-Das installiert:
+This installs:
 
 - `~/.local/bin/couchdeck`
 - `~/.local/share/applications/couchdeck.desktop`
 - `~/.local/share/icons/hicolor/scalable/apps/couchdeck.svg`
 
-Start über die KDE-Anwendungsliste oder:
+Start it from the KDE application menu or with:
 
 ```bash
 ~/.local/bin/couchdeck
 ```
 
-Entwicklung/Debug:
+Development/debug:
 
 ```bash
-~/.local/bin/couchdeck --windowed          # Fenster statt Vollbild
-~/.local/bin/couchdeck --no-controller     # Gamepad-Thread deaktivieren
+~/.local/bin/couchdeck --windowed          # window instead of fullscreen
+~/.local/bin/couchdeck --no-controller     # disable the gamepad thread
 ~/.local/bin/couchdeck --help
 ```
 
-Deinstallation ohne Datenverlust:
+Uninstall without losing data:
 
 ```bash
 ./scripts/uninstall-user.sh
 ```
 
-Vollständige Löschung von Bibliothek, Profilen, PIN-Hash, Artwork, Cache und Logs nur nach expliziter Bestätigung:
+Complete removal of library, profiles, PIN hash, artwork, cache, and logs only after explicit confirmation:
 
 ```bash
 ./scripts/uninstall-user.sh --purge
 ```
 
-## Bedienung
+## Controls
 
-| Aktion | Controller | Tastatur/Maus |
+| Action | Controller | Keyboard/mouse |
 |---|---|---|
-| Fokus bewegen | D-Pad / linker Stick | Pfeiltasten, Maus |
-| Starten / bestätigen | A (South) | Enter / Leertaste, Doppelklick |
-| Zurück / schließen | B (East) | Escape |
-| Menü | Start | M |
-| Profile wechseln | LB/RB (öffnet Profilansicht, dort wechseln) | PageUp/PageDown |
-| Vollbild umschalten | – | F11 |
-| Beenden | Menü → Beenden | Strg+Q |
+| Move focus | D-pad / left stick | Arrow keys, mouse |
+| Start / confirm | A (South) | Enter / Space, double-click |
+| Back / close | B (East) | Escape |
+| Menu | Start | M |
+| Switch profile | LB/RB (opens profile view; switch there) | PageUp/PageDown |
+| Minimize to KDE | Menu → Minimize to KDE | Menu |
+| Toggle fullscreen | – | F11 |
+| Reboot / shut down system | Menu → System … | Menu |
+| Quit CouchDeck | Menu → Quit CouchDeck | Ctrl+Q |
 
-Die Bibliothek zeigt nur Cover, Titel und bei Fokus eine reduzierte Aktionsleiste. LB/RB öffnen aus der Bibliothek die Profilübersicht; direkt gewechselt wird dort.
+The library shows only covers, titles, and a reduced action bar on focus. LB/RB open the profile overview from the library; switching happens there.
 
-## Erste Schritte
+## Autostart, kiosk mode, and system actions
 
-1. **Admin-Bereich öffnen**: Menü → Admin-Bereich. Beim ersten Start ist ein lokales Admin-Profil `Spieler 1` vorhanden. Name und Avatar lassen sich unter Admin → Profile ändern.
-2. **Spiel importieren**: Admin → Spiele → *Desktop-Datei importieren*. Name, Pfad und roher `Exec`-Inhalt werden vor der Freigabe angezeigt. Alternativ eine beliebige Datei über den Dateibrowser auswählen.
-3. **Cover setzen**: Spiel auswählen → *Cover wählen*. Das Bild wird kopiert und als eigener Override gespeichert; `Icon=` in der `.desktop`-Datei bleibt unverändert.
-4. **Admin-PIN setzen** (empfohlen): Admin → PIN & Sicherheit → *PIN setzen*. Die PIN ist eine lokale UI-Sperre, keine Betriebssystem-Sicherheitsgrenze.
-5. **Starten**: In der Bibliothek A/Enter drücken. CouchDeck übergibt die Datei an GIO und zeigt bewusst keinen „Spiel läuft“-Status.
+CouchDeck is intended for a KDE Plasma desktop under Wayland, not for Steam Gaming Mode. The autostart entry therefore contains `OnlyShowIn=KDE;` and is ignored in a Gamescope/Gaming Mode session.
 
-## Steam und Prism
+- **Enable autostart**: Admin → Settings → “Start automatically on login (KDE only)”. Alternatively `./scripts/install-user.sh --autostart`.
+- **Autostart file**: `$XDG_CONFIG_HOME/autostart/couchdeck.desktop` (normally `~/.config/autostart/couchdeck.desktop`).
+- **Fullscreen overlay**: On startup, the window opens borderless in fullscreen. KDE remains active in the background.
+- **To KDE**: The “Minimize to KDE” menu item exits fullscreen first and then minimizes the window. CouchDeck can be restored from the KDE taskbar. If a Wayland compositor ignores the minimize request, the window is already in windowed mode and remains reachable via taskbar/Alt+Tab.
+- **Quit**: “Quit CouchDeck” in the Start menu only exits the launcher, not already running games.
+- **Reboot / shut down**: CouchDeck asks for confirmation and then calls `systemctl --no-block --no-wall reboot` or `systemctl --no-block --no-wall poweroff`. Authorization is handled by systemd/logind via Polkit; a Polkit prompt may appear.
 
-### Steam als Flatpak
+Autostart is a deliberate opt-in feature and is removed by `scripts/uninstall-user.sh`. The library, profiles, and artwork remain intact.
 
-Ein vorhandener Shortcut mit `Exec=steam steam://rungameid/12345` wird im Spieleeditor und unter Admin → Steam/Prism erkannt. CouchDeck ändert die Originaldatei nicht. Nach Bestätigung wird eine separate Datei unter `$XDG_DATA_HOME/couchdeck/managed-desktop/` erzeugt:
+## First steps
+
+1. **Open the admin area**: Menu → Admin Area. On first start, a local admin profile `Player 1` exists. Name and avatar can be changed under Admin → Profiles.
+2. **Import a game**: Admin → Games → *Import desktop file*. Name, path, and raw `Exec` content are shown before approval. Alternatively, choose any file via the file browser.
+3. **Set a cover**: Select a game → *Choose cover*. The image is copied and stored as a custom override; `Icon=` in the `.desktop` file remains unchanged.
+4. **Set an admin PIN** (recommended): Admin → PIN & Security → *Set PIN*. The PIN is a local UI lock, not an operating-system security boundary.
+5. **Start**: Press A/Enter in the library. CouchDeck hands the file to GIO and deliberately does not show a “game is running” status.
+
+## Steam and Prism
+
+### Steam as Flatpak
+
+An existing shortcut with `Exec=steam steam://rungameid/12345` is detected in the game editor and under Admin → Steam/Prism. CouchDeck does not modify the original file. After confirmation, a separate file is created under `$XDG_DATA_HOME/couchdeck/managed-desktop/`:
 
 ```ini
 Exec=flatpak run com.valvesoftware.Steam steam://rungameid/12345
 ```
 
-Der neue Eintrag wird zusätzlich in die Bibliothek aufgenommen; der ursprüngliche Eintrag bleibt erhalten. Ist `com.valvesoftware.Steam` nicht installiert, wird die Reparatur abgelehnt.
+The new entry is additionally added to the library; the original entry remains. If `com.valvesoftware.Steam` is not installed, the repair is refused.
 
 ### Prism Launcher
 
-Vorhandene `.desktop`-Dateien mit:
+Existing `.desktop` files with:
 
 ```ini
 Exec=flatpak run org.prismlauncher.PrismLauncher --launch INSTANCE_ID
 ```
 
-können direkt importiert werden. Beim Import wird geprüft, ob der Instanzordner existiert:
+can be imported directly. During import, CouchDeck verifies that the instance folder exists:
 
 - `~/.var/app/org.prismlauncher.PrismLauncher/data/PrismLauncher/instances/<ID>`
 - `~/.local/share/PrismLauncher/instances/<ID>`
 - `~/.var/app/org.prismlauncher.PrismLauncher/.local/share/PrismLauncher/instances/<ID>`
 
-`INSTANCE_ID` ist der **Ordnername**, nicht der sichtbare Instanzname. Unter Admin → Steam/Prism können vorhandene Instanzen ausgewählt und eine verwaltete Desktop-Datei erzeugt werden. Das Cover wird anschließend wie bei jedem anderen Eintrag gesetzt und ist völlig unabhängig vom Desktop-Icon.
+`INSTANCE_ID` is the **folder name**, not the visible instance name. Under Admin → Steam/Prism, existing instances can be selected and a managed desktop file can be created. The cover is then set like for any other entry and is completely independent of the desktop icon.
 
-Beispieldateien liegen unter `examples/`: `prism-minecraft.desktop`, `steam-game-flatpak.desktop`, `steam-game-original.desktop` und `library.example.json`.
+Example files are in `examples/`: `prism-minecraft.desktop`, `steam-game-flatpak.desktop`, `steam-game-original.desktop`, and `library.example.json`.
 
-## Datenformat und Speicherorte
+## Data format and locations
 
-| Zweck | Pfad |
+| Purpose | Path |
 |---|---|
-| Einstellungen | `$XDG_CONFIG_HOME/couchdeck/settings.toml` |
-| Bibliothek/Profile/Spiele | `$XDG_DATA_HOME/couchdeck/library.json` |
-| PIN-Hashes | `$XDG_DATA_HOME/couchdeck/secrets.json` (Modus `0600`) |
-| Importierte Bilder | `$XDG_DATA_HOME/couchdeck/assets/{covers,backgrounds,avatars}/` |
-| Verwaltete Desktop-Dateien | `$XDG_DATA_HOME/couchdeck/managed-desktop/` |
-| Thumbnail-Cache | `$XDG_CACHE_HOME/couchdeck/thumbnails/` |
+| Settings | `$XDG_CONFIG_HOME/couchdeck/settings.toml` |
+| KDE autostart | `$XDG_CONFIG_HOME/autostart/couchdeck.desktop` |
+| Library/profiles/games | `$XDG_DATA_HOME/couchdeck/library.json` |
+| PIN hashes | `$XDG_DATA_HOME/couchdeck/secrets.json` (mode `0600`) |
+| Imported images | `$XDG_DATA_HOME/couchdeck/assets/{covers,backgrounds,avatars}/` |
+| Managed desktop files | `$XDG_DATA_HOME/couchdeck/managed-desktop/` |
+| Thumbnail cache | `$XDG_CACHE_HOME/couchdeck/thumbnails/` |
 | Logs | `$XDG_STATE_HOME/couchdeck/couchdeck.log` |
 
-Details: [docs/DATA-FORMAT.md](docs/DATA-FORMAT.md).
+Details: [docs/DATA-FORMAT.md](docs/DATA-FORMAT.md) (currently in German).
 
-## Sicherheitsmodell
+## Security model
 
-- CouchDeck startet **nur** Dateien, die ein Admin explizit importiert hat. Beim Import werden Name, Pfad und `Exec` angezeigt.
-- `Exec=` wird nie von CouchDeck ausgeführt oder zum Starten in Argumente zerlegt. Die Datei geht unverändert an `gio launch`; der rohe Inhalt wird nur lesend angezeigt und für Diagnosehinweise geprüft.
-- Der Admin-Bereich und alle Änderungsaktionen sind nur für Admin-Profile sichtbar.
-- Die PIN schützt vor versehentlichen Änderungen in der UI. Sie ist **keine echte OS-Sicherheitsgrenze**: Wer Zugriff auf dasselbe Linux-Benutzerkonto hat, kann die JSON-Dateien direkt ändern. Für echte Trennung separate Linux-Konten verwenden.
-- Keine Netzwerkabhängigkeit, keine Cloud, keine Telemetrie, keine externen Downloads.
+- CouchDeck **only** launches files that an admin has explicitly imported. During import, name, path, and `Exec` are shown.
+- `Exec=` is never executed by CouchDeck or split into arguments for launching. The file is passed unchanged to `gio launch`; the raw content is only displayed and checked for diagnostic hints.
+- The admin area and all modification actions are only visible to admin profiles.
+- The PIN protects against accidental UI changes. It is **not a real OS security boundary**: anyone with access to the same Linux user account can modify the JSON files directly. Use separate Linux accounts for real isolation.
+- Power actions are only triggered after a confirmation dialog. Fixed, argument-separated `systemctl` calls are used; no shell, no arbitrary command chaining.
+- No network dependency, no cloud, no telemetry, no external downloads.
 
-## Architektur
+## Architecture
 
 ```
-main.rs        CLI, Logging, eframe-Start, Viewport
-app.rs         Zustandsmaschine, Navigation, Aktionen, Persistenz-Orchestrierung
+main.rs        CLI, logging, eframe startup, viewport
+app.rs         state machine, navigation, actions, persistence orchestration
 model.rs       Library/Profile/GameEntry/Settings/AdminSecrets
-storage.rs     XDG-Persistenz, atomisches Schreiben, Backups, Migration
-paths.rs       XDG-Auflösung, Applikations-/Icon-Pfade
-desktop.rs     Desktop-Parsing, Discovery, Icon-Auflösung, Steam-/Prism-Diagnose
-launch.rs      GIO-Launch im Hintergrundthread, Fehlerdiagnose
-controller.rs  gilrs-Thread, Deadzone, Repeat, Hotplug, Input-Normalisierung
-artwork.rs     Bildimport, Center-Crop, Thumbnail-Cache, Texturen
-ui/            Bibliothek, Profile, Admin, Dialoge/Overlays
+storage.rs     XDG persistence, atomic writes, backups, migration
+paths.rs       XDG resolution, application/icon paths
+desktop.rs     desktop parsing, discovery, icon resolution, Steam/Prism diagnostics
+launch.rs      GIO launch in a background thread, error diagnostics
+power.rs       systemctl reboot/shutdown, Polkit error handling
+controller.rs  gilrs thread, deadzone, repeat, hotplug, input normalization
+artwork.rs     image import, center crop, thumbnail cache, textures
+ui/            library, profiles, admin, dialogs/overlays
 ```
 
-Datenfluss: `UI → AppState → Library/Profiles → GIO (gio launch)`.
+Data flow: `UI → AppState → Library/Profiles → GIO (gio launch)`.
 
-## Bekannte Einschränkungen / noch auf Zielhardware zu testen
+## Known limitations / still to be tested on target hardware
 
-- **Nicht auf Bazzite getestet**: Entwicklung und automatisierte Tests liefen auf Manjaro/KDE/Wayland. Wayland-Fullscreen, KDE-Fokusverhalten, echte Controller-Hotplug-Szenarien, 4K/DPI und die NVIDIA-Wayland-Darstellung auf Bazzite müssen auf dem Zielgerät verifiziert werden.
-- **Kein Controller in der Testumgebung**: Die Logik ist unit-getestet (`gilrs`-Mapping, Deadzone, Repeat); ein realer Xbox-/PlayStation-Controller wurde hier nicht angeschlossen. `--no-controller` und der Fall „kein Controller gefunden“ wurden geprüft.
-- **Kein Spiel-Lebenszyklus**: `gio launch` ist nur ein Startbefehl. CouchDeck erkennt weder zuverlässig, ob ein Spiel läuft, noch wann es endet. Steam/Prism können im Hintergrund weiterlaufen.
-- **Fokus nach Spielstart/-ende**: Plasma soll das Spielfenster in den Vordergrund holen. Das Verhalten wurde auf dem Zielgerät noch nicht geprüft. CouchDeck beendet keine Spiele und bietet ein explizites „Launcher minimieren“.
-- **SVG-Desktop-Icons** werden nicht rasterisiert (kein SVG-Decoder eingebunden). PNG/WebP/JPEG-Icons und eigene Cover funktionieren; sonst greift die neutrale Kachel.
-- **Kein Cover-Scraping, keine Steam-API, keine Shop-Anbindung**, keine automatische Suche.
-- **Favoriten**: Das Datenfeld ist vorhanden, eine Favoriten-UI ist im MVP nicht implementiert.
-- **Autostart**: kein XDG-Autostart-Eintrag; bewusst nur als möglicher späterer Opt-in-Schritt.
-- **Prism-Verwaltung**: Das Erzeugen einer verwalteten Datei setzt das Prism-Flatpak voraus. Native Prism-Installationen können importiert werden, wenn eine passende `.desktop`-Datei existiert.
-- **Steam Input**: Nicht mit aktivem Steam Input getestet. Steam kann zusätzliche virtuelle Controller erzeugen; bei Doppel-Eingaben ggf. Steam Input für den Launcher deaktivieren.
-- **Kein Flatpak für CouchDeck selbst** in v1, wie spezifiziert. Release-Packaging besteht aus User-Install-Skript plus Binary, nicht aus RPM/AppImage.
-- **Zielsession ist der KDE-Plasma-Desktop unter Wayland**, nicht Steam Gaming Mode/Gamescope. Gamescope-/Steam-Input-Konflikte wurden nicht geprüft.
+- **Not tested on Bazzite**: Development and automated tests ran on Manjaro/KDE/Wayland. Wayland fullscreen, KDE focus behavior, real controller hotplug scenarios, 4K/DPI, and NVIDIA Wayland rendering on Bazzite must be verified on the target device.
+- **No controller in the test environment**: The logic is unit-tested (`gilrs` mapping, deadzone, repeat); a real Xbox/PlayStation controller was not connected here. `--no-controller` and the “no controller found” case were tested.
+- **No game lifecycle tracking**: `gio launch` is only a start command. CouchDeck does not reliably know whether a game is running or when it ends. Steam/Prism may continue running in the background.
+- **Focus after game start/exit**: Plasma is expected to bring the game window to the foreground. This has not been verified on the target device. CouchDeck never terminates games and offers an explicit “Minimize to KDE”.
+- **SVG desktop icons** are not rasterized (no SVG decoder is bundled). PNG/WebP/JPEG icons and custom covers work; otherwise the neutral tile is used.
+- **No cover scraping, no Steam API, no store integration**, no automatic search.
+- **Favorites**: the data field exists, but a favorites UI is not implemented in the MVP.
+- **Prism management**: generating a managed file requires the Prism Flatpak. Native Prism installations can be imported if a matching `.desktop` file exists.
+- **Steam Input**: not tested with Steam Input active. Steam may create additional virtual controllers; if double input occurs, disable Steam Input for the launcher.
+- **Autostart**: the XDG autostart entry is KDE-only and has not yet been verified in a real Bazzite KDE login session. It starts fullscreen by default.
+- **Fullscreen minimize**: the “leave fullscreen → minimize” flow is implemented, but `ViewportCommand::Minimized` behavior under Bazzite/KDE Wayland still needs testing.
+- **System power**: shutdown/reboot uses `systemctl` and requires a suitable Polkit permission. The actual action was not executed in the development environment to avoid shutting down the system; command construction, confirmation dialog, and error handling were tested.
+- **Multiple instances**: there is no single-instance lock yet. Autostart plus a manual start can create two instances.
+- **No Flatpak for CouchDeck itself** in v0.2, as specified. Release packaging consists of the user install script plus binary, not RPM/AppImage.
+- **Target session is the KDE Plasma desktop under Wayland**, not Steam Gaming Mode/Gamescope. Gamescope/Steam Input conflicts have not been tested.
 
-## Tests und Abnahme
+## Tests and acceptance
 
-- Unit-/Integrationstests: **45 Tests grün** (`cargo test`, inkl. GIO-Integrationstest).
-- `cargo clippy --all-targets -- -D warnings`: sauber.
-- `cargo fmt --check`: sauber.
-- Release-Build: `cargo build --release --locked`.
-- UI-Smoke-Tests und Messungen: [docs/TEST_REPORT.md](docs/TEST_REPORT.md).
-- Abnahmematrix: [docs/ACCEPTANCE.md](docs/ACCEPTANCE.md).
+- Unit/integration tests: **47 tests passing** (`cargo test`, including the GIO integration test and v0.2 autostart/power tests).
+- `cargo clippy --all-targets -- -D warnings`: clean.
+- `cargo fmt --check`: clean.
+- Release build: `cargo build --release --locked`.
+- UI smoke tests and measurements: [docs/TEST_REPORT.md](docs/TEST_REPORT.md) (currently in German).
+- Acceptance matrix: [docs/ACCEPTANCE.md](docs/ACCEPTANCE.md) (currently in German).
 
-## Lizenz
+## Changelog
 
-Apache License 2.0. Siehe [LICENSE](LICENSE) und [NOTICE](NOTICE).
+- **v0.2.0**: KDE autostart, “Minimize to KDE”, shutdown/reboot power menu, more robust quit/fullscreen behavior.
+- **v0.1.0**: first MVP with library, profiles, admin PIN, artwork, and Steam/Prism integration.
+
+Details: [CHANGELOG.md](CHANGELOG.md).
+
+## License
+
+Apache License 2.0. See [LICENSE](LICENSE) and [NOTICE](NOTICE).

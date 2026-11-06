@@ -27,7 +27,7 @@ Alle Dateien sind menschenlesbar und versioniert. CouchDeck schreibt Bibliothek 
   "games": [
     {
       "id": "game-1234567890",
-      "desktop_file": "/home/chris/.local/share/applications/prism-minecraft.desktop",
+      "desktop_file": "/home/USER/.local/share/applications/prism-minecraft.desktop",
       "title_override": "Minecraft",
       "desktop_name": "Minecraft (Prism-Instanz)",
       "desktop_icon": "org.prismlauncher.PrismLauncher",
@@ -123,6 +123,29 @@ X-CouchDeck-Managed=true
 ```
 
 Originaldateien werden weder verändert noch überschrieben. Der Start erfolgt weiterhin über `gio launch` auf den absoluten Pfad.
+
+## KDE-Autostart
+
+`$XDG_CONFIG_HOME/autostart/couchdeck.desktop` wird nur auf ausdrücklichen Wunsch erzeugt:
+
+```ini
+[Desktop Entry]
+Type=Application
+Name=CouchDeck
+Exec="/home/USER/.local/bin/couchdeck" --autostart
+Icon=couchdeck
+Terminal=false
+Categories=Game;
+StartupNotify=false
+OnlyShowIn=KDE;
+X-GNOME-Autostart-enabled=true
+X-KDE-autostart-after=panel
+X-CouchDeck-Autostart=true
+```
+
+- `OnlyShowIn=KDE;` verhindert den Start im Steam Gaming Mode/Gamescope.
+- Der Pfad wird aus dem aktuell laufenden Binary erzeugt.
+- Deinstallation entfernt den Eintrag; die Deinstallation mit `--purge` löscht zusätzlich die Benutzerdaten.
 
 ## Cache und Logs
 

@@ -1,7 +1,8 @@
 # Test- und Messbericht
 
-**Stand:** 6. November 2026  
-**Getestete Umgebung:** Manjaro Linux (KDE Plasma, Wayland-Session), Kernel `6.18.55-1-MANJARO`, NVIDIA RTX 4070 Ti SUPER  
+**Stand:** 6. November 2026 · **Version:** CouchDeck 0.2.0
+
+**Getestete Umgebung:** Manjaro Linux (KDE Plasma, Wayland-Session), Kernel `6.18.55-1-MANJARO`, NVIDIA RTX 4070 Ti SUPER
 **Nicht die Zielhardware:** Bazzite KDE Plasma auf Wayland wurde in dieser Umgebung nicht ausgeführt.
 
 ## Toolchain und Abhängigkeiten
@@ -29,8 +30,8 @@ $ cargo clippy --all-targets -- -D warnings
 Finished `dev` profile ... (Exit 0)
 
 $ cargo test
-running 43 tests
-test result: ok. 43 passed; 0 failed
+running 45 tests
+test result: ok. 45 passed; 0 failed
 running 2 tests
 test result: ok. 2 passed; 0 failed
 (running 0 tests: main.rs, Doc-Tests)
@@ -38,6 +39,8 @@ test result: ok. 2 passed; 0 failed
 $ cargo build --release
 Finished `release` profile [optimized]
 ```
+
+Das sind **47 Tests insgesamt** (45 Unit-Tests + 2 GIO-Integrationstests).
 
 ### Abgedeckte Unit-Tests (Auszug)
 
@@ -51,6 +54,8 @@ Finished `release` profile [optimized]
 - PIN: nur Ziffern 4–12, Argon2id-Hash enthält nicht die Klartext-PIN, Verifikation, `0600`.
 - Controller: Button-Mapping, Deadzone/Hysterese, Initial- und Hold-Repeat, Rückkehr von D-Pad zu Stick.
 - Admin-/Controller-Fokus: zyklische Fokusreihenfolge, Fokus-Start, und injizierter Enter-Event aktiviert den fokussierten Button.
+- Autostart v0.2: KDE-only-Desktop-Entry, Quoting eines Binary-Pfads mit Leerzeichen, `--autostart`, Deaktivierung/Entfernen.
+- Power v0.2: feste, shellfreie `systemctl --no-block --no-wall reboot|poweroff`-Argumente und Labels.
 - GIO-Integrationstest: Desktop-Datei mit Leerzeichen im Pfad und gequotetem `Exec` wird über `gio launch` gestartet; fehlende Datei liefert einen Fehler.
 
 ## Manuelle UI-Smoke-Tests
@@ -77,8 +82,15 @@ Die UI wurde zusätzlich mit dem X11-Backend (Xwayland) gestartet, damit Fenster
 | Controller-Thread ohne angeschlossenen Controller | OK, Log „Kein Controller beim Start gefunden“, kein Crash |
 | Profilfilterung: Start mit Profil `Mia` | OK, nur für Mia sichtbare Spiele, Header zeigt Mia/Spieler |
 | Install-/Uninstall-Skript in temporärem `$HOME` | OK, Binary/Desktop/Icon installiert bzw. entfernt; Daten bleiben erhalten |
+| Autostart-Datei erzeugen/entfernen (Unit-Test, v0.2) | OK; KDE-only, Pfad mit Leerzeichen korrekt gequotet |
+| Autostart-Schalter in Admin → Einstellungen (UI, v0.2) | OK; Status, Pfad und Entwicklungs-Binary-Warnung sichtbar |
+| Power-Menü mit Neustart/Herunterfahren (UI, v0.2) | OK; Bestätigungsdialoge vorhanden, keine echte Power-Aktion ausgeführt |
+| Power-Flow mit Fake-`systemctl` (v0.2) | OK; Argumente `--no-block --no-wall poweroff`, App beendet sich nach Erfolg |
+| Minimize mit `--windowed` unter X11/Xwayland (v0.2) | OK; Fensterzustand `_NET_WM_STATE_HIDDEN` |
+| Power-Kommandokonstruktion (Unit-Test, v0.2) | OK; feste `systemctl`-Argumente, keine Shell |
+| Autostart/Minimize/Power in echter KDE-Anmeldesitzung | Nicht ausgeführt (Zielhardware-Test offen) |
 
-Screenshots: [Bibliothek](screenshots/library.png), [Bibliothek als Mia](screenshots/library-profile-mia.png), [Profile](screenshots/profiles.png), [Admin](screenshots/admin.png), [Spieleeditor](screenshots/game-editor.png), [Import](screenshots/import.png), [PIN](screenshots/pinpad.png), [Start-Overlay](screenshots/launch.png), [Fatal](screenshots/corrupt-data.png).
+Screenshots: [Bibliothek](screenshots/library.png), [Bibliothek als Mia](screenshots/library-profile-mia.png), [Profile](screenshots/profiles.png), [Admin](screenshots/admin.png), [Spieleeditor](screenshots/game-editor.png), [Import](screenshots/import.png), [PIN](screenshots/pinpad.png), [Start-Overlay](screenshots/launch.png), [Power-Menü](screenshots/menu.png), [Autostart-Einstellungen](screenshots/autostart-settings.png), [Fatal](screenshots/corrupt-data.png).
 
 Die Screenshots verwenden fiktive Demo-Spiele und Demo-Cover aus der Testumgebung. Sie zeigen keinen Shop und keine echten Spieleplattform-Daten.
 

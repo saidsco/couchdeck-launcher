@@ -14,6 +14,7 @@ use crate::launch::{self, LaunchOutcome};
 use crate::logging::{log_error, log_info, log_warn};
 use crate::model::{new_id, resolve_data_path, AdminSecrets, GameEntry, Library, Settings};
 use crate::paths::XdgPaths;
+use crate::power::{self, PowerOutcome, SystemAction};
 use crate::storage::{self, LibraryLoad, SecretsLoad, SettingsLoad};
 
 pub const APP_NAME: &str = "CouchDeck";
@@ -41,6 +42,8 @@ pub enum MenuAction {
     Import,
     ToggleFullscreen,
     Minimize,
+    Reboot,
+    PowerOff,
     About,
     Quit,
 }
@@ -62,6 +65,8 @@ pub enum ConfirmAction {
     RemoveProfile(String),
     RemovePin(String),
     RepairSteam(String),
+    Reboot,
+    PowerOff,
     Quit,
 }
 
@@ -180,6 +185,13 @@ pub struct LaunchState {
     pub completed_at: Option<Instant>,
 }
 
+pub struct PowerState {
+    pub action: SystemAction,
+    pub started: Instant,
+    pub outcome: Option<PowerOutcome>,
+    pub completed_at: Option<Instant>,
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ToastKind {
     Info,
@@ -267,6 +279,11 @@ pub struct CouchDeckApp {
     pub launch: Option<LaunchState>,
     pub launch_rx: Option<Receiver<LaunchOutcome>>,
     pub last_launch_started: Option<Instant>,
+    pub power: Option<PowerState>,
+    pub power_rx: Option<Receiver<PowerOutcome>>,
+    /// Set when leaving fullscreen so the minimised command is sent on the next
+    /// frame, after the compositor has processed the fullscreen exit.
+    pub pending_minimize: bool,
     pub toast: Option<Toast>,
     pub fatal: Option<FatalState>,
     pub fullscreen: bool,
@@ -373,6 +390,9 @@ impl CouchDeckApp {
             launch: None,
             launch_rx: None,
             last_launch_started: None,
+            power: None,
+            power_rx: None,
+            pending_minimize: false,
             toast: None,
             fatal,
             fullscreen: !options.windowed,
@@ -711,15 +731,23 @@ impl CouchDeckApp {
             action: MenuAction::ToggleFullscreen,
         });
         items.push(MenuItem {
-            label: "Launcher minimieren".to_owned(),
+            label: "Zu KDE minimieren".to_owned(),
             action: MenuAction::Minimize,
+        });
+        items.push(MenuItem {
+            label: "System neu starten".to_owned(),
+            action: MenuAction::Reboot,
+        });
+        items.push(MenuItem {
+            label: "System herunterfahren".to_owned(),
+            action: MenuAction::PowerOff,
         });
         items.push(MenuItem {
             label: "Über CouchDeck".to_owned(),
             action: MenuAction::About,
         });
         items.push(MenuItem {
-            label: "Beenden".to_owned(),
+            label: "CouchDeck beenden".to_owned(),
             action: MenuAction::Quit,
         });
         self.menu_focus = 0;
@@ -751,13 +779,30 @@ impl CouchDeckApp {
             }
             MenuAction::ToggleFullscreen => {
                 self.fullscreen = !self.fullscreen;
+                ctx.send_viewport_cmd(ViewportCommand::Decorations(!self.fullscreen));
                 ctx.send_viewport_cmd(ViewportCommand::Fullscreen(self.fullscreen));
                 self.overlay = Overlay::None;
             }
-            MenuAction::Minimize => {
-                ctx.send_viewport_cmd(ViewportCommand::Minimized(true));
-                self.overlay = Overlay::None;
-                self.notify("Launcher minimiert. Über die Taskleiste wiederherstellen.");
+            MenuAction::Minimize => self.minimize_to_desktop(ctx),
+            MenuAction::Reboot => {
+                self.overlay = Overlay::Confirm(ConfirmDialog {
+                    title: SystemAction::Reboot.confirm_title().to_owned(),
+                    message: "Alle laufenden Anwendungen und Spiele werden beendet. CouchDeck übergibt den Befehl an systemd.".to_owned(),
+                    confirm_label: SystemAction::Reboot.confirm_label().to_owned(),
+                    danger: true,
+                    action: ConfirmAction::Reboot,
+                    focus: 0,
+                });
+            }
+            MenuAction::PowerOff => {
+                self.overlay = Overlay::Confirm(ConfirmDialog {
+                    title: SystemAction::PowerOff.confirm_title().to_owned(),
+                    message: "Alle laufenden Anwendungen und Spiele werden beendet. CouchDeck übergibt den Befehl an systemd.".to_owned(),
+                    confirm_label: SystemAction::PowerOff.confirm_label().to_owned(),
+                    danger: true,
+                    action: ConfirmAction::PowerOff,
+                    focus: 0,
+                });
             }
             MenuAction::About => {
                 let gio = self
@@ -1444,6 +1489,105 @@ impl CouchDeckApp {
     }
 
     // ---------------------------------------------------------------------
+    // Desktop mode / system power
+    // ---------------------------------------------------------------------
+
+    /// Leave the borderless fullscreen overlay and minimize to KDE. The
+    /// fullscreen exit must be processed by the compositor before minimizing,
+    /// otherwise some Wayland compositors ignore the minimize request.
+    pub fn minimize_to_desktop(&mut self, ctx: &egui::Context) {
+        self.overlay = Overlay::None;
+        if self.fullscreen {
+            self.fullscreen = false;
+            self.pending_minimize = true;
+            ctx.send_viewport_cmd(ViewportCommand::Decorations(true));
+            ctx.send_viewport_cmd(ViewportCommand::Fullscreen(false));
+            self.notify("Wechsle zu KDE …");
+        } else {
+            ctx.send_viewport_cmd(ViewportCommand::Minimized(true));
+            self.notify("Launcher minimiert. Über die Taskleiste wiederherstellen.");
+        }
+        ctx.request_repaint();
+    }
+
+    fn finish_pending_minimize(&mut self, ctx: &egui::Context) {
+        if !self.pending_minimize {
+            return;
+        }
+        self.pending_minimize = false;
+        ctx.send_viewport_cmd(ViewportCommand::Minimized(true));
+        self.notify("Launcher minimiert. Über die Taskleiste wiederherstellen.");
+        ctx.request_repaint();
+    }
+
+    pub fn start_system_action(&mut self, action: SystemAction) {
+        self.overlay = Overlay::None;
+        self.power = Some(PowerState {
+            action,
+            started: Instant::now(),
+            outcome: None,
+            completed_at: None,
+        });
+        self.power_rx = Some(power::spawn(action));
+        log_info("power", action.label());
+    }
+
+    fn poll_power(&mut self) {
+        let result = self.power_rx.as_ref().map(Receiver::try_recv);
+        match result {
+            Some(Ok(outcome)) => {
+                self.power_rx = None;
+                if outcome.success {
+                    log_info("power", &outcome.message);
+                    if let Some(state) = &mut self.power {
+                        state.outcome = Some(outcome);
+                        state.completed_at = Some(Instant::now());
+                    }
+                } else {
+                    log_warn("power", &outcome.message);
+                    self.power = None;
+                    self.message_dialog(
+                        "Systembefehl fehlgeschlagen",
+                        outcome.message,
+                        MessageSeverity::Error,
+                    );
+                }
+            }
+            Some(Err(std::sync::mpsc::TryRecvError::Empty)) => {}
+            Some(Err(std::sync::mpsc::TryRecvError::Disconnected)) => {
+                self.power_rx = None;
+                self.power = None;
+                self.message_dialog(
+                    "Systembefehl abgebrochen",
+                    "Der Power-Thread wurde unerwartet beendet.",
+                    MessageSeverity::Error,
+                );
+            }
+            None => {}
+        }
+    }
+
+    fn tick_power(&mut self, ctx: &egui::Context) {
+        if self.power.is_none() {
+            return;
+        }
+        let completed = self
+            .power
+            .as_ref()
+            .and_then(|state| state.completed_at)
+            .map(|at| at.elapsed() > Duration::from_millis(1400))
+            .unwrap_or(false);
+        if completed {
+            // systemctl accepted the job. The system is going down/rebooting;
+            // closing the launcher releases the session UI in any case.
+            self.power = None;
+            self.should_quit = true;
+        } else {
+            ctx.request_repaint_after(Duration::from_millis(120));
+        }
+    }
+
+    // ---------------------------------------------------------------------
     // Launch
     // ---------------------------------------------------------------------
 
@@ -1653,6 +1797,9 @@ impl CouchDeckApp {
     pub fn handle_nav(&mut self, ctx: &egui::Context, action: NavAction) {
         if self.fatal.is_some() {
             self.handle_fatal_nav(action);
+            return;
+        }
+        if self.power.is_some() {
             return;
         }
         if self.launch.is_some() {
@@ -2063,6 +2210,8 @@ impl CouchDeckApp {
                 self.apply_steam_repair(&id);
                 self.admin.view = AdminView::Integrations;
             }
+            ConfirmAction::Reboot => self.start_system_action(SystemAction::Reboot),
+            ConfirmAction::PowerOff => self.start_system_action(SystemAction::PowerOff),
             ConfirmAction::Quit => {
                 self.overlay = Overlay::None;
                 self.should_quit = true;
@@ -2117,10 +2266,13 @@ impl CouchDeckApp {
         if quit {
             self.should_quit = true;
         }
-        let fullscreen = ctx.input_mut(|input| input.consume_key(Modifiers::NONE, Key::F11));
-        if fullscreen {
-            self.fullscreen = !self.fullscreen;
-            ctx.send_viewport_cmd(ViewportCommand::Fullscreen(self.fullscreen));
+        if self.power.is_none() {
+            let fullscreen = ctx.input_mut(|input| input.consume_key(Modifiers::NONE, Key::F11));
+            if fullscreen {
+                self.fullscreen = !self.fullscreen;
+                ctx.send_viewport_cmd(ViewportCommand::Decorations(!self.fullscreen));
+                ctx.send_viewport_cmd(ViewportCommand::Fullscreen(self.fullscreen));
+            }
         }
     }
 
@@ -2141,6 +2293,13 @@ impl CouchDeckApp {
             if confirm {
                 self.handle_nav(ctx, NavAction::Confirm);
             }
+            return;
+        }
+
+        // During a confirmed power action, do not let controller/keyboard input
+        // start games or change the underlying screen. Ctrl+Q remains available
+        // through handle_global_keys.
+        if self.power.is_some() {
             return;
         }
 
@@ -2256,9 +2415,12 @@ impl eframe::App for CouchDeckApp {
         self.poll_controller(ctx);
         self.flush_admin_confirm(ctx);
         self.poll_launch();
+        self.poll_power();
+        self.finish_pending_minimize(ctx);
         self.handle_global_keys(ctx);
         self.handle_keyboard(ctx);
         self.tick_launch_auto_close();
+        self.tick_power(ctx);
         crate::ui::draw(self, ctx);
         self.tick_toast(ctx);
         if self.should_quit {

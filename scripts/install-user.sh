@@ -4,6 +4,29 @@ set -euo pipefail
 
 cd "$(dirname "${BASH_SOURCE[0]}")/.."
 
+AUTOSTART=0
+for arg in "$@"; do
+  case "$arg" in
+    --autostart)
+      AUTOSTART=1
+      ;;
+    -h|--help)
+      cat <<EOF
+Verwendung: $0 [--autostart]
+
+  --autostart   KDE-Autostart-Eintrag für CouchDeck anlegen
+                (nur in KDE-Sitzungen, nicht im Steam Gaming Mode)
+EOF
+      exit 0
+      ;;
+    *)
+      echo "Unbekannte Option: $arg" >&2
+      echo "Verwendung: $0 [--autostart]" >&2
+      exit 2
+      ;;
+  esac
+done
+
 if [[ ${EUID} -eq 0 ]]; then
   echo "Fehler: CouchDeck wird als normaler Benutzer installiert, nicht als root." >&2
   exit 1
@@ -43,6 +66,28 @@ StartupNotify=true
 DESKTOP
 chmod 0644 "$APP_DIR/couchdeck.desktop"
 
+CONFIG_HOME="${XDG_CONFIG_HOME:-$HOME/.config}"
+AUTOSTART_FILE="$CONFIG_HOME/autostart/couchdeck.desktop"
+if [[ $AUTOSTART -eq 1 ]]; then
+  install -d "$CONFIG_HOME/autostart"
+  cat > "$AUTOSTART_FILE" <<DESKTOP
+[Desktop Entry]
+Type=Application
+Name=CouchDeck
+Comment=Controllerfreundliche Fullscreen-Spielebibliothek
+Exec="${HOME}/.local/bin/couchdeck" --autostart
+Icon=couchdeck
+Terminal=false
+Categories=Game;
+StartupNotify=false
+OnlyShowIn=KDE;
+X-GNOME-Autostart-enabled=true
+X-KDE-autostart-after=panel
+X-CouchDeck-Autostart=true
+DESKTOP
+  chmod 0644 "$AUTOSTART_FILE"
+fi
+
 # Best-effort desktop/icon cache refresh; harmless if the tools are absent.
 if command -v update-desktop-database >/dev/null 2>&1; then
   update-desktop-database "$APP_DIR" >/dev/null 2>&1 || true
@@ -59,4 +104,8 @@ CouchDeck installiert:
 
 Start:  ~/.local/bin/couchdeck
 Debug:  ~/.local/bin/couchdeck --windowed --no-controller
+Autostart: $(if [[ $AUTOSTART -eq 1 ]]; then echo "aktiv ($AUTOSTART_FILE)"; else echo "inaktiv"; fi)
+
+Der Autostart kann später auch in CouchDeck unter Admin → Einstellungen
+ein- und ausgeschaltet werden.
 EOF
