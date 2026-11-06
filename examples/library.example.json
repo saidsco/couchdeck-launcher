@@ -1,0 +1,36 @@
+{
+  "schema_version": 1,
+  "active_profile_id": "local-admin",
+  "profiles": [
+    {
+      "id": "local-admin",
+      "name": "Spieler 1",
+      "role": "admin",
+      "avatar": "assets/avatars/local-admin.png",
+      "favorites": []
+    },
+    {
+      "id": "guest",
+      "name": "Gast",
+      "role": "player",
+      "avatar": null,
+      "favorites": []
+    }
+  ],
+  "games": [
+    {
+      "id": "minecraft-example",
+      "desktop_file": "/home/USER/.local/share/applications/prism-minecraft.desktop",
+      "title_override": "Minecraft",
+      "desktop_name": "Minecraft (Prism-Instanz)",
+      "desktop_icon": "org.prismlauncher.PrismLauncher",
+      "cover": "assets/covers/minecraft-example.webp",
+      "background": null,
+      "visible_to_profiles": null,
+      "hidden": false,
+      "sort_order": 10,
+      "managed": false,
+      "created_at_unix": 1793910000
+    }
+  ]
+}

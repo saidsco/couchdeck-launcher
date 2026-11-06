@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=Minecraft (Prism-Instanz)
+Comment=Startet eine bestimmte Minecraft-Instanz über Prism Launcher Flatpak
+Exec=flatpak run org.prismlauncher.PrismLauncher --launch REPLACE_WITH_INSTANCE_FOLDER_ID
+Icon=org.prismlauncher.PrismLauncher
+Terminal=false
+Categories=Game;
+StartupNotify=true

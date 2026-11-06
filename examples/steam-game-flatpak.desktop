@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=Steam-Spiel (App-ID ersetzen)
+Comment=Startet ein Steam-Spiel über Steam als Flatpak
+Exec=flatpak run com.valvesoftware.Steam steam://rungameid/REPLACE_WITH_NUMERIC_APP_ID
+Icon=com.valvesoftware.Steam
+Terminal=false
+Categories=Game;
+StartupNotify=true
