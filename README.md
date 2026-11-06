@@ -2,7 +2,7 @@
 
 CouchDeck is a native, controller-first fullscreen game launcher for **Bazzite / KDE Plasma / Wayland**. It opens directly into a personal game library – no store, no news, no cloud, no overlay, and no game-platform accounts.
 
-**Current version:** 0.3.0 · **Language:** English · [Deutsch](README-de.md)
+**Current version:** 0.3.1 · **Language:** English · [Deutsch](README-de.md)
 
 The application UI is available in **German and English** via Fluent, with automatic locale detection and English as fallback. Some detailed documents under `docs/` are still in German.
 
@@ -12,6 +12,7 @@ Games are launched exclusively through existing `.desktop` files and `gio launch
 
 ## Features
 
+- **Native release packages**: portable x86_64 tar.gz and executable AppImage via GitHub Releases, with SHA-256 checksums, `ldd`/glibc runtime report, no root and no Rust compiler at install time.
 - **Bilingual UI (de/en)** via Fluent: automatic detection from `LANGUAGE`/`LC_ALL`/`LC_MESSAGES`/`LANG`, English fallback, switchable live under Admin → Settings.
 - **Fullscreen library** with a cover grid, 3:4 center crop, focus animation, and fallback order: custom cover → desktop icon → neutral tile.
 - **Gamepad navigation** via `gilrs`: D-pad and left stick with deadzone, hold-repeat, debouncing, and hotplug. South = confirm/start, East = back, Start = menu. LB/RB (shoulder buttons) open the profile overview; profile switching happens there. Navigation is only processed while CouchDeck has window focus; connect/disconnect events are still handled, and stale input is discarded on focus changes.
@@ -38,9 +39,97 @@ More screenshots: [Time budget exhausted](docs/screenshots/time-budget.png), [Pr
 - Bazzite with KDE Plasma on Wayland (target system).
 - GLib/GIO (`gio`), a working OpenGL setup, and udev/libudev for `gilrs`.
 - systemd/logind with `systemctl` for reboot/shutdown (present on Bazzite); Polkit must allow the action for the active session.
-- Rust stable **≥ 1.85**. Tested with Rust 1.89.
+- Rust stable **≥ 1.85** for building from source. Tested with Rust 1.89.
+- For prebuilt releases: Linux x86_64 with glibc at least the version documented in the release `runtime-info.txt` (built on Fedora 42 / glibc 2.41), plus the normal KDE Plasma/Wayland desktop libraries. No Rust toolchain is required.
 - No root, no `rpm-ostree` layer, no Flatpak for CouchDeck itself.
 - The respective Flatpaks must be installed on the host for Steam/Prism integration.
+
+## Install from GitHub Releases (Bazzite, no Rust required)
+
+Prebuilt Linux x86_64 packages are published at
+[github.com/saidsco/couchdeck-launcher/releases](https://github.com/saidsco/couchdeck-launcher/releases).
+They are native applications: **no Flatpak sandbox, no root, no Rust compiler**.
+
+Download these files from the latest release:
+
+- `couchdeck-<version>-linux-x86_64.tar.gz`
+- `CouchDeck-<version>-x86_64.AppImage`
+- `SHA256SUMS`
+- optional: `couchdeck-<version>-runtime-info.txt`
+
+Verify the download (only downloaded files are checked):
+
+```bash
+sha256sum -c SHA256SUMS --ignore-missing
+```
+
+### Portable archive → user installation
+
+```bash
+tar -xzf couchdeck-<version>-linux-x86_64.tar.gz
+./couchdeck-<version>-linux-x86_64/scripts/install-user.sh
+# optional KDE autostart:
+./couchdeck-<version>-linux-x86_64/scripts/install-user.sh --autostart
+```
+
+This installs the binary to `~/.local/bin/couchdeck`, plus the KDE menu entry,
+icon and optional autostart entry. It **does not touch** the library, profiles,
+PIN hash, artwork or settings under the XDG directories.
+
+### AppImage
+
+```bash
+chmod +x CouchDeck-<version>-x86_64.AppImage
+./CouchDeck-<version>-x86_64.AppImage
+```
+
+If FUSE is unavailable:
+
+```bash
+APPIMAGE_EXTRACT_AND_RUN=1 ./CouchDeck-<version>-x86_64.AppImage
+```
+
+The AppImage uses the same XDG data directories and does not install anything
+system-wide.
+
+### Update
+
+Install the new release archive with the same `install-user.sh` command, or
+replace the AppImage file. User data is stored separately and is preserved.
+The admin PIN, profiles, imported games, covers/backgrounds and settings remain
+unchanged.
+
+### Uninstall
+
+Keep the release archive, or download it again, then run:
+
+```bash
+./couchdeck-<version>-linux-x86_64/scripts/uninstall-user.sh
+```
+
+This removes binary, menu entry, icon and autostart only. To delete user data
+as well:
+
+```bash
+./couchdeck-<version>-linux-x86_64/scripts/uninstall-user.sh --purge
+```
+
+The purge asks for explicit confirmation.
+
+### Runtime requirements and glibc
+
+The release is built in Fedora 42 with glibc 2.41; the current release binary references at most `GLIBC_2.39`. The generated
+`runtime-info.txt` documents the build glibc, the maximum referenced GLIBC
+symbol version and the `ldd` result. `ldd` on the release binary shows the
+direct dependencies (glibc, `libm`, `libgcc_s`, `libudev`, `libcap`); the
+Wayland/X11/GL libraries are loaded dynamically by the desktop session. On
+Bazzite KDE Plasma these are provided by the host. The AppImage deliberately
+keeps host glibc, GPU drivers, Wayland/X11 and `libudev` to avoid
+driver/ABI conflicts.
+
+See [docs/RELEASE.md](docs/RELEASE.md) for build/release details and
+[docs/BAZZITE-RELEASE-TEST.md](docs/BAZZITE-RELEASE-TEST.md) for the clean
+Bazzite validation checklist.
 
 ## Building on Bazzite (Distrobox)
 
@@ -244,7 +333,7 @@ Data flow: `UI → AppState → Library/Profiles → GIO (gio launch)`.
 
 ## Known limitations / still to be tested on target hardware
 
-- **Not tested on Bazzite**: Development and automated tests ran on Manjaro/KDE/Wayland. Wayland fullscreen, KDE focus behavior, real controller hotplug scenarios, 4K/DPI, and NVIDIA Wayland rendering on Bazzite must be verified on the target device.
+- **Not tested on Bazzite**: Development and automated tests ran on Manjaro/KDE/Wayland. The release packages are built and smoke-tested in a clean Fedora 42 container, but AppImage/archive, controller, GIO launch and system actions still need the manual clean-Bazzite test from `docs/BAZZITE-RELEASE-TEST.md`. Wayland fullscreen, KDE focus behavior, real controller hotplug scenarios, 4K/DPI, and NVIDIA Wayland rendering must also be verified on the target device.
 - **Controller hardware**: an 8BitDo Ultimate was detected and usable on Manjaro/KDE/Wayland (USB/Bluetooth mode details still to be recorded). Xbox/PlayStation controllers and Bazzite hotplug/reconnect remain to be verified. `--no-controller` and the “no controller found” case were tested.
 - **No game lifecycle tracking**: `gio launch` is only a start command. CouchDeck does not reliably know whether a game is running or when it ends. Steam/Prism may continue running in the background. Time budgets therefore measure **active profile time while CouchDeck is running**, not actual game process time; game detection is a later step.
 - **Time-budget edge cases**: usage is saved every 30 seconds, on warnings, on grants, on profile switches, and on exit. A hard kill/power loss can lose up to the last interval. If the launcher is not running, no time is counted. The child guard covers app-level minimize/quit/power/profile switching and best-effort WM close/minimize paths, but cannot prevent TTY switching, killing the process, or editing files in the same Linux account.
@@ -259,7 +348,7 @@ Data flow: `UI → AppState → Library/Profiles → GIO (gio launch)`.
 - **Fullscreen minimize**: the “leave fullscreen → minimize” flow is implemented, but `ViewportCommand::Minimized` behavior under Bazzite/KDE Wayland still needs testing.
 - **System power**: shutdown/reboot uses `systemctl` and requires a suitable Polkit permission. The actual action was not executed in the development environment to avoid shutting down the system; command construction, confirmation dialog, and error handling were tested.
 - **Multiple instances**: there is no single-instance lock yet. Autostart plus a manual start can create two instances; this can also interfere with time-budget accounting.
-- **No Flatpak for CouchDeck itself** in v0.3.0, as specified. Release packaging consists of the user install script plus binary, not RPM/AppImage.
+- **No Flatpak for CouchDeck itself** in v0.3.1, as specified. Release packaging consists of a portable tar.gz and a native AppImage, not RPM/Flatpak.
 - **Target session is the KDE Plasma desktop under Wayland**, not Steam Gaming Mode/Gamescope. Gamescope/Steam Input conflicts have not been tested.
 
 ## Tests and acceptance
@@ -273,6 +362,7 @@ Data flow: `UI → AppState → Library/Profiles → GIO (gio launch)`.
 
 ## Changelog
 
+- **v0.3.1**: GitHub release automation: portable x86_64 archive, native AppImage, SHA256SUMS, ldd/glibc runtime reports and no-Rust installation.
 - **v0.3.0**: German/English Fluent UI with live switching, per-profile backgrounds, child profiles with daily time budgets, parent extra-time grants, central launch blocking, warning sounds.
 - **v0.2.5**: controller focus gating/input-buffer reset, correct LB/RB shoulder mapping, system actions moved to `system.rs`.
 - **v0.2.0**: KDE autostart, “Minimize to KDE”, shutdown/reboot power menu, more robust quit/fullscreen behavior.

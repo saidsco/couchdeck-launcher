@@ -106,12 +106,25 @@ Legende:
 - [~] Fehlerhafter Steam-Exec wird erkannt, nicht still geändert, nach Zustimmung separat korrigiert; echter Steam-Flatpak-Test offen.
 - [ ] Rückkehr und Fokus nach Spielstart/-ende auf echtem KDE/Wayland geprüft.
 
+## Release-Distribution (v0.3.1)
+
+- [x] GitHub-Actions-Workflow für Tags `v*` und manuellen Dispatch.
+- [x] Portables x86_64-`.tar.gz` mit Binary, Installer, Doku und Runtime-Report.
+- [x] Ausführbares x86_64-AppImage ohne Flatpak-Sandbox und ohne Root-Rechte.
+- [x] `SHA256SUMS` für tar.gz, AppImage und Runtime-Report.
+- [x] `ldd`-Prüfung und Dokumentation von Build-glibc sowie maximaler GLIBC-Symbolversion.
+- [x] Release-Pakete laufen ohne installierten Rust-Compiler; Build-Tools nur im CI-Container.
+- [x] Installation über `~/.local/bin/couchdeck` und XDG-Desktop-Entry weiterhin unterstützt.
+- [x] Installer überschreibt keine Profile, Artwork oder Einstellungen; Update ist derselbe Aufruf.
+- [x] AppImage/Archiv im Fedora-42-Container gebaut, per `--version` und Xvfb-Start geprüft.
+- [~] AppImage und Archiv auf einer frischen Bazzite-KDE-Installation inkl. Controller, GIO-Spielstart und Systemaktionen getestet — manuelle Checkliste offen.
+
 ## Nicht Teil des MVP
 
 - Kein eigener Store, keine Steam-API, keine automatische Cover-Suche/Web-Scraping.
 - Keine Accounts, kein Sync, keine Cloud.
 - Keine eigene Gamescope-/Login-Session.
 - Kein systemweiter Autostart ohne Opt-in.
-- Kein Flatpak-Paket für CouchDeck selbst.
+- Kein Flatpak-Paket für CouchDeck selbst; stattdessen portables tar.gz und natives AppImage.
 - Favoriten-UI nicht implementiert (Datenfeld reserviert).
 - SVG-Desktop-Icons werden nicht rasterisiert.

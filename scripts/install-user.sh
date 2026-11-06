@@ -2,7 +2,8 @@
 # Install CouchDeck for the current user. No sudo, no rpm-ostree layer.
 set -euo pipefail
 
-cd "$(dirname "${BASH_SOURCE[0]}")/.."
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PACKAGE_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 
 AUTOSTART=0
 for arg in "$@"; do
@@ -32,7 +33,15 @@ if [[ ${EUID} -eq 0 ]]; then
   exit 1
 fi
 
-BINARY="${COUCHDECK_BINARY:-target/release/couchdeck}"
+if [[ -n "${COUCHDECK_BINARY:-}" ]]; then
+  BINARY="$COUCHDECK_BINARY"
+elif [[ -x "$PACKAGE_ROOT/couchdeck" ]]; then
+  # Release archive layout: couchdeck-<version>/couchdeck
+  BINARY="$PACKAGE_ROOT/couchdeck"
+else
+  BINARY="$PACKAGE_ROOT/target/release/couchdeck"
+fi
+
 if [[ ! -x "$BINARY" ]]; then
   cat >&2 <<EOF
 Fehler: $BINARY wurde nicht gefunden oder ist nicht ausführbar.
@@ -40,8 +49,21 @@ Fehler: $BINARY wurde nicht gefunden oder ist nicht ausführbar.
 Baue zuerst im passenden Distrobox-Container:
     cargo build --release
 
-Danach dieses Skript auf dem Host (ohne sudo) ausführen.
+Oder verwende ein vollständiges CouchDeck-Release-Archiv. Danach dieses Skript
+auf dem Host (ohne sudo) ausführen.
 EOF
+  exit 1
+fi
+
+if [[ -n "${COUCHDECK_ICON:-}" ]]; then
+  ICON_SOURCE="$COUCHDECK_ICON"
+elif [[ -f "$PACKAGE_ROOT/assets/couchdeck.svg" ]]; then
+  ICON_SOURCE="$PACKAGE_ROOT/assets/couchdeck.svg"
+elif [[ -f "$PACKAGE_ROOT/couchdeck.svg" ]]; then
+  # Release archive layout
+  ICON_SOURCE="$PACKAGE_ROOT/couchdeck.svg"
+else
+  echo "Fehler: couchdeck.svg wurde nicht gefunden." >&2
   exit 1
 fi
 
@@ -50,7 +72,7 @@ APP_DIR="$HOME/.local/share/applications"
 ICON_DIR="$HOME/.local/share/icons/hicolor/scalable/apps"
 
 install -Dm755 "$BINARY" "$BIN_DIR/couchdeck"
-install -Dm644 assets/couchdeck.svg "$ICON_DIR/couchdeck.svg"
+install -Dm644 "$ICON_SOURCE" "$ICON_DIR/couchdeck.svg"
 install -d "$APP_DIR"
 
 cat > "$APP_DIR/couchdeck.desktop" <<DESKTOP
@@ -108,4 +130,7 @@ Autostart: $(if [[ $AUTOSTART -eq 1 ]]; then echo "aktiv ($AUTOSTART_FILE)"; els
 
 Der Autostart kann später auch in CouchDeck unter Admin → Einstellungen
 ein- und ausgeschaltet werden.
+
+Bibliothek, Profile, PIN, Artwork und Einstellungen werden durch dieses
+Installations-/Update-Skript nicht angefasst.
 EOF

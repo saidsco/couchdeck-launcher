@@ -1,5 +1,27 @@
 # Changelog
 
+## 0.3.1 – 2026-11-06
+
+### Native Release-Distribution
+
+- GitHub-Actions-Workflow für Tags `v*` und manuellen Dispatch eines vorhandenen Tags.
+- Portables `couchdeck-<version>-linux-x86_64.tar.gz` mit Binary, Icon, Installer/Uninstaller, README, Docs und Runtime-Report.
+- Ausführbares `CouchDeck-<version>-x86_64.AppImage` ohne Flatpak-Sandbox und ohne Root-Rechte.
+- `SHA256SUMS` für alle veröffentlichten Dateien.
+- `ldd`-Prüfung, Build-glibc und maximale GLIBC-Symbolversion als `runtime-info.txt`.
+- Release-Build in Fedora 42 (glibc 2.41, Rust 1.89); Pakete benötigen keinen Rust-Compiler.
+- AppImage/Archiv nutzen weiterhin `~/.local/bin/couchdeck` und die vorhandenen XDG-Datenordner; Profile, Artwork und Einstellungen werden bei Updates nicht überschrieben.
+- Installer erkennt Repo- und Release-Archiv-Layout; Update ist derselbe `install-user.sh`-Aufruf.
+- README/README-de mit Installation, Update, Deinstallation, Prüfsummen und glibc-Hinweisen für Bazzite erweitert.
+- Dokumentierte Bazzite-Zielhardware-Checkliste für AppImage/Archiv, Controller, GIO-Spielstart und Systemaktionen.
+
+### Tests / Doku
+
+- Bestehende 62 Unit-Tests + 2 GIO-Integrationstests bleiben grün.
+- Release-Paketierung lokal im Fedora-42-Container getestet: tar.gz, AppImage, SHA256SUMS, `ldd`, AppImage-Start unter Xvfb.
+- Echter Test auf einer frischen Bazzite-KDE-Installation bleibt als manueller Zielhardware-Test offen.
+
+
 ## 0.3.0 – 2026-11-06
 
 ### Internationalisierung

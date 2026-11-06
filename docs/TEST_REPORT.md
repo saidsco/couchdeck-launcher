@@ -1,8 +1,9 @@
 # Test- und Messbericht
 
-**Stand:** 6. November 2026 · **Version:** CouchDeck 0.3.0
+**Stand:** 6. November 2026 · **Version:** CouchDeck 0.3.1
 
 **Getestete Umgebung:** Manjaro Linux (KDE Plasma, Wayland-Session), Kernel `6.18.55-1-MANJARO`, NVIDIA RTX 4070 Ti SUPER
+**Release-Buildumgebung:** Fedora 42 Container, glibc 2.41, Rust 1.89.0, x86_64
 **Nicht die Zielhardware:** Bazzite KDE Plasma auf Wayland wurde in dieser Umgebung nicht ausgeführt.
 
 ## Toolchain und Abhängigkeiten
@@ -19,7 +20,8 @@
 | chrono | `0.4.45` |
 | serde_json | `1.0.154` |
 | toml | `0.8.23` |
-| GIO | `2.88.3` |
+| GIO | `2.88.3` (Host) / `2.84.4` (Fedora-42-Release-Container) |
+| Release-Build | Fedora 42, glibc 2.41, Rust 1.89.0 |
 
 `Cargo.lock` ist eingecheckt.
 
@@ -44,6 +46,16 @@ Finished `release` profile [optimized]
 ```
 
 Das sind **64 Tests insgesamt** (62 Unit-Tests + 2 GIO-Integrationstests).
+
+Zusätzlich wurde die Release-Paketierung im Fedora-42-Container geprüft:
+
+```text
+scripts/check-runtime.sh target/release/couchdeck ...   # ldd ohne "not found"
+scripts/package-release.sh                              # tar.gz + AppImage + SHA256SUMS
+APPIMAGE_EXTRACT_AND_RUN=1 CouchDeck-<version>.AppImage --version
+xvfb-run ... CouchDeck-<version>.AppImage --windowed    # Start bis "app: Start:"
+sha256sum -c SHA256SUMS
+```
 
 ### Abgedeckte Unit-Tests (Auszug)
 
@@ -103,10 +115,25 @@ Die UI wurde zusätzlich mit dem X11-Backend (Xwayland) gestartet, damit Fenster
 | Profil-Hintergrund-Rendering (v0.3.0) | OK; generiertes Hintergrundbild über `library.json` geladen und in der deutschen UI angezeigt; Dateiauswahl-UI noch nicht durchgeklickt |
 | Zusatzzeit-Dialog mit Admin-PIN (v0.3.0) | UI/Logik implementiert; im Screenshot-Test war absichtlich keine Admin-PIN gesetzt, daher nicht bis zur Freigabe durchgeklickt |
 | 8BitDo Ultimate unter Manjaro/Xwayland (v0.3.0) | Erkannt (`Controller: 8BitDo Ultimate`); reale Navigation/Modi auf Bazzite noch nicht dokumentiert |
+| tar.gz-Release (v0.3.1) | OK im Fedora-42-Container; Layout, Installer, `--version`, SHA256SUMS geprüft |
+| AppImage-Release (v0.3.1) | OK; `--version` und Start unter Xvfb bis zur Bibliothek, keine fehlenden Bibliotheken |
+| ldd/glibc-Report (v0.3.1) | OK; Build-glibc 2.41, max. referenziertes Symbol `GLIBC_2.39`, keine `not found`-Einträge |
+| Installation/Update in temporärem `$HOME` (v0.3.1) | Installer installiert Binary/Entry/Icon; XDG-Datenordner werden nicht angefasst |
+| AppImage/Archiv auf frischer Bazzite-KDE-Installation (v0.3.1) | **Nicht ausgeführt**; manuelle Checkliste in `docs/BAZZITE-RELEASE-TEST.md` |
 
 Screenshots: [Zeitkontingent verbraucht](screenshots/time-budget.png), [Bibliothek](screenshots/library.png), [Bibliothek als Mia](screenshots/library-profile-mia.png), [Profile](screenshots/profiles.png), [Admin](screenshots/admin.png), [Spieleeditor](screenshots/game-editor.png), [Import](screenshots/import.png), [PIN](screenshots/pinpad.png), [Start-Overlay](screenshots/launch.png), [Power-Menü](screenshots/menu.png), [Autostart-Einstellungen](screenshots/autostart-settings.png), [Fatal](screenshots/corrupt-data.png).
 
 Die Screenshots verwenden fiktive Demo-Spiele und Demo-Cover aus der Testumgebung. Sie zeigen keinen Shop und keine echten Spieleplattform-Daten.
+
+## Release-Distribution (v0.3.1)
+
+- GitHub-Actions-Workflow `.github/workflows/release.yml` für Tags `v*` und Workflow-Dispatch.
+- Build und Tests laufen in einem frischen Fedora-42-Container; das Release-Binary wird ohne Rust-Toolchain weiterverpackt.
+- `scripts/fetch-release-tools.sh` lädt ein gepinntes linuxdeploy-Build-Werkzeug mit SHA256-Prüfung und stellt daraus `appimagetool` bereit.
+- Das AppImage enthält die unveränderte native Binary sowie Desktop-/Icon-Metadaten; glibc, GPU-Treiber, Wayland/X11 und `libudev` kommen von Bazzite. Dadurch keine gebündelten System-ABI-Konflikte.
+- `SHA256SUMS` wird nach dem Packaging aus den finalen Dateien erzeugt.
+- AppImage und Archiv-Binary wurden mit `env -i PATH=/usr/bin:/bin` (ohne Cargo/Toolchain im Suchpfad) per `--version` gestartet.
+- Der echte Bazzite-KDE-Zielhardware-Test (Controller, GIO-Spielstart, Systemaktionen, AppImage/Archiv) ist noch offen und in `docs/BAZZITE-RELEASE-TEST.md` beschrieben.
 
 ## Idle-/Performance-Messung
 

@@ -1,0 +1,12 @@
+[Desktop Entry]
+Type=Application
+Name=CouchDeck
+Name[de]=CouchDeck
+Comment=Controller-first fullscreen game launcher
+Comment[de]=Controllerfreundliche Fullscreen-Spielebibliothek
+Exec=couchdeck
+Icon=couchdeck
+Terminal=false
+Categories=Game;
+StartupNotify=true
+X-CouchDeck-AppImage=true
