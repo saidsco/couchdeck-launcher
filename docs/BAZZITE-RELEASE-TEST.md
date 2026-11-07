@@ -17,6 +17,12 @@ sha256sum -c SHA256SUMS --ignore-missing
 Nur die heruntergeladenen Dateien werden geprüft; `--ignore-missing` erlaubt
 einen Test von AppImage und Archiv getrennt.
 
+## 0.4.1 Fix-Retest (offen)
+
+- [ ] Menü-Icon wird nach Installation/Update korrekt angezeigt (PNG + absoluter Pfad)
+- [ ] Fullscreen → „Zum Desktop minimieren“ → über Taskleiste zurück → Fullscreen wieder aktiv
+- [ ] Mit `--windowed` gestartet: Minimieren/Wiederherstellen bleibt im Windowed-Modus
+
 ## A. AppImage
 
 ```bash
@@ -33,17 +39,17 @@ APPIMAGE_EXTRACT_AND_RUN=1 ./CouchDeck-<version>-x86_64.AppImage
 
 Prüfen:
 
-- [ ] Startet direkt fullscreen in der Bibliothek
-- [ ] D-Pad/Stick erreicht alle Kacheln
-- [ ] A startet, B zurück, Start öffnet Menü
-- [ ] LB/RB öffnet die Profilübersicht
-- [ ] Controller-Reconnect/Hotplug funktioniert
-- [ ] Import einer `.desktop`-Datei über Admin → Spiele (Quelle, Desktop-ID und Exec prüfen)
+- [X] Startet direkt fullscreen in der Bibliothek
+- [X] D-Pad/Stick erreicht alle Kacheln
+- [X] A startet, B zurück, Start öffnet Menü
+- [X] LB/RB öffnet die Profilübersicht
+- [X] Controller-Reconnect/Hotplug funktioniert
+- [X] Import einer `.desktop`-Datei über Admin → Spiele (Quelle, Desktop-ID und Exec prüfen)
 - [ ] Admin → Suchpfade: zusätzliches Verzeichnis hinzufügen/entfernen, Rescan
 - [ ] Autostart nur nach Opt-in; `OnlyShowIn` entspricht der aktuellen Sitzung
-- [ ] Spielstart über `gio launch` (Test-Desktop-Datei mit Leerzeichen im Pfad)
-- [ ] Admin-PIN mit On-Screen-Pad
-- [ ] Zum Desktop minimieren
+- [X] Spielstart über `gio launch` (Test-Desktop-Datei mit Leerzeichen im Pfad)
+- [X] Admin-PIN mit On-Screen-Pad
+- [X] Zum Desktop minimieren
 - [ ] Systemaktionen: Bestätigungsdialog und systemctl/Polkit (Neustart/
       Herunterfahren nur auf einem Wegwerf-Testsystem wirklich ausführen)
 
@@ -57,8 +63,8 @@ tar -xzf couchdeck-<version>-linux-x86_64.tar.gz
 
 Danach dieselben UI-/Controller-/GIO-Tests wie oben. Zusätzlich:
 
-- [ ] `~/.local/bin/couchdeck` existiert und ist ausführbar
-- [ ] Desktop-Eintrag und Icon erscheinen in der Desktop-Anwendungsliste
+- [X] `~/.local/bin/couchdeck` existiert und ist ausführbar
+- [ ] Desktop-Eintrag und Icon erscheinen in der Desktop-Anwendungsliste — 0.4.0-Defect: kein Icon; 0.4.1 liefert PNG + absoluten Icon-Pfad, Retest offen
 - [ ] `ldd ~/.local/bin/couchdeck` enthält kein `not found`
 - [ ] `ldd --version` erfüllt die dokumentierte glibc-Anforderung
 - [ ] `~/.local/share/couchdeck/` wird bei einem Update nicht überschrieben
