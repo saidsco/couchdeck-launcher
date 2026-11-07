@@ -1,6 +1,6 @@
 # Test- und Messbericht
 
-**Stand:** 7. November 2026 · **Version:** CouchDeck 0.4.0
+**Stand:** 7. November 2026 · **Version:** CouchDeck 0.4.1
 
 **Getestete Umgebung:** Manjaro Linux (KDE Plasma, Wayland-Session), Kernel `6.18.55-1-MANJARO`, NVIDIA RTX 4070 Ti SUPER
 **Release-Buildumgebung:** Fedora 42 Container, glibc 2.41, Rust 1.89.0, x86_64
@@ -36,8 +36,8 @@ $ cargo clippy --all-targets -- -D warnings
 Finished `dev` profile ... (Exit 0)
 
 $ cargo test
-running 73 tests
-test result: ok. 73 passed; 0 failed
+running 74 tests
+test result: ok. 74 passed; 0 failed
 running 2 tests
 test result: ok. 2 passed; 0 failed
 (running 0 tests: main.rs, Doc-Tests)
@@ -46,7 +46,7 @@ $ cargo build --release
 Finished `release` profile [optimized]
 ```
 
-Das sind **75 Tests insgesamt** (73 Unit-Tests + 2 GIO-Integrationstests).
+Das sind **76 Tests insgesamt** (74 Unit-Tests + 2 GIO-Integrationstests).
 
 Zusätzlich wurde die Release-Paketierung im Fedora-42-Container geprüft:
 
@@ -133,6 +133,8 @@ Die UI wurde zusätzlich mit dem X11-Backend (Xwayland) gestartet, damit Fenster
 | Autostart-Installer mit `XDG_CURRENT_DESKTOP=ubuntu:GNOME` (v0.4.0) | OK; `OnlyShowIn=GNOME`, `NotShowIn=gamescope`, kein `X-KDE-autostart-after` |
 | Autostart-Installer mit `XDG_CURRENT_DESKTOP=gamescope:KDE` (v0.4.0) | OK; Installation/Autostart verweigert, kein Binary installiert |
 | Single-Instance-Smoke mit zwei Prozessen (v0.4.0) | OK; zweiter Prozess beendet sich mit Hinweis, erster läuft weiter |
+| Icon-Installation (v0.4.1) | OK; Installer legt 256-/512-PNG und SVG an, Desktop-/Autostart-Eintrag referenziert absolutes PNG |
+| Fullscreen-Wiederherstellung (v0.4.1) | Zustandslogik unit-getestet; echtes Minimieren/Wiederherstellen auf Bazzite/GNOME/XFCE offen |
 | Discovery-UI unter KDE/Wayland (v0.4.0) | Automatisierte Discovery-Tests grün; Admin-Ansicht „Suchpfade“ nicht vollständig manuell durchgeklickt |
 | GNOME/Wayland, XFCE/X11, SteamOS Desktop Mode (v0.4.0) | **Nicht ausgeführt**; Matrix in `docs/DESKTOP-TEST-MATRIX.md` |
 

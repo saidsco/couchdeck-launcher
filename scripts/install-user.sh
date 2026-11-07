@@ -102,23 +102,51 @@ EOF
 fi
 
 if [[ -n "${COUCHDECK_ICON:-}" ]]; then
-  ICON_SOURCE="$COUCHDECK_ICON"
+  ICON_SVG="$COUCHDECK_ICON"
 elif [[ -f "$PACKAGE_ROOT/assets/couchdeck.svg" ]]; then
-  ICON_SOURCE="$PACKAGE_ROOT/assets/couchdeck.svg"
+  ICON_SVG="$PACKAGE_ROOT/assets/couchdeck.svg"
 elif [[ -f "$PACKAGE_ROOT/couchdeck.svg" ]]; then
   # Release archive layout
-  ICON_SOURCE="$PACKAGE_ROOT/couchdeck.svg"
+  ICON_SVG="$PACKAGE_ROOT/couchdeck.svg"
 else
   echo "Fehler: couchdeck.svg wurde nicht gefunden." >&2
   exit 1
 fi
 
+if [[ -n "${COUCHDECK_ICON_PNG:-}" ]]; then
+  ICON_PNG="$COUCHDECK_ICON_PNG"
+elif [[ -f "$PACKAGE_ROOT/assets/couchdeck.png" ]]; then
+  ICON_PNG="$PACKAGE_ROOT/assets/couchdeck.png"
+elif [[ -f "$PACKAGE_ROOT/couchdeck.png" ]]; then
+  ICON_PNG="$PACKAGE_ROOT/couchdeck.png"
+else
+  echo "Fehler: couchdeck.png wurde nicht gefunden." >&2
+  exit 1
+fi
+
+if [[ -n "${COUCHDECK_ICON_PNG_512:-}" ]]; then
+  ICON_PNG_512="$COUCHDECK_ICON_PNG_512"
+elif [[ -f "$PACKAGE_ROOT/assets/couchdeck-512.png" ]]; then
+  ICON_PNG_512="$PACKAGE_ROOT/assets/couchdeck-512.png"
+elif [[ -f "$PACKAGE_ROOT/couchdeck-512.png" ]]; then
+  ICON_PNG_512="$PACKAGE_ROOT/couchdeck-512.png"
+else
+  ICON_PNG_512=""
+fi
+
 BIN_DIR="$HOME/.local/bin"
 APP_DIR="$HOME/.local/share/applications"
-ICON_DIR="$HOME/.local/share/icons/hicolor/scalable/apps"
+ICON_SCALABLE_DIR="$HOME/.local/share/icons/hicolor/scalable/apps"
+ICON_256_DIR="$HOME/.local/share/icons/hicolor/256x256/apps"
+ICON_512_DIR="$HOME/.local/share/icons/hicolor/512x512/apps"
+ICON_ABS="$ICON_256_DIR/couchdeck.png"
 
 install -Dm755 "$BINARY" "$BIN_DIR/couchdeck"
-install -Dm644 "$ICON_SOURCE" "$ICON_DIR/couchdeck.svg"
+install -Dm644 "$ICON_SVG" "$ICON_SCALABLE_DIR/couchdeck.svg"
+install -Dm644 "$ICON_PNG" "$ICON_ABS"
+if [[ -n "$ICON_PNG_512" ]]; then
+  install -Dm644 "$ICON_PNG_512" "$ICON_512_DIR/couchdeck.png"
+fi
 install -d "$APP_DIR"
 
 cat > "$APP_DIR/couchdeck.desktop" <<DESKTOP
@@ -127,7 +155,7 @@ Type=Application
 Name=CouchDeck
 Comment=Controllerfreundliche Fullscreen-Spielebibliothek
 Exec="${HOME}/.local/bin/couchdeck"
-Icon=couchdeck
+Icon=$ICON_ABS
 Terminal=false
 Categories=Game;
 StartupNotify=true
@@ -144,7 +172,7 @@ Type=Application
 Name=CouchDeck
 Comment=Controllerfreundliche Fullscreen-Spielebibliothek
 Exec="${HOME}/.local/bin/couchdeck" --autostart
-Icon=couchdeck
+Icon=$ICON_ABS
 Terminal=false
 Categories=Game;
 StartupNotify=false
@@ -164,12 +192,17 @@ fi
 if command -v gtk-update-icon-cache >/dev/null 2>&1; then
   gtk-update-icon-cache -f -t "$HOME/.local/share/icons/hicolor" >/dev/null 2>&1 || true
 fi
+if command -v kbuildsycoca6 >/dev/null 2>&1; then
+  kbuildsycoca6 --noincremental >/dev/null 2>&1 || true
+elif command -v kbuildsycoca5 >/dev/null 2>&1; then
+  kbuildsycoca5 --noincremental >/dev/null 2>&1 || true
+fi
 
 cat <<EOF
 CouchDeck installiert:
   Binary:  $BIN_DIR/couchdeck
   Eintrag: $APP_DIR/couchdeck.desktop
-  Icon:    $ICON_DIR/couchdeck.svg
+  Icon:    $ICON_ABS
 
 Start:  ~/.local/bin/couchdeck
 Debug:  ~/.local/bin/couchdeck --windowed --no-controller

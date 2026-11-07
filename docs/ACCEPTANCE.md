@@ -10,7 +10,7 @@ Legende:
 - [ ] Reproduzierbarer Build in Distrobox auf passendem Fedora-Release — Befehle dokumentiert, aber nicht auf Bazzite ausgeführt (Entwicklungsumgebung: Manjaro).
 - [x] `cargo fmt --check` erfolgreich.
 - [x] `cargo clippy --all-targets -- -D warnings` erfolgreich.
-- [x] `cargo test` erfolgreich: 73 Unit-Tests + 2 GIO-Integrationstests.
+- [x] `cargo test` erfolgreich: 74 Unit-Tests + 2 GIO-Integrationstests.
 - [x] `cargo build --release` erfolgreich.
 - [~] Fullscreen unter KDE/GNOME/XFCE (Wayland/X11) + `--windowed` — Fensterbetrieb auf KDE/Xwayland geprüft; andere Sitzungen offen.
 - [x] Install/Uninstall ohne sudo, kein `rpm-ostree`-Layer — in temporärem `$HOME` getestet.
@@ -122,6 +122,13 @@ Legende:
 - [x] `GameEntry` um Herkunft/Startmethode/Desktop-ID erweitert; 0.3.1-Daten bleiben lesbar.
 - [~] GNOME/Wayland, XFCE/X11 und SteamOS Desktop Mode nicht real getestet; Matrix in `docs/DESKTOP-TEST-MATRIX.md`.
 - [~] Admin-Discovery-UI nicht vollständig manuell durchgeklickt.
+
+## Bugfixes v0.4.1
+
+- [x] Installer liefert PNG-Icons (256/512) und SVG; Desktop-/Autostart-Eintrag nutzt absoluten PNG-Pfad.
+- [x] Uninstaller entfernt SVG- und PNG-Icons.
+- [x] Fullscreen-Wiederherstellung nach „Zum Desktop minimieren“ implementiert und per Unit-Test für die Zustandslogik abgesichert.
+- [~] Sichtprüfung des Icons und echtes Taskleisten-Minimieren/Wiederherstellen auf Bazzite/GNOME/XFCE offen.
 
 ## Release-Distribution (v0.3.1 / 0.4.0-Vorbereitung)
 

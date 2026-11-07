@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.4.1 – 2026-11-07
+
+### Fixes
+
+- Desktop-/Menü-Icon: Installation liefert jetzt zusätzlich 256×256- und 512×512-PNGs plus SVG; der Desktop- und Autostart-Eintrag referenziert das PNG per absolutem Pfad. Das umgeht KDE-/Icon-Cache-Probleme bei reinen SVG-Theme-Icons.
+- „Zum Desktop minimieren“ merkt sich, ob CouchDeck im Fullscreen lief. Beim Wiederherstellen aus der Taskleiste wird Fullscreen erneut aktiviert, sofern der Compositor Minimieren oder Fokusverlust gemeldet hat. Bei einem Start mit `--windowed` oder nach manuellem Verlassen des Fullscreens bleibt der Windowed-Modus erhalten.
+- Tests für die Fullscreen-Wiederherstellungslogik ergänzt.
+
+### Tests / Doku
+
+- 74 Unit-Tests + 2 GIO-Integrationstests (76 gesamt).
+- Kein Git-Tag/GitHub-Release/Push ohne Freigabe.
+
+
 ## 0.4.0 – 2026-11-07
 
 ### Desktopunabhängigkeit

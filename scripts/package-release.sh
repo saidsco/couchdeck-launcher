@@ -41,7 +41,7 @@ install -m644 README.md README-de.md LICENSE NOTICE CHANGELOG.md "$STAGE/"
 mkdir -p "$STAGE/docs"
 install -m644 docs/*.md "$STAGE/docs/"
 cp -a docs/screenshots "$STAGE/docs/screenshots"
-install -m644 assets/couchdeck.svg "$STAGE/couchdeck.svg"
+install -m644 assets/couchdeck.svg assets/couchdeck.png assets/couchdeck-512.png "$STAGE/"
 install -m755 scripts/install-user.sh scripts/uninstall-user.sh scripts/check-runtime.sh "$STAGE/scripts/"
 
 "$ROOT/scripts/check-runtime.sh" "$BINARY" "$RUNTIME_INFO"

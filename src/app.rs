@@ -34,6 +34,15 @@ fn take_usage_seconds(delta: Duration, remainder: &mut Duration) -> u64 {
     seconds
 }
 
+fn fullscreen_restore_ready(
+    focused: bool,
+    minimized: bool,
+    observed_unfocus: bool,
+    observed_minimized: bool,
+) -> bool {
+    focused && !minimized && (observed_unfocus || observed_minimized)
+}
+
 fn default_visibility_for_profiles(profiles: &[crate::model::Profile]) -> Option<Vec<String>> {
     if !profiles.iter().any(|profile| profile.is_child) {
         return None;
@@ -376,6 +385,9 @@ pub struct CouchDeckApp {
     pub time_expired_pending: bool,
     /// Set only after a parent-authorized minimisation or application close.
     pub allow_child_minimize: bool,
+    pub restore_fullscreen_after_minimize: bool,
+    pub minimize_observed_unfocus: bool,
+    pub minimize_observed_minimized: bool,
     pub allow_close: bool,
     /// Set when leaving fullscreen so the minimised command is sent on the next
     /// frame, after the compositor has processed the fullscreen exit.
@@ -520,6 +532,9 @@ impl CouchDeckApp {
             last_budget_exhausted: false,
             time_expired_pending: false,
             allow_child_minimize: false,
+            restore_fullscreen_after_minimize: false,
+            minimize_observed_unfocus: false,
+            minimize_observed_minimized: false,
             allow_close: false,
             pending_minimize: false,
             window_focused: None,
@@ -1315,6 +1330,7 @@ impl CouchDeckApp {
                 self.open_import();
             }
             MenuAction::ToggleFullscreen => {
+                self.restore_fullscreen_after_minimize = false;
                 self.fullscreen = !self.fullscreen;
                 ctx.send_viewport_cmd(ViewportCommand::Decorations(!self.fullscreen));
                 ctx.send_viewport_cmd(ViewportCommand::Fullscreen(self.fullscreen));
@@ -2223,10 +2239,17 @@ impl CouchDeckApp {
         if self.fullscreen {
             self.fullscreen = false;
             self.pending_minimize = true;
+            // Restore the fullscreen presentation when the user brings the
+            // launcher back from the taskbar. The compositor may report focus
+            // loss, the minimized state, or both.
+            self.restore_fullscreen_after_minimize = true;
+            self.minimize_observed_unfocus = false;
+            self.minimize_observed_minimized = false;
             ctx.send_viewport_cmd(ViewportCommand::Decorations(true));
             ctx.send_viewport_cmd(ViewportCommand::Fullscreen(false));
             self.notify_key("app-minimizing-desktop");
         } else {
+            self.restore_fullscreen_after_minimize = false;
             ctx.send_viewport_cmd(ViewportCommand::Minimized(true));
             self.notify_key("app-minimized");
         }
@@ -2433,6 +2456,9 @@ impl CouchDeckApp {
                     "Fensterfokus gewonnen; Eingabepuffer wird verworfen.",
                 );
             } else {
+                if self.restore_fullscreen_after_minimize {
+                    self.minimize_observed_unfocus = true;
+                }
                 // A confirm that was queued by the controller must not fire
                 // into an unfocused admin view.
                 self.admin.pending_steps = 0;
@@ -2442,6 +2468,44 @@ impl CouchDeckApp {
                     "Fensterfokus verloren; Gamepad-Navigation pausiert.",
                 );
             }
+        }
+    }
+
+    fn maybe_restore_fullscreen_from_minimize(&mut self, ctx: &egui::Context) {
+        if !self.restore_fullscreen_after_minimize {
+            return;
+        }
+        if self.pending_minimize {
+            ctx.request_repaint_after(Duration::from_millis(50));
+            return;
+        }
+        let minimized = ctx
+            .input(|input| input.viewport().minimized)
+            .unwrap_or(false);
+        if minimized {
+            self.minimize_observed_minimized = true;
+        }
+        let focused = ctx.input(|input| input.focused);
+        if fullscreen_restore_ready(
+            focused,
+            minimized,
+            self.minimize_observed_unfocus,
+            self.minimize_observed_minimized,
+        ) {
+            self.restore_fullscreen_after_minimize = false;
+            self.minimize_observed_unfocus = false;
+            self.minimize_observed_minimized = false;
+            self.fullscreen = true;
+            self.allow_child_minimize = false;
+            ctx.send_viewport_cmd(ViewportCommand::Decorations(false));
+            ctx.send_viewport_cmd(ViewportCommand::Fullscreen(true));
+            log_info(
+                "window",
+                "Fenster wiederhergestellt; Fullscreen wird erneut aktiviert.",
+            );
+            ctx.request_repaint();
+        } else {
+            ctx.request_repaint_after(Duration::from_millis(250));
         }
     }
 
@@ -3178,6 +3242,7 @@ impl CouchDeckApp {
         if !self.system.is_active() {
             let fullscreen = ctx.input_mut(|input| input.consume_key(Modifiers::NONE, Key::F11));
             if fullscreen {
+                self.restore_fullscreen_after_minimize = false;
                 self.fullscreen = !self.fullscreen;
                 ctx.send_viewport_cmd(ViewportCommand::Decorations(!self.fullscreen));
                 ctx.send_viewport_cmd(ViewportCommand::Fullscreen(self.fullscreen));
@@ -3323,6 +3388,7 @@ impl eframe::App for CouchDeckApp {
         self.frame_count += 1;
         self.update_window_focus(ctx);
         self.handle_child_window_controls(ctx);
+        self.maybe_restore_fullscreen_from_minimize(ctx);
         self.poll_controller(ctx);
         self.flush_admin_confirm(ctx);
         self.poll_launch();
@@ -3424,7 +3490,8 @@ pub fn refresh_picker(state: &mut FilePickerState, i18n: &I18n) {
 mod tests {
     use super::{
         accept_controller_nav, admin_pin_matches, default_visibility_for_profiles,
-        profile_switch_requires_parent, start_is_blocked, take_usage_seconds,
+        fullscreen_restore_ready, profile_switch_requires_parent, start_is_blocked,
+        take_usage_seconds,
     };
     use crate::model::{AdminSecrets, Profile};
     use crate::timekeeping::TimeStatus;
@@ -3482,6 +3549,15 @@ mod tests {
             take_usage_seconds(Duration::from_millis(200), &mut remainder),
             1
         );
+    }
+
+    #[test]
+    fn fullscreen_is_restored_only_after_a_real_minimize_or_focus_loss() {
+        assert!(fullscreen_restore_ready(true, false, true, false));
+        assert!(fullscreen_restore_ready(true, false, false, true));
+        assert!(!fullscreen_restore_ready(true, false, false, false));
+        assert!(!fullscreen_restore_ready(false, false, true, true));
+        assert!(!fullscreen_restore_ready(true, true, true, true));
     }
 
     #[test]

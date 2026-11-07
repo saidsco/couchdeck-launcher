@@ -14,10 +14,17 @@ fi
 rm -f "$HOME/.local/bin/couchdeck"
 rm -f "$HOME/.local/share/applications/couchdeck.desktop"
 rm -f "$HOME/.local/share/icons/hicolor/scalable/apps/couchdeck.svg"
+rm -f "$HOME/.local/share/icons/hicolor/256x256/apps/couchdeck.png"
+rm -f "$HOME/.local/share/icons/hicolor/512x512/apps/couchdeck.png"
 rm -f "${XDG_CONFIG_HOME:-$HOME/.config}/autostart/couchdeck.desktop"
 
 if command -v update-desktop-database >/dev/null 2>&1; then
   update-desktop-database "$HOME/.local/share/applications" >/dev/null 2>&1 || true
+fi
+if command -v kbuildsycoca6 >/dev/null 2>&1; then
+  kbuildsycoca6 --noincremental >/dev/null 2>&1 || true
+elif command -v kbuildsycoca5 >/dev/null 2>&1; then
+  kbuildsycoca5 --noincremental >/dev/null 2>&1 || true
 fi
 
 if [[ $PURGE -eq 1 ]]; then

@@ -6,7 +6,7 @@ Die App startet direkt in eine persönliche Spielebibliothek – kein Shop, kein
 
 Primäre Desktop-Ziele sind **KDE Plasma, GNOME und XFCE** unter Wayland oder X11. Bazzite und SteamOS im Desktop Mode sind unterstützte Zielplattformen, aber keine technischen Voraussetzungen. Steam Gaming Mode/Gamescope ist derzeit kein zugesichertes Ziel.
 
-**Aktuelle Version:** 0.4.0 · **Sprache:** Deutsch · [English](README.md)
+**Aktuelle Version:** 0.4.1 · **Sprache:** Deutsch · [English](README.md)
 
 Die Anwendungsoberfläche ist über Fluent **auf Deutsch und Englisch** verfügbar, mit automatischer Spracherkennung und Englisch als Fallback. Einzelne Detaildokumente unter `docs/` sind weiterhin auf Deutsch.
 
@@ -36,7 +36,7 @@ Gespielt wird ausschließlich über vorhandene `.desktop`-Dateien und `gio launc
 - **Steam-Flatpak-Reparatur**: erkennt `Exec=steam steam://rungameid/ID`, ändert nichts automatisch und erzeugt nach ausdrücklicher Bestätigung eine **separate verwaltete** Datei mit `flatpak run com.valvesoftware.Steam …`.
 - **Prism-Launcher**: Import vorhandener Instanz-Desktop-Dateien; zusätzlich kann CouchDeck eine verwaltete Datei mit `flatpak run org.prismlauncher.PrismLauncher --launch INSTANCE_ID` erzeugen. `INSTANCE_ID` ist der Instanzordner, nicht der sichtbare Name.
 - **Autostart (Opt-in, desktopbezogen)**: XDG-Autostart für die erkannte KDE-, GNOME- oder XFCE-Sitzung. Die Datei nutzt `OnlyShowIn=<erkannte Sitzung>` und `NotShowIn=gamescope`; unbekannte Sitzungen und Steam Gaming Mode/Gamescope werden nie geraten. Verwaltung über Admin → Einstellungen oder `install-user.sh --autostart`.
-- **Zum Desktop minimieren**: verlässt zuerst den Fullscreen und minimiert dann das Fenster, damit Panel/Taskleiste unter KDE, GNOME, XFCE und anderen Desktops erreichbar bleiben.
+- **Zum Desktop minimieren**: verlässt zuerst den Fullscreen und minimiert dann das Fenster, damit Panel/Taskleiste unter KDE, GNOME, XFCE und anderen Desktops erreichbar bleiben. Beim Zurückholen aus der Taskleiste wird Fullscreen wieder aktiviert, wenn CouchDeck zuvor im Fullscreen lief.
 - **Power-Menü**: CouchDeck beenden, System neu starten oder herunterfahren – mit Bestätigungsdialog und festen `systemctl`-Aufrufen (kein Shell-Einsatz).
 - **Robuste Persistenz**: atomisches Schreiben, Backups bei beschädigten Dateien, keine stillen Überschreibungen, Logs unter `$XDG_STATE_HOME/couchdeck/`. Ein benutzerspezifischer Instanz-Lock verhindert, dass Autostart und manueller Start zwei UIs auf dieselbe Bibliothek/dasselbe Zeitbudget loslassen.
 
@@ -367,7 +367,7 @@ Datenfluss: `UI → AppState → Library/Profiles → GIO (gio launch)`.
 
 ## Tests und Abnahme
 
-- Unit-/Integrationstests: **75 Tests grün** (`cargo test`: 73 Unit-Tests inkl. Zeitkontingent, i18n, Eltern-PIN-/Wechsel-/Start-Sperren, plus 2 GIO-Integrationstests).
+- Unit-/Integrationstests: **76 Tests grün** (`cargo test`: 74 Unit-Tests inkl. Zeitkontingent, i18n, Eltern-PIN-/Wechsel-/Start-Sperren, plus 2 GIO-Integrationstests).
 - `cargo clippy --all-targets -- -D warnings`: sauber.
 - `cargo fmt --check`: sauber.
 - Release-Build: `cargo build --release --locked`.
@@ -376,6 +376,7 @@ Datenfluss: `UI → AppState → Library/Profiles → GIO (gio launch)`.
 
 ## Changelog
 
+- **v0.4.1**: Menü-Icon zuverlässig installiert (PNG + absoluter Icon-Pfad) und Fullscreen beim Zurückholen aus dem Minimieren wiederhergestellt.
 - **v0.4.0**: Desktopunabhängige KDE-/GNOME-/XFCE-Unterstützung, sicherer XDG-Autostart, erweiterte XDG-/Flatpak-/Desktopordner-Discovery, Admin-Suchpfade, gruppierte Importübersicht, zukunftsfähige Spiele-Herkunft und Single-Instance-Lock.
 - **v0.3.1**: GitHub-Release-Automatisierung: portables x86_64-Archiv, natives AppImage, SHA256SUMS, ldd/glibc-Report und Installation ohne Rust.
 - **v0.3.0**: Deutsche/englische Fluent-UI mit Live-Wechsel, Profil-Hintergründe, Kinderprofile mit Tagesbudget, Elternfreigabe für Zusatzzeit, zentrale Start-Sperre, Warntöne.
