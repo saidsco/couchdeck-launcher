@@ -9,7 +9,7 @@ use eframe::egui::{Key, Modifiers, ViewportCommand};
 
 use crate::artwork::{self, ArtworkCache, ArtworkKind};
 use crate::controller::{self, ControllerEvent, ControllerHandle, NavAction};
-use crate::desktop::{self, DesktopFile, IconResolver};
+use crate::desktop::{self, DiscoveredEntry, DiscoveryResult, DiscoverySource, IconResolver};
 use crate::i18n::{ArgValue, I18n, LanguagePreference};
 use crate::launch::{self, LaunchOutcome};
 use crate::logging::{log_error, log_info, log_warn};
@@ -32,6 +32,19 @@ fn take_usage_seconds(delta: Duration, remainder: &mut Duration) -> u64 {
     let seconds = total.as_secs();
     *remainder = total.saturating_sub(Duration::from_secs(seconds));
     seconds
+}
+
+fn default_visibility_for_profiles(profiles: &[crate::model::Profile]) -> Option<Vec<String>> {
+    if !profiles.iter().any(|profile| profile.is_child) {
+        return None;
+    }
+    Some(
+        profiles
+            .iter()
+            .filter(|profile| !profile.is_child)
+            .map(|profile| profile.id.clone())
+            .collect(),
+    )
 }
 
 fn start_is_blocked(status: Option<&TimeStatus>) -> bool {
@@ -128,11 +141,12 @@ pub struct MessageDialog {
 }
 
 pub struct ImportState {
-    pub entries: Vec<DesktopFile>,
+    pub entries: Vec<DiscoveredEntry>,
     pub selected: usize,
     pub focus_actions: bool,
     pub action_index: usize,
     pub error: Option<String>,
+    pub loading: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -142,6 +156,7 @@ pub enum PickerPurpose {
     GlobalBackground,
     Avatar(String),
     ProfileBackground(String),
+    SearchDirectory,
     ImportDesktop,
 }
 
@@ -153,6 +168,7 @@ impl PickerPurpose {
             Self::GlobalBackground => "picker-global-background",
             Self::Avatar(_) => "picker-avatar",
             Self::ProfileBackground(_) => "picker-profile-background",
+            Self::SearchDirectory => "picker-search-directory",
             Self::ImportDesktop => "picker-desktop",
         }
     }
@@ -285,6 +301,7 @@ pub enum AdminView {
     Games,
     GameEdit(String),
     Profiles,
+    Discovery,
     Integrations,
     Settings,
     Pin,
@@ -349,6 +366,9 @@ pub struct CouchDeckApp {
     pub last_launch_started: Option<Instant>,
     pub system: SystemController,
     pub timekeeping: Timekeeping,
+    pub discovery: Option<DiscoveryResult>,
+    pub discovery_rx: Option<Receiver<DiscoveryResult>>,
+    pub discovery_loading: bool,
     pub last_time_tick: Instant,
     pub last_time_save: Instant,
     pub time_remainder: Duration,
@@ -491,6 +511,9 @@ impl CouchDeckApp {
             last_launch_started: None,
             system: SystemController::new(),
             timekeeping,
+            discovery: None,
+            discovery_rx: None,
+            discovery_loading: false,
             last_time_tick: Instant::now(),
             last_time_save: Instant::now(),
             time_remainder: Duration::ZERO,
@@ -535,6 +558,7 @@ impl CouchDeckApp {
                 app.settings.background, app.settings.show_backgrounds
             ),
         );
+        app.start_discovery();
         app
     }
 
@@ -557,6 +581,55 @@ impl CouchDeckApp {
         self.settings.language = preference;
         self.i18n.set_preference(preference);
         self.save_settings();
+    }
+
+    pub fn start_discovery(&mut self) {
+        if self.discovery_loading {
+            return;
+        }
+        let paths = self.paths.clone();
+        let additional = self.settings.additional_desktop_dirs.clone();
+        let (tx, rx) = std::sync::mpsc::channel();
+        std::thread::spawn(move || {
+            let result = desktop::discover_entries(&paths, &additional);
+            let _ = tx.send(result);
+        });
+        self.discovery_rx = Some(rx);
+        self.discovery_loading = true;
+    }
+
+    fn poll_discovery(&mut self) {
+        let Some(rx) = &self.discovery_rx else {
+            return;
+        };
+        let result = match rx.try_recv() {
+            Ok(result) => result,
+            Err(std::sync::mpsc::TryRecvError::Empty) => return,
+            Err(std::sync::mpsc::TryRecvError::Disconnected) => {
+                self.discovery_rx = None;
+                self.discovery_loading = false;
+                self.notify_error("Discovery-Thread wurde unerwartet beendet.");
+                return;
+            }
+        };
+        self.discovery_rx = None;
+        self.discovery_loading = false;
+        log_info(
+            "discovery",
+            format!(
+                "{} Desktop-Einträge, {} Quellen, {} Warnungen",
+                result.entries.len(),
+                result.roots.len(),
+                result.warnings.len()
+            ),
+        );
+        let entries = result.entries.clone();
+        self.discovery = Some(result);
+        if let Overlay::Import(state) = &mut self.overlay {
+            state.entries = entries;
+            state.selected = 0;
+            state.loading = false;
+        }
     }
 
     // ---------------------------------------------------------------------
@@ -1339,13 +1412,22 @@ impl CouchDeckApp {
                 return;
             }
         }
-        let entries = desktop::discover_applications(&self.paths);
+        let entries = self
+            .discovery
+            .as_ref()
+            .map(|discovery| discovery.entries.clone())
+            .unwrap_or_default();
+        let loading = self.discovery.is_none() || self.discovery_loading;
+        if self.discovery.is_none() {
+            self.start_discovery();
+        }
         self.overlay = Overlay::Import(ImportState {
             entries,
             selected: 0,
             focus_actions: false,
             action_index: 0,
             error: None,
+            loading,
         });
     }
 
@@ -1356,12 +1438,24 @@ impl CouchDeckApp {
     pub fn load_import_file(&mut self, path: PathBuf) {
         match desktop::parse_desktop_file(&path) {
             Ok(entry) => {
+                let desktop_id = entry.file_name().trim_end_matches(".desktop").to_owned();
+                let source_dir = path
+                    .parent()
+                    .map(Path::to_path_buf)
+                    .unwrap_or_else(|| self.paths.home.clone());
                 self.overlay = Overlay::Import(ImportState {
-                    entries: vec![entry],
+                    entries: vec![DiscoveredEntry {
+                        file: entry,
+                        desktop_id,
+                        source: DiscoverySource::Manual,
+                        source_dir,
+                        menu_visible: true,
+                    }],
                     selected: 0,
                     focus_actions: false,
                     action_index: 0,
                     error: None,
+                    loading: false,
                 });
             }
             Err(err) => {
@@ -1375,12 +1469,13 @@ impl CouchDeckApp {
         }
     }
 
-    pub fn import_entry(&mut self, entry: &DesktopFile) {
+    pub fn import_entry(&mut self, entry: &DiscoveredEntry) {
         if !self.is_admin() {
             self.notify_warning_key("app-import-not-admin");
             return;
         }
-        let canonical = std::fs::canonicalize(&entry.path).unwrap_or_else(|_| entry.path.clone());
+        let canonical =
+            std::fs::canonicalize(&entry.file.path).unwrap_or_else(|_| entry.file.path.clone());
         let duplicate = self.library.games.iter().any(|game| {
             let existing = std::fs::canonicalize(&game.desktop_file)
                 .unwrap_or_else(|_| game.desktop_file.clone());
@@ -1400,35 +1495,105 @@ impl CouchDeckApp {
             .map(|g| g.sort_order)
             .max()
             .unwrap_or(0);
-        let managed = entry.path.starts_with(self.paths.managed_desktop_dir());
+        let managed = entry.source == DiscoverySource::Managed
+            || entry
+                .file
+                .path
+                .starts_with(self.paths.managed_desktop_dir());
+        let source = match entry.source {
+            DiscoverySource::Managed => crate::model::GameSource::ManagedDesktop,
+            DiscoverySource::Manual => crate::model::GameSource::Manual,
+            _ => crate::model::GameSource::DesktopEntry,
+        };
+        let visible_to_profiles = self.default_import_visibility();
         self.library.games.push(GameEntry {
             id: id.clone(),
-            desktop_file: entry.path.clone(),
+            desktop_file: entry.file.path.clone(),
             title_override: None,
-            desktop_name: Some(entry.name.clone()),
-            desktop_icon: entry.icon.clone(),
+            desktop_name: Some(entry.file.name.clone()),
+            desktop_icon: entry.file.icon.clone(),
             cover: None,
             background: None,
-            visible_to_profiles: None,
+            visible_to_profiles,
             hidden: false,
             sort_order: max_sort + 10,
             managed,
             created_at_unix: now_unix(),
+            desktop_id: Some(entry.desktop_id.clone()),
+            source,
+            launch_method: crate::model::LaunchMethod::GioDesktop,
         });
         self.overlay = Overlay::None;
         self.save_library();
         self.focus_on_game(&id);
-        self.notify(self.tf("app-imported", &[("name", entry.name.clone().into())]));
+        self.notify(self.tf("app-imported", &[("name", entry.file.name.clone().into())]));
         log_info(
             "import",
-            format!("{} -> {}", entry.name, entry.path.display()),
+            format!("{} -> {}", entry.file.name, entry.file.path.display()),
         );
+    }
+
+    fn default_import_visibility(&self) -> Option<Vec<String>> {
+        // A newly imported entry must never become visible to a child profile
+        // automatically. Parents can grant access explicitly in the game editor.
+        default_visibility_for_profiles(&self.library.profiles)
     }
 
     pub fn focus_on_game(&mut self, id: &str) {
         if let Some(index) = self.visible_games().iter().position(|g| g.id == id) {
             self.set_focus(index, self.visible_games().len());
         }
+    }
+
+    pub fn add_search_dir(&mut self, path: PathBuf) {
+        let path = if path.is_absolute() {
+            path
+        } else {
+            self.paths.home.join(path)
+        };
+        if self
+            .settings
+            .additional_desktop_dirs
+            .iter()
+            .any(|p| p == &path)
+        {
+            self.overlay = Overlay::None;
+            self.screen = Screen::Admin;
+            self.admin.view = AdminView::Discovery;
+            return;
+        }
+        self.settings.additional_desktop_dirs.push(path);
+        self.save_settings();
+        self.overlay = Overlay::None;
+        self.screen = Screen::Admin;
+        self.admin.view = AdminView::Discovery;
+        self.notify_key("admin-discovery-added");
+        self.rescan_discovery();
+    }
+
+    pub fn remove_search_dir(&mut self, path: &Path) {
+        self.settings
+            .additional_desktop_dirs
+            .retain(|candidate| candidate != path);
+        self.save_settings();
+        self.notify_key("admin-discovery-removed");
+        self.rescan_discovery();
+    }
+
+    pub fn rescan_discovery(&mut self) {
+        self.discovery_rx = None;
+        self.discovery_loading = false;
+        self.start_discovery();
+    }
+
+    pub fn picker_use_directory(&mut self) {
+        let dir = match &self.overlay {
+            Overlay::Picker(state) if state.purpose == PickerPurpose::SearchDirectory => {
+                state.dir.clone()
+            }
+            _ => return,
+        };
+        self.add_search_dir(dir);
     }
 
     pub fn open_picker(&mut self, purpose: PickerPurpose) {
@@ -1443,6 +1608,7 @@ impl CouchDeckApp {
                     self.paths.home.clone()
                 }
             }
+            PickerPurpose::SearchDirectory => self.paths.home.clone(),
             _ => {
                 let pictures = self.paths.home.join("Pictures");
                 if pictures.is_dir() {
@@ -1539,6 +1705,17 @@ impl CouchDeckApp {
             self.load_import_file(path);
             return;
         }
+        if purpose == PickerPurpose::SearchDirectory {
+            if path.is_dir() {
+                self.add_search_dir(path);
+            } else {
+                let message = self.t("app-picker-no-directory");
+                if let Overlay::Picker(state) = &mut self.overlay {
+                    state.error = Some(message);
+                }
+            }
+            return;
+        }
         match self.import_artwork(&purpose, &path) {
             Ok(message) => {
                 self.overlay = Overlay::None;
@@ -1614,6 +1791,7 @@ impl CouchDeckApp {
                 self.save_library();
                 Ok(self.tf("app-avatar-updated", &[("name", name.into())]))
             }
+            PickerPurpose::SearchDirectory => unreachable!(),
             PickerPurpose::ProfileBackground(profile_id) => {
                 let name = self
                     .library
@@ -1967,6 +2145,9 @@ impl CouchDeckApp {
             sort_order: max_sort + 10,
             managed: true,
             created_at_unix: now_unix(),
+            desktop_id: None,
+            source: crate::model::GameSource::Steam,
+            launch_method: crate::model::LaunchMethod::GioDesktop,
         });
         self.overlay = Overlay::None;
         self.save_library();
@@ -2007,11 +2188,14 @@ impl CouchDeckApp {
             desktop_icon: Some("org.prismlauncher.PrismLauncher".to_owned()),
             cover: None,
             background: None,
-            visible_to_profiles: None,
+            visible_to_profiles: self.default_import_visibility(),
             hidden: false,
             sort_order: max_sort + 10,
             managed: true,
             created_at_unix: now_unix(),
+            desktop_id: None,
+            source: crate::model::GameSource::Prism,
+            launch_method: crate::model::LaunchMethod::GioDesktop,
         });
         self.save_library();
         self.focus_on_game(&id);
@@ -2031,7 +2215,7 @@ impl CouchDeckApp {
         }
     }
 
-    /// Leave the borderless fullscreen overlay and minimize to KDE. The
+    /// Leave the borderless fullscreen overlay and minimize to the desktop. The
     /// fullscreen exit must be processed by the compositor before minimizing,
     /// otherwise some Wayland compositors ignore the minimize request.
     pub fn minimize_to_desktop(&mut self, ctx: &egui::Context) {
@@ -2041,7 +2225,7 @@ impl CouchDeckApp {
             self.pending_minimize = true;
             ctx.send_viewport_cmd(ViewportCommand::Decorations(true));
             ctx.send_viewport_cmd(ViewportCommand::Fullscreen(false));
-            self.notify_key("app-minimizing-kde");
+            self.notify_key("app-minimizing-desktop");
         } else {
             ctx.send_viewport_cmd(ViewportCommand::Minimized(true));
             self.notify_key("app-minimized");
@@ -2599,6 +2783,10 @@ impl CouchDeckApp {
                     self.overlay = Overlay::Picker(state);
                     self.picker_activate_selected();
                 }
+                NavAction::Menu if state.purpose == PickerPurpose::SearchDirectory => {
+                    self.overlay = Overlay::Picker(state);
+                    self.picker_use_directory();
+                }
                 NavAction::Back | NavAction::Menu => {
                     self.overlay = Overlay::None;
                 }
@@ -3139,6 +3327,10 @@ impl eframe::App for CouchDeckApp {
         self.flush_admin_confirm(ctx);
         self.poll_launch();
         self.poll_system();
+        self.poll_discovery();
+        if self.discovery_loading {
+            ctx.request_repaint_after(Duration::from_millis(250));
+        }
         self.finish_pending_minimize(ctx);
         self.handle_global_keys(ctx);
         self.handle_keyboard(ctx);
@@ -3231,8 +3423,8 @@ pub fn refresh_picker(state: &mut FilePickerState, i18n: &I18n) {
 #[cfg(test)]
 mod tests {
     use super::{
-        accept_controller_nav, admin_pin_matches, profile_switch_requires_parent, start_is_blocked,
-        take_usage_seconds,
+        accept_controller_nav, admin_pin_matches, default_visibility_for_profiles,
+        profile_switch_requires_parent, start_is_blocked, take_usage_seconds,
     };
     use crate::model::{AdminSecrets, Profile};
     use crate::timekeeping::TimeStatus;
@@ -3290,6 +3482,23 @@ mod tests {
             take_usage_seconds(Duration::from_millis(200), &mut remainder),
             1
         );
+    }
+
+    #[test]
+    fn new_imports_are_not_visible_to_child_profiles_by_default() {
+        let mut admin = Profile::new_admin("Admin");
+        admin.id = "admin".to_owned();
+        let mut player = Profile::new_admin("Player");
+        player.id = "player".to_owned();
+        player.role = crate::model::ProfileRole::Player;
+        let mut child = Profile::new_admin("Child");
+        child.id = "child".to_owned();
+        child.role = crate::model::ProfileRole::Player;
+        child.is_child = true;
+        let visibility = default_visibility_for_profiles(&[admin, player, child]).unwrap();
+        assert_eq!(visibility, vec!["admin".to_owned(), "player".to_owned()]);
+        assert!(!visibility.iter().any(|id| id == "child"));
+        assert!(default_visibility_for_profiles(&[]).is_none());
     }
 
     #[test]

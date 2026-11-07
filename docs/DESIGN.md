@@ -42,3 +42,23 @@ Profile sind **virtuelle Profile im selben Linux-Benutzerkonto**. Keine Abschott
 - ParentAuth prüft jede Admin-PIN eines Nicht-Kind-Admin-Profils einmalig und entsperrt den Admin-Bereich nicht dauerhaft.
 - Zusatzzeit ist nur für den aktuellen Kalendertag gültig und verändert das reguläre Tageslimit nicht.
 - App-interne Sperren: Profilwechsel, Minimieren, Beenden, Systemaktionen; Best-Effort für WM-Close/Minimize. Kein Schutz gegen Prozess-Kill, TTY-Wechsel oder Dateiänderungen im selben Linux-Konto.
+
+## Desktopunabhängigkeit (v0.4)
+- KDE, GNOME und XFCE sind gleichrangige Desktop-Ziele; Bazzite/SteamOS Desktop Mode sind Zielplattformen, keine technischen Voraussetzungen.
+- Der Anwendungskern enthält keine KDE-only-API. Fenster, Fokus und Minimieren nutzen eframe-Viewport-Kommandos; Compositor-Grenzen werden dokumentiert.
+- XDG-Autostart wird anhand von `XDG_CURRENT_DESKTOP`/`XDG_SESSION_DESKTOP`/`DESKTOP_SESSION` an die erkannte Sitzung gebunden; Gamescope/unbekannte Sitzungen bleiben ausgeschlossen.
+
+## Desktop-Discovery (v0.4)
+- Discovery läuft im Hintergrund und liefert `DiscoveryResult` mit Einträgen, Wurzeln und Warnungen.
+- Quellenpriorität: Benutzer-XDG, Flatpak-Benutzer, System-XDG, Flatpak-System, XDG-Desktopordner, Admin-Pfade, verwaltete Dateien.
+- Desktop-IDs deduplizieren nach XDG-Überlagerung; Unterverzeichnisse werden mit `-` verbunden.
+- `NoDisplay`/`Hidden`/`OnlyShowIn`/`NotShowIn`/fehlendes `TryExec` bleiben für Admin-Prüfung sichtbar, sind aber nicht automatisch menü-sichtbar.
+- Neue Einträge werden nie automatisch importiert; bei Kinderprofilen ist die Standard-Sichtbarkeit auf Nicht-Kinderprofile beschränkt.
+
+## Spielemodell (v0.4)
+- Stabile CouchDeck-ID bleibt erhalten; `desktop_id`, `source` und `launch_method` ergänzen Herkunft und Startweg ohne bestehende Daten zu brechen.
+- `library.json`-Schema bleibt abwärtskompatibel; fehlende neue Felder werden per Serde-Default geladen.
+
+## Single Instance (v0.4)
+- `flock` auf `$XDG_RUNTIME_DIR/couchdeck.lock` (Fallback State-Verzeichnis) schützt Bibliothek und Zeitbudget vor parallelen UIs.
+- Kernel gibt den Lock bei Abstürzen frei; eine alte Lock-Datei blockiert nicht.

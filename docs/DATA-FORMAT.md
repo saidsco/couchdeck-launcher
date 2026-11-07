@@ -43,7 +43,10 @@ Alle Dateien sind menschenlesbar und versioniert. CouchDeck schreibt Bibliothek 
       "hidden": false,
       "sort_order": 10,
       "managed": false,
-      "created_at_unix": 1793910000
+      "created_at_unix": 1793910000,
+      "desktop_id": "prism-minecraft.desktop",
+      "source": "desktop_entry",
+      "launch_method": "gio_desktop"
     }
   ]
 }
@@ -73,6 +76,9 @@ Alle Dateien sind menschenlesbar und versioniert. CouchDeck schreibt Bibliothek 
 | `games[].sort_order` | Aufsteigende Reihenfolge im Grid; `10`-Schritte erleichtern Einfügen. |
 | `games[].managed` | `true`, wenn die Datei in `managed-desktop/` von CouchDeck erzeugt wurde. |
 | `games[].created_at_unix` | Unix-Zeit der Aufnahme (informativ). |
+| `games[].desktop_id` | Stabile XDG-Desktop-ID, wenn der Eintrag aus einer Discovery-Quelle importiert wurde. |
+| `games[].source` | Herkunft: `desktop_entry`, `managed_desktop`, `steam`, `prism`, `manual`, `other`. Fehlt das Feld in alten Dateien, wird `desktop_entry` verwendet. |
+| `games[].launch_method` | Startmethode; in 0.4 ausschließlich `gio_desktop`. Das Feld ist für spätere Startadapter vorbereitet. |
 
 ### Asset-Pfade
 
@@ -105,6 +111,9 @@ show_controller_hints = true
 show_backgrounds = true
 language = "auto"
 alarm_sound = true
+additional_desktop_dirs = [
+  "/home/USER/Meine Spiele-Launcher",
+]
 ```
 
 | Feld | Bedeutung |
@@ -116,6 +125,7 @@ alarm_sound = true
 | `show_backgrounds` | Hintergrundbilder an/aus. |
 | `language` | `auto`, `de` oder `en`. `auto` nutzt `LANGUAGE`/`LC_ALL`/`LC_MESSAGES`/`LANG`; Fallback ist Englisch. Live umschaltbar. |
 | `alarm_sound` | Best-Effort-Warnton bei 5-/1-Minuten-Warnungen und bei erschöpftem Budget. |
+| `additional_desktop_dirs` | Zusätzliche `.desktop`-Suchverzeichnisse; absolute Pfade werden bevorzugt. Leer/fehlend = keine zusätzlichen Quellen. |
 
 Ungültige `settings.toml` führt zu Standardwerten im Speicher und einer Sicherungskopie; die Datei wird erst bei einer expliziten Einstellungsänderung neu geschrieben.
 
@@ -169,7 +179,7 @@ X-CouchDeck-Managed=true
 
 Originaldateien werden weder verändert noch überschrieben. Der Start erfolgt weiterhin über `gio launch` auf den absoluten Pfad.
 
-## KDE-Autostart
+## XDG-Autostart
 
 `$XDG_CONFIG_HOME/autostart/couchdeck.desktop` wird nur auf ausdrücklichen Wunsch erzeugt:
 
@@ -182,15 +192,24 @@ Icon=couchdeck
 Terminal=false
 Categories=Game;
 StartupNotify=false
-OnlyShowIn=KDE;
+OnlyShowIn=GNOME;
+NotShowIn=gamescope;
 X-GNOME-Autostart-enabled=true
-X-KDE-autostart-after=panel
 X-CouchDeck-Autostart=true
+X-CouchDeck-Desktop=GNOME;
 ```
 
-- `OnlyShowIn=KDE;` verhindert den Start im Steam Gaming Mode/Gamescope.
+- `OnlyShowIn=<KDE|GNOME|XFCE>;` bindet den Eintrag an die erkannte Desktop-Sitzung; `NotShowIn=gamescope;` schließt Steam Gaming Mode/Gamescope aus.
+- Unbekannte Sitzungen erzeugen keinen Eintrag. Eine vorhandene Datei für eine andere Sitzung bleibt auf der Platte, wird aber als inaktiv angezeigt und kann entfernt werden.
+- Der Installer schreibt Autostart nur mit `--autostart` aus einer unterstützten Desktop-Sitzung.
 - Der Pfad wird aus dem aktuell laufenden Binary erzeugt.
 - Deinstallation entfernt den Eintrag; die Deinstallation mit `--purge` löscht zusätzlich die Benutzerdaten.
+
+## Instanz-Lock
+
+- `$XDG_RUNTIME_DIR/couchdeck.lock` (Fallback `$XDG_STATE_HOME/couchdeck/instance.lock`) enthält die PID der laufenden Instanz und wird mit einem exklusiven `flock` gehalten.
+- Der Kernel gibt den Lock bei normalem Ende und bei Abstürzen frei. Eine zurückbleibende Lock-Datei blockiert keinen Neustart.
+- Ein zweiter Start beendet sich mit einem Hinweis, bevor Bibliothek oder Zeitbudget verändert werden.
 
 ## Cache und Logs
 

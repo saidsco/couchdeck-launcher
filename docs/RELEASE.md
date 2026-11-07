@@ -23,8 +23,9 @@ Releases.
 
 ## Warum kein Flatpak?
 
-CouchDeck soll direkt auf die KDE-Plasma-Sitzung, GIO, Controller-Devices,
-PipeWire/PulseAudio und systemctl/Politik der Bazzite-Host-Session zugreifen.
+CouchDeck soll direkt auf die aktive KDE-/GNOME-/XFCE-Sitzung, GIO,
+Controller-Devices, PipeWire/PulseAudio und systemctl/Polkit der Host-Session
+zugreifen.
 Eine Flatpak-Sandbox würde zusätzliche Portale, Berechtigungen und
 Integrationsarbeit erfordern. Das AppImage bleibt eine normale
 Benutzeranwendung ohne Sandbox und ohne `sudo`.
@@ -71,8 +72,8 @@ keine Build-Werkzeuge. `appimagetool` wird nur im Build verwendet.
 `ldd` auf dem Fedora-42-Release-Binary zeigt die direkt gelinkten Bibliotheken
 (z. B. glibc, `libm`, `libgcc_s`, `libudev`, `libcap`). Die Wayland-/X11-/GL-
 Bibliotheken werden von `winit`/`glutin` zur Laufzeit dynamisch geladen und
-erscheinen daher nicht zwingend in `ldd`. Auf Bazzite KDE Plasma werden sie von
-der Desktop-Sitzung bereitgestellt:
+erscheinen daher nicht zwingend in `ldd`. Auf KDE Plasma, GNOME und XFCE werden
+sie von der Desktop-Sitzung bereitgestellt:
 
 - `libwayland-client.so.0`, `libxkbcommon.so.0`
 - `libX11`, `libXcursor`, `libXrandr`, `libXi`, `libxcb`
@@ -81,7 +82,7 @@ der Desktop-Sitzung bereitgestellt:
 
 Das AppImage verpackt die **unveränderte native Binary** und die Desktop-/Icon-
 Metadaten. glibc, GPU-Treiber, Wayland/X11 und `libudev` kommen bewusst von
-Bazzite, damit es keine Treiber-/ABI-Konflikte durch mitgelieferte
+dem Host, damit es keine Treiber-/ABI-Konflikte durch mitgelieferte
 Systembibliotheken gibt. Es ist **keine** Flatpak-Sandbox. Wenn FUSE auf dem
 System fehlt, lässt es sich mit `APPIMAGE_EXTRACT_AND_RUN=1` starten.
 
@@ -100,7 +101,7 @@ Installiert werden nur:
 - `~/.local/bin/couchdeck`
 - `~/.local/share/applications/couchdeck.desktop`
 - `~/.local/share/icons/hicolor/scalable/apps/couchdeck.svg`
-- optional der KDE-Autostart-Eintrag mit `--autostart`
+- optional ein desktopbezogener XDG-Autostart-Eintrag mit `--autostart`
 
 Bibliothek, Profile, PIN-Hash, Artwork und Einstellungen werden **nicht**
 überschrieben. Ein Update ist daher derselbe Aufruf mit dem neuen Archiv.
@@ -113,7 +114,7 @@ chmod +x CouchDeck-<version>-x86_64.AppImage
 ```
 
 Das AppImage kann beliebig abgelegt werden und nutzt dieselben XDG-Datenordner.
-Es trägt sich nicht automatisch in das KDE-Menü ein.
+Es trägt sich nicht automatisch in das Desktop-Menü ein.
 
 ### Deinstallation
 
@@ -134,10 +135,11 @@ Einstellungen, Cache und Logs nach expliziter Bestätigung.
 - Die üblichen Grenzen der lokalen Admin-PIN bleiben bestehen; sie ist keine
   OS-Sicherheitsgrenze.
 
-## Bazzite-Zielhardware-Test
+## Zielhardware- und Desktop-Test
 
 Der automatisierte Build testet das AppImage in einem sauberen Fedora-42-
 Container (Start, `--version`, dynamische Bibliotheken). Ein echter Test auf
-einer frischen Bazzite-KDE-Installation mit Controller, GIO-Spielstart und
-Systemaktionen ist ein separater manueller Test. Die Checkliste steht in
+einer frischen Bazzite-/KDE-Installation und den in der Desktop-Testmatrix
+genannten GNOME-/XFCE-/SteamOS-Kombinationen ist ein separater manueller Test.
+Die Bazzite-Checkliste steht in
 [`BAZZITE-RELEASE-TEST.md`](BAZZITE-RELEASE-TEST.md).

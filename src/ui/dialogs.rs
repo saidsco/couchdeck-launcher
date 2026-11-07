@@ -19,12 +19,13 @@ use crate::ui::{
 
 enum OverlayAction {
     Menu(MenuAction),
-    ImportSelected(Box<desktop::DesktopFile>),
+    ImportSelected(Box<desktop::DiscoveredEntry>),
     ImportOther,
     PickerNavigate(PathBuf),
     PickerConfirm(PathBuf),
     PickerParent,
     PickerOpenPath,
+    PickerUseDirectory,
     Pin(usize),
     Confirm(ConfirmAction),
     Close,
@@ -77,7 +78,8 @@ fn apply_action(app: &mut CouchDeckApp, ctx: &egui::Context, action: OverlayActi
         OverlayAction::PickerNavigate(_)
         | OverlayAction::PickerConfirm(_)
         | OverlayAction::PickerParent
-        | OverlayAction::PickerOpenPath => {
+        | OverlayAction::PickerOpenPath
+        | OverlayAction::PickerUseDirectory => {
             debug_assert!(false, "picker action escaped draw_picker");
         }
         OverlayAction::Pin(index) => app.pin_press(ctx, index),
@@ -196,7 +198,12 @@ fn draw_import(ctx: &egui::Context, app: &mut CouchDeckApp, mut state: ImportSta
                         .auto_shrink([false, false])
                         .max_height(body_h - 28.0 * scale)
                         .show(ui, |ui| {
-                            if state.entries.is_empty() {
+                            if state.loading {
+                                ui.horizontal(|ui| {
+                                    ui.spinner();
+                                    ui.label(RichText::new(app.t("dialog-discovery-loading")));
+                                });
+                            } else if state.entries.is_empty() {
                                 ui.label(
                                     RichText::new(format!(
                                         "{}\n{}",
@@ -206,14 +213,25 @@ fn draw_import(ctx: &egui::Context, app: &mut CouchDeckApp, mut state: ImportSta
                                     .color(MUTED),
                                 );
                             }
+                            let mut last_source = None;
                             for (index, entry) in state.entries.iter().enumerate() {
+                                if last_source != Some(entry.source) {
+                                    ui.add_space(5.0 * scale);
+                                    ui.label(
+                                        RichText::new(app.t(entry.source.label_key()))
+                                            .size(11.5 * scale)
+                                            .strong()
+                                            .color(ACCENT),
+                                    );
+                                    last_source = Some(entry.source);
+                                }
                                 let already = app.library.games.iter().any(|game| {
                                     std::fs::canonicalize(&game.desktop_file)
                                         .unwrap_or_else(|_| game.desktop_file.clone())
-                                        == std::fs::canonicalize(&entry.path)
-                                            .unwrap_or_else(|_| entry.path.clone())
+                                        == std::fs::canonicalize(&entry.file.path)
+                                            .unwrap_or_else(|_| entry.file.path.clone())
                                 });
-                                let mut label = truncate(&entry.name, 38);
+                                let mut label = truncate(&entry.file.name, 38);
                                 if already {
                                     label.push_str(&format!(
                                         "  {}",
@@ -244,18 +262,40 @@ fn draw_import(ctx: &egui::Context, app: &mut CouchDeckApp, mut state: ImportSta
                     ui.set_min_width(preview_w.min(560.0 * scale));
                     if let Some(entry) = state.entries.get(state.selected) {
                         ui.label(
-                            RichText::new(truncate(&entry.name, 60))
+                            RichText::new(truncate(&entry.file.name, 60))
                                 .size(22.0 * scale)
                                 .strong()
                                 .color(TEXT),
                         );
                         ui.label(
-                            RichText::new(truncate(&entry.path.to_string_lossy(), 100))
+                            RichText::new(truncate(&entry.file.path.to_string_lossy(), 100))
                                 .monospace()
                                 .size(11.5 * scale)
                                 .color(MUTED),
                         );
-                        if !entry.executable_for_gio() {
+                        ui.label(
+                            RichText::new(app.tf(
+                                "dialog-source",
+                                &[
+                                    ("source", app.t(entry.source.label_key()).into()),
+                                    (
+                                        "root",
+                                        truncate(&entry.source_dir.to_string_lossy(), 80).into(),
+                                    ),
+                                    ("id", entry.desktop_id.clone().into()),
+                                ],
+                            ))
+                            .size(11.5 * scale)
+                            .color(MUTED),
+                        );
+                        if !entry.menu_visible {
+                            ui.label(
+                                RichText::new(app.t("dialog-not-in-menu"))
+                                    .size(12.0 * scale)
+                                    .color(WARNING),
+                            );
+                        }
+                        if !entry.file.executable_for_gio() {
                             ui.label(
                                 RichText::new(app.t("dialog-no-exec-warning"))
                                     .size(13.0 * scale)
@@ -271,7 +311,11 @@ fn draw_import(ctx: &egui::Context, app: &mut CouchDeckApp, mut state: ImportSta
                         ui.add(
                             egui::Label::new(
                                 RichText::new(
-                                    entry.exec.clone().unwrap_or_else(|| app.t("admin-no-exec")),
+                                    entry
+                                        .file
+                                        .exec
+                                        .clone()
+                                        .unwrap_or_else(|| app.t("admin-no-exec")),
                                 )
                                 .monospace()
                                 .size(12.0 * scale)
@@ -279,7 +323,7 @@ fn draw_import(ctx: &egui::Context, app: &mut CouchDeckApp, mut state: ImportSta
                             )
                             .wrap(),
                         );
-                        if let Some(icon) = &entry.icon {
+                        if let Some(icon) = &entry.file.icon {
                             ui.label(
                                 RichText::new(
                                     app.tf("dialog-icon", &[("icon", icon.clone().into())]),
@@ -289,7 +333,7 @@ fn draw_import(ctx: &egui::Context, app: &mut CouchDeckApp, mut state: ImportSta
                                 .color(MUTED),
                             );
                         }
-                        if let Some(try_exec) = &entry.try_exec {
+                        if let Some(try_exec) = &entry.file.try_exec {
                             ui.label(
                                 RichText::new(
                                     app.tf("dialog-tryexec", &[("value", try_exec.clone().into())]),
@@ -299,7 +343,7 @@ fn draw_import(ctx: &egui::Context, app: &mut CouchDeckApp, mut state: ImportSta
                                 .color(MUTED),
                             );
                         }
-                        if let Some(workdir) = &entry.workdir {
+                        if let Some(workdir) = &entry.file.workdir {
                             ui.label(
                                 RichText::new(
                                     app.tf("dialog-workdir", &[("value", workdir.clone().into())]),
@@ -309,7 +353,7 @@ fn draw_import(ctx: &egui::Context, app: &mut CouchDeckApp, mut state: ImportSta
                                 .color(MUTED),
                             );
                         }
-                        for diagnostic in desktop::analyze_entry(entry, &app.paths) {
+                        for diagnostic in desktop::analyze_entry(&entry.file, &app.paths) {
                             ui.label(RichText::new(diagnostic.message).size(12.5 * scale).color(
                                 match diagnostic.severity {
                                     Severity::Info => MUTED,
@@ -393,9 +437,15 @@ fn draw_picker(ctx: &egui::Context, app: &mut CouchDeckApp, mut state: FilePicke
                 .color(TEXT),
         );
         ui.label(
-            RichText::new(app.t("dialog-picker-hint"))
-                .size(12.5 * scale)
-                .color(MUTED),
+            RichText::new(
+                if state.purpose == crate::app::PickerPurpose::SearchDirectory {
+                    app.t("dialog-picker-directory-hint")
+                } else {
+                    app.t("dialog-picker-hint")
+                },
+            )
+            .size(12.5 * scale)
+            .color(MUTED),
         );
         ui.add_space(8.0 * scale);
         ui.horizontal(|ui| {
@@ -506,6 +556,16 @@ fn draw_picker(ctx: &egui::Context, app: &mut CouchDeckApp, mut state: FilePicke
             });
         ui.add_space(8.0 * scale);
         ui.horizontal(|ui| {
+            if state.purpose == crate::app::PickerPurpose::SearchDirectory
+                && ui
+                    .add_sized(
+                        Vec2::new(300.0 * scale, 42.0 * scale),
+                        primary_button(app.t("dialog-picker-use-directory")),
+                    )
+                    .clicked()
+            {
+                action = Some(OverlayAction::PickerUseDirectory);
+            }
             if ui
                 .add_sized(
                     Vec2::new(160.0 * scale, 42.0 * scale),
@@ -554,6 +614,11 @@ fn draw_picker(ctx: &egui::Context, app: &mut CouchDeckApp, mut state: FilePicke
         Some(OverlayAction::PickerConfirm(path)) => {
             app.overlay = Overlay::Picker(state);
             app.picker_confirm_path(path);
+            Outcome::Consume(None)
+        }
+        Some(OverlayAction::PickerUseDirectory) => {
+            app.overlay = Overlay::Picker(state);
+            app.picker_use_directory();
             Outcome::Consume(None)
         }
         Some(_) => Outcome::Consume(None),

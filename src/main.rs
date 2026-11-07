@@ -2,7 +2,7 @@ use std::process::ExitCode;
 
 use couchdeck::app::{AppOptions, CouchDeckApp};
 use couchdeck::paths::XdgPaths;
-use couchdeck::{logging, storage};
+use couchdeck::{instance, logging, storage};
 
 const USAGE: &str = "\
 CouchDeck – controller-first Fullscreen-Spielebibliothek
@@ -68,6 +68,19 @@ fn run() -> Result<(), String> {
         ),
     );
     storage::ensure_directories(&paths)?;
+
+    let _instance_guard = match instance::InstanceGuard::acquire(&paths.instance_lock_path()) {
+        Ok(guard) => guard,
+        Err(instance::InstanceError::AlreadyRunning) => {
+            logging::log_info(
+                "main",
+                "CouchDeck läuft bereits; zweiter Start wird beendet.",
+            );
+            println!("CouchDeck läuft bereits.");
+            return Ok(());
+        }
+        Err(err) => return Err(err.to_string()),
+    };
 
     let options = AppOptions {
         windowed,

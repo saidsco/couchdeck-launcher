@@ -10,12 +10,12 @@ Legende:
 - [ ] Reproduzierbarer Build in Distrobox auf passendem Fedora-Release — Befehle dokumentiert, aber nicht auf Bazzite ausgeführt (Entwicklungsumgebung: Manjaro).
 - [x] `cargo fmt --check` erfolgreich.
 - [x] `cargo clippy --all-targets -- -D warnings` erfolgreich.
-- [x] `cargo test` erfolgreich: 62 Unit-Tests + 2 GIO-Integrationstests.
+- [x] `cargo test` erfolgreich: 73 Unit-Tests + 2 GIO-Integrationstests.
 - [x] `cargo build --release` erfolgreich.
-- [~] Wayland/KDE Fullscreen + `--windowed` — Fensterbetrieb geprüft; Wayland-Fullscreen und KDE-Fokus auf Zielhardware offen.
+- [~] Fullscreen unter KDE/GNOME/XFCE (Wayland/X11) + `--windowed` — Fensterbetrieb auf KDE/Xwayland geprüft; andere Sitzungen offen.
 - [x] Install/Uninstall ohne sudo, kein `rpm-ostree`-Layer — in temporärem `$HOME` getestet.
 - [x] Installationsskript installiert Binary, XDG-Desktop-Entry und Icon.
-- [x] Optionaler KDE-Autostart über `install-user.sh --autostart` oder Admin → Einstellungen.
+- [x] Optionaler desktopbezogener XDG-Autostart (KDE/GNOME/XFCE) über `install-user.sh --autostart` oder Admin → Einstellungen; Gamescope/unbekannte Sitzungen ausgeschlossen.
 - [x] Uninstall entfernt Binary/Entry/Icon/Autostart; `--purge` löscht Benutzerdaten nur nach expliziter Bestätigung.
 - [x] Fehlermeldung bei fehlender Desktop-Datei, fehlendem `Exec`, ungültigem Bild, fehlerhaftem JSON, fehlendem GIO (Code-/UI-Pfad).
 - [x] Beschädigte Bibliothek: Fatal-Screen, Backup, keine stille Überschreibung.
@@ -51,8 +51,8 @@ Legende:
 - [x] Fokusanimation ca. 180 ms; keine Repaint-Schleife im Idle.
 - [x] Idle-CPU-Messung: 0 Ticks über 5 s im Release-Build.
 - [~] Controller-Hotplug/Reconnect mit echtem Gerät.
-- [x] „Zu KDE minimieren“: Fullscreen verlassen, Dekorationen wiederherstellen, Fenster minimieren; Wayland-Verhalten offen.
-- [~] Autostart als KDE-only XDG-Eintrag; Entry-Erzeugung/Entfernen unit-getestet, echte Anmeldesitzung offen.
+- [x] „Zum Desktop minimieren“: Fullscreen verlassen, Dekorationen wiederherstellen, Fenster minimieren; Wayland-Verhalten offen.
+- [~] Autostart desktopbezogen; Sitzungserkennung und Entry-Erzeugung/Entfernen unit-getestet, echte GNOME/XFCE-Anmeldesitzungen offen.
 - [x] Beenden über Menü/Strg+Q beendet nur den Launcher; laufende Spiele werden nicht beendet.
 - [~] System neu starten/herunterfahren mit Bestätigung und festen `systemctl`-Aufrufen; Ausführung auf Zielhardware offen.
 
@@ -104,9 +104,26 @@ Legende:
 - [~] Steam-Flatpak tatsächlich starten (nicht installiert).
 - [x] Manuell importiertes Nicht-Steam-Spiel startet über GIO (Integrationstest).
 - [~] Fehlerhafter Steam-Exec wird erkannt, nicht still geändert, nach Zustimmung separat korrigiert; echter Steam-Flatpak-Test offen.
-- [ ] Rückkehr und Fokus nach Spielstart/-ende auf echtem KDE/Wayland geprüft.
+- [~] Rückkehr und Fokus nach Spielstart/-ende unter KDE/Wayland geprüft; GNOME/XFCE offen.
 
-## Release-Distribution (v0.3.1)
+## Desktop-/Discovery-Härtung (v0.4.0)
+
+- [x] KDE-spezifische Laufzeitvoraussetzungen entfernt; KDE/GNOME/XFCE als unterstützte Desktop-Ziele dokumentiert.
+- [x] „Zum Desktop minimieren“ in UI und Übersetzungen.
+- [x] Sichere Sitzungserkennung aus mehrteiligen `XDG_CURRENT_DESKTOP`-Werten; Gamescope/Gaming Mode ausgeschlossen.
+- [x] Autostart an erkannte KDE-/GNOME-/XFCE-Sitzung gebunden, inklusive `NotShowIn=gamescope`.
+- [x] Installer `--autostart` verweigert unbekannte Sitzungen und Gamescope.
+- [x] Single-Instance-`flock` mit automatischer Freigabe bei Abstürzen.
+- [x] Discovery aus XDG_DATA_HOME, XDG_DATA_DIRS, Flatpak-Benutzer/System, XDG-Desktopordner, Managed und Custom-Pfaden.
+- [x] XDG-Prioritäten/Desktop-IDs, Symlinks, Leerzeichen, `Hidden`, `NoDisplay`, `OnlyShowIn`, `NotShowIn`, `TryExec` behandelt.
+- [x] Admin-Ansicht für zusätzliche Suchpfade mit Hinzufügen/Entfernen/Rescan und Fehleranzeige.
+- [x] Importübersicht mit Quelle, Quellverzeichnis, Desktop-ID, Gruppierung und Diagnostik.
+- [x] Neue Importe standardmäßig nicht für Kinderprofile sichtbar.
+- [x] `GameEntry` um Herkunft/Startmethode/Desktop-ID erweitert; 0.3.1-Daten bleiben lesbar.
+- [~] GNOME/Wayland, XFCE/X11 und SteamOS Desktop Mode nicht real getestet; Matrix in `docs/DESKTOP-TEST-MATRIX.md`.
+- [~] Admin-Discovery-UI nicht vollständig manuell durchgeklickt.
+
+## Release-Distribution (v0.3.1 / 0.4.0-Vorbereitung)
 
 - [x] GitHub-Actions-Workflow für Tags `v*` und manuellen Dispatch.
 - [x] Portables x86_64-`.tar.gz` mit Binary, Installer, Doku und Runtime-Report.
@@ -119,6 +136,7 @@ Legende:
 - [x] AppImage/Archiv im Fedora-42-Container gebaut, per `--version` und Xvfb-Start geprüft.
 - [x] GitHub Release `v0.3.1` mit allen Assets veröffentlicht; Download und SHA256-Prüfung erneut verifiziert.
 - [~] AppImage und Archiv auf einer frischen Bazzite-KDE-Installation inkl. Controller, GIO-Spielstart und Systemaktionen getestet — manuelle Checkliste offen.
+- [x] Release-Metadaten, Installer, AppImage-Skripte und Workflow auf 0.4.0-Kompatibilität geprüft; kein v0.4.0-Tag/Release ohne Freigabe erzeugt.
 
 ## Nicht Teil des MVP
 

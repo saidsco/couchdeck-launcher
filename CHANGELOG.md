@@ -1,5 +1,46 @@
 # Changelog
 
+## 0.4.0 – 2026-11-07
+
+### Desktopunabhängigkeit
+
+- KDE-spezifische Laufzeitannahmen aus Anwendung, Autostart, Installer und Dokumentation entfernt.
+- Unterstützte Desktop-Ziele: KDE Plasma, GNOME und XFCE unter Wayland oder X11; Bazzite und SteamOS Desktop Mode als Zielplattformen, Gamescope/Gaming Mode nicht zugesichert.
+- „Zu KDE minimieren“ → „Zum Desktop minimieren“ in Deutsch und Englisch.
+- Autostart ist nicht mehr KDE-exklusiv, sondern an die erkannte KDE-/GNOME-/XFCE-Sitzung gebunden.
+
+### Autostart und Single Instance
+
+- Sitzungserkennung aus `XDG_CURRENT_DESKTOP`, `XDG_SESSION_DESKTOP` und `DESKTOP_SESSION`, inklusive mehrteiliger Werte.
+- `OnlyShowIn=<erkannte Sitzung>;`, `NotShowIn=gamescope;` und `X-CouchDeck-Desktop=<Sitzung>;`.
+- Unbekannte Sitzungen und Gamescope/Steam Gaming Mode erhalten keinen Autostart; bestehende fremde Einträge werden als inaktiv angezeigt und können entfernt werden.
+- Installer `--autostart` erkennt die Sitzung und verweigert riskante Annahmen.
+- Benutzerspezifischer `flock`-Instanzschutz vor parallelen UIs; automatische Freigabe bei Abstürzen.
+
+### Desktop-Discovery
+
+- Quellen: `$XDG_DATA_HOME/applications`, `$XDG_DATA_DIRS`, Flatpak-Benutzer-/Systemexports, tatsächlicher XDG-Desktopordner aus `user-dirs.dirs`, CouchDeck-verwaltete Dateien und zusätzliche Admin-Suchpfade.
+- XDG-Überlagerung und stabile Desktop-IDs, inklusive Unterverzeichnissen.
+- Hintergrund-Scan ohne Blockieren des UI-Threads; begrenzte Rekursion; keine Symlink-Verzeichnis-Loops.
+- `NoDisplay`, `Hidden`, `OnlyShowIn`, `NotShowIn`, `TryExec`, lokalisierte Namen, Symlinks, Leerzeichen und fehlende/unlesbare Verzeichnisse werden behandelt.
+- Neue Admin-Ansicht „Suchpfade & Discovery“ mit automatischen/manuellen Quellen, Hinzufügen per Ordnerdialog, Entfernen, Rescan und Warnungen.
+
+### Import und Spielemodell
+
+- Importübersicht gruppiert nach Herkunft und zeigt Quelle, Quellverzeichnis, Desktop-ID, Pfad, `Exec` und Diagnostik.
+- `NoDisplay`-Einträge bleiben bewusst importierbar.
+- Neue Importe werden bei vorhandenen Kinderprofilen nicht automatisch für Kinder sichtbar.
+- `GameEntry` um `desktop_id`, `source` und `launch_method` erweitert; `library.json` aus 0.3.1 bleibt ohne Migration lesbar.
+- Discovery-Läufe verändern keine bestehenden Bibliothekseinträge; fehlende Quelldateien werden nicht automatisch gelöscht.
+
+### Tests / Doku
+
+- Neue Tests für XDG-/Flatpak-/Desktopordner-/Custom-Discovery, Prioritäten, Desktop-IDs, `NoDisplay`/`Hidden`/`OnlyShowIn`/`NotShowIn`/`TryExec`, Symlinks, 0.3.1-Kompatibilität, kindersichere Import-Sichtbarkeit, Autostart-Sitzungserkennung und Single-Instance-Lock.
+- Desktop-Testmatrix für KDE/Wayland, KDE/X11, GNOME/Wayland, XFCE/X11 und SteamOS Desktop Mode.
+- AGENTS, README, README-de, Datenformat, Release-/Testdokumentation und Desktop-Architektur aktualisiert.
+- Kein Git-Tag, GitHub-Release oder Push ohne ausdrückliche Freigabe.
+
+
 ## 0.3.1 – 2026-11-06
 
 ### Native Release-Distribution

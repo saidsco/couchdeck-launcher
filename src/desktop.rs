@@ -342,6 +342,16 @@ fn parse_desktop_text_with_locales(
     })
 }
 
+/// The binary that should be referenced by an autostart entry. AppImage runs
+/// set `$APPIMAGE` to the stable AppImage path; using `current_exe()` there
+/// would point into the temporary mount.
+pub fn current_launcher_binary() -> Result<PathBuf, String> {
+    if let Some(appimage) = env::var_os("APPIMAGE").filter(|value| !value.is_empty()) {
+        return Ok(PathBuf::from(appimage));
+    }
+    env::current_exe().map_err(|err| format!("Eigener Programmpfad nicht ermittelbar: {err}"))
+}
+
 /// Check executables for `TryExec` and diagnostics.
 pub fn command_available(command: &str) -> bool {
     let command = command.trim();
@@ -380,17 +390,90 @@ fn is_executable(path: &Path) -> bool {
         }
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum DiscoverySource {
+    UserXdg,
+    FlatpakUser,
+    SystemXdg,
+    FlatpakSystem,
+    DesktopFolder,
+    Managed,
+    Custom,
+    Manual,
+}
+
+impl DiscoverySource {
+    pub fn label_key(self) -> &'static str {
+        match self {
+            Self::UserXdg => "discovery-source-user-xdg",
+            Self::FlatpakUser => "discovery-source-flatpak-user",
+            Self::SystemXdg => "discovery-source-system-xdg",
+            Self::FlatpakSystem => "discovery-source-flatpak-system",
+            Self::DesktopFolder => "discovery-source-desktop-folder",
+            Self::Managed => "discovery-source-managed",
+            Self::Custom => "discovery-source-custom",
+            Self::Manual => "discovery-source-manual",
+        }
+    }
+
+    pub fn is_flatpak(self) -> bool {
+        matches!(self, Self::FlatpakUser | Self::FlatpakSystem)
+    }
+
+    fn priority(self) -> u8 {
+        match self {
+            Self::UserXdg => 0,
+            Self::FlatpakUser => 1,
+            Self::SystemXdg => 2,
+            Self::FlatpakSystem => 3,
+            Self::DesktopFolder => 4,
+            Self::Custom => 5,
+            Self::Managed => 6,
+            Self::Manual => 7,
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct DiscoveryRoot {
+    pub path: PathBuf,
+    pub source: DiscoverySource,
+    pub automatic: bool,
+}
+
+#[derive(Debug, Clone)]
+pub struct DiscoveryWarning {
+    pub path: PathBuf,
+    pub message: String,
+}
+
+#[derive(Debug, Clone)]
+pub struct DiscoveredEntry {
+    pub file: DesktopFile,
+    pub desktop_id: String,
+    pub source: DiscoverySource,
+    pub source_dir: PathBuf,
+    /// True when the entry would normally appear in the current desktop menu.
+    /// `NoDisplay`/`Hidden`/`OnlyShowIn`/`NotShowIn` and missing `TryExec` make
+    /// this false, but the entry remains visible to the administrator for a
+    /// deliberate manual import.
+    pub menu_visible: bool,
+}
+
+#[derive(Debug, Clone)]
+pub struct DiscoveryResult {
+    pub entries: Vec<DiscoveredEntry>,
+    pub roots: Vec<DiscoveryRoot>,
+    pub warnings: Vec<DiscoveryWarning>,
+}
+
 pub fn current_desktops() -> BTreeSet<String> {
-    env::var("XDG_CURRENT_DESKTOP")
-        .unwrap_or_default()
-        .split(':')
-        .map(|s| s.trim().to_ascii_uppercase())
-        .filter(|s| !s.is_empty())
+    crate::session::current_desktop_tokens()
+        .into_iter()
         .collect()
 }
 
-fn shown_in_current_desktop(entry: &DesktopFile) -> bool {
-    let desktops = current_desktops();
+pub fn shown_in_desktops(entry: &DesktopFile, desktops: &BTreeSet<String>) -> bool {
     if entry
         .not_show_in
         .iter()
@@ -409,61 +492,99 @@ fn shown_in_current_desktop(entry: &DesktopFile) -> bool {
     true
 }
 
-/// Discover launchable applications. User entries take precedence over system
-/// entries with the same desktop-file id, matching the XDG spec.
-pub fn discover_applications(paths: &XdgPaths) -> Vec<DesktopFile> {
-    let mut by_id: BTreeMap<String, PathBuf> = BTreeMap::new();
-    for dir in paths.application_dirs() {
-        collect_desktop_files(&dir, &dir, 0, &mut by_id);
-    }
+fn shown_in_current_desktop(entry: &DesktopFile) -> bool {
+    shown_in_desktops(entry, &current_desktops())
+}
 
-    let mut apps: Vec<DesktopFile> = Vec::new();
-    for (_, path) in by_id {
-        match parse_desktop_file(&path) {
-            Ok(entry) => {
-                if entry.hidden || entry.no_display || !shown_in_current_desktop(&entry) {
-                    continue;
-                }
-                if let Some(try_exec) = &entry.try_exec {
-                    if !command_available(try_exec) {
-                        crate::logging::log_info(
-                            "desktop",
-                            format!(
-                                "Überspringe {}: TryExec={try_exec} nicht gefunden",
-                                path.display()
-                            ),
-                        );
-                        continue;
-                    }
-                }
-                apps.push(entry);
-            }
-            Err(err) => crate::logging::log_warn(
-                "desktop",
-                format!("Überspringe {}: {err}", path.display()),
-            ),
-        }
+fn classify_data_dir(paths: &XdgPaths, applications: &Path) -> DiscoverySource {
+    let data_home_flatpak = paths.data_home.join("flatpak/exports/share/applications");
+    if applications == data_home_flatpak {
+        DiscoverySource::FlatpakUser
+    } else if applications.starts_with("/var/lib/flatpak/exports/share/applications") {
+        DiscoverySource::FlatpakSystem
+    } else if applications.starts_with(&paths.data_home) {
+        DiscoverySource::UserXdg
+    } else {
+        DiscoverySource::SystemXdg
     }
-    apps.sort_by(|a, b| {
-        a.name
-            .to_lowercase()
-            .cmp(&b.name.to_lowercase())
-            .then_with(|| a.path.cmp(&b.path))
-    });
-    apps
+}
+
+/// All roots in discovery order: user XDG, Flatpak user/system, XDG data dirs,
+/// the real XDG desktop folder, administrator paths and CouchDeck's managed
+/// files. Discovery de-duplicates roots and desktop IDs.
+pub fn discovery_roots(paths: &XdgPaths, additional: &[PathBuf]) -> Vec<DiscoveryRoot> {
+    let mut roots = Vec::new();
+    let mut seen = BTreeSet::new();
+    let mut add = |path: PathBuf, source: DiscoverySource, automatic: bool| {
+        let key = path.to_string_lossy().to_string();
+        if seen.insert(key) {
+            roots.push(DiscoveryRoot {
+                path,
+                source,
+                automatic,
+            });
+        }
+    };
+
+    add(
+        paths.data_home.join("applications"),
+        DiscoverySource::UserXdg,
+        true,
+    );
+    let flatpak_dirs = paths.flatpak_application_dirs();
+    if let Some(user_flatpak) = flatpak_dirs.first() {
+        add(user_flatpak.clone(), DiscoverySource::FlatpakUser, true);
+    }
+    for base in &paths.data_dirs {
+        let applications = base.join("applications");
+        if flatpak_dirs.iter().any(|dir| dir == &applications) {
+            continue;
+        }
+        add(
+            applications.clone(),
+            classify_data_dir(paths, &applications),
+            true,
+        );
+    }
+    if let Some(system_flatpak) = flatpak_dirs.get(1) {
+        add(system_flatpak.clone(), DiscoverySource::FlatpakSystem, true);
+    }
+    if let Some(desktop) = paths.desktop_dir() {
+        add(desktop, DiscoverySource::DesktopFolder, true);
+    }
+    for additional_root in additional {
+        let resolved = if additional_root.is_absolute() {
+            additional_root.clone()
+        } else {
+            paths.home.join(additional_root)
+        };
+        add(resolved, DiscoverySource::Custom, false);
+    }
+    add(paths.managed_desktop_dir(), DiscoverySource::Managed, true);
+    roots
 }
 
 fn collect_desktop_files(
-    root: &Path,
+    root: &DiscoveryRoot,
     dir: &Path,
     depth: usize,
-    by_id: &mut BTreeMap<String, PathBuf>,
+    by_id: &mut BTreeMap<String, (u8, PathBuf, DiscoverySource, PathBuf)>,
+    warnings: &mut Vec<DiscoveryWarning>,
 ) {
-    if depth > 4 {
+    if depth > 6 {
         return;
     }
-    let Ok(read_dir) = fs::read_dir(dir) else {
-        return;
+    let read_dir = match fs::read_dir(dir) {
+        Ok(read_dir) => read_dir,
+        Err(err) => {
+            if dir.exists() {
+                warnings.push(DiscoveryWarning {
+                    path: dir.to_path_buf(),
+                    message: format!("Verzeichnis nicht lesbar: {err}"),
+                });
+            }
+            return;
+        }
     };
     for entry in read_dir.filter_map(Result::ok) {
         let path = entry.path();
@@ -471,23 +592,96 @@ fn collect_desktop_files(
             Ok(t) => t,
             Err(_) => continue,
         };
+        // Do not follow symlinked directories; this avoids loops while still
+        // allowing symlinked .desktop files to be imported.
         if file_type.is_dir() {
-            collect_desktop_files(root, &path, depth + 1, by_id);
-        } else if path.extension().and_then(|e| e.to_str()) == Some("desktop") {
-            let Ok(relative) = path.strip_prefix(root) else {
-                continue;
-            };
-            let id = relative
-                .components()
-                .filter_map(|component| match component {
-                    Component::Normal(part) => part.to_str(),
-                    _ => None,
-                })
-                .collect::<Vec<_>>()
-                .join("-");
-            by_id.entry(id).or_insert(path);
+            collect_desktop_files(root, &path, depth + 1, by_id, warnings);
+            continue;
+        }
+        if path.extension().and_then(|e| e.to_str()) != Some("desktop") {
+            continue;
+        }
+        let Ok(relative) = path.strip_prefix(&root.path) else {
+            continue;
+        };
+        let desktop_id = relative
+            .components()
+            .filter_map(|component| match component {
+                Component::Normal(part) => part.to_str(),
+                _ => None,
+            })
+            .collect::<Vec<_>>()
+            .join("-");
+        if desktop_id.is_empty() {
+            continue;
+        }
+        let priority = root.source.priority();
+        by_id
+            .entry(desktop_id)
+            .or_insert((priority, path, root.source, root.path.clone()));
+    }
+}
+
+/// Discover all desktop files, including `NoDisplay` entries that an
+/// administrator may import deliberately. Use `menu_visible` on each result to
+/// distinguish normal desktop-menu visibility.
+pub fn discover_entries(paths: &XdgPaths, additional: &[PathBuf]) -> DiscoveryResult {
+    let roots = discovery_roots(paths, additional);
+    let mut by_id = BTreeMap::new();
+    let mut warnings = Vec::new();
+    for root in &roots {
+        collect_desktop_files(root, &root.path, 0, &mut by_id, &mut warnings);
+    }
+
+    let mut entries = Vec::new();
+    for (desktop_id, (_, path, source, source_dir)) in by_id {
+        match parse_desktop_file(&path) {
+            Ok(file) => {
+                let menu_visible = !file.hidden
+                    && !file.no_display
+                    && shown_in_current_desktop(&file)
+                    && file
+                        .try_exec
+                        .as_deref()
+                        .map(command_available)
+                        .unwrap_or(true);
+                entries.push(DiscoveredEntry {
+                    file,
+                    desktop_id,
+                    source,
+                    source_dir,
+                    menu_visible,
+                });
+            }
+            Err(err) => warnings.push(DiscoveryWarning {
+                path,
+                message: err.to_string(),
+            }),
         }
     }
+    entries.sort_by(|a, b| {
+        a.source
+            .priority()
+            .cmp(&b.source.priority())
+            .then_with(|| a.file.name.to_lowercase().cmp(&b.file.name.to_lowercase()))
+            .then_with(|| a.file.path.cmp(&b.file.path))
+    });
+    DiscoveryResult {
+        entries,
+        roots,
+        warnings,
+    }
+}
+
+/// Backwards-compatible discovery used by the normal menu-oriented code path.
+/// Only entries that would appear in the current desktop menu are returned.
+pub fn discover_applications(paths: &XdgPaths) -> Vec<DesktopFile> {
+    discover_entries(paths, &[])
+        .entries
+        .into_iter()
+        .filter(|entry| entry.menu_visible)
+        .map(|entry| entry.file)
+        .collect()
 }
 
 /// Resolve `Icon=` names against the XDG icon/pixmap locations.
@@ -788,7 +982,7 @@ pub fn analyze_entry(entry: &DesktopFile, paths: &XdgPaths) -> Vec<Diagnostic> {
                 )));
             } else {
                 out.push(Diagnostic::warning(format!(
-                    "Steam-Spiel-URI mit App-ID {} erkannt (kein Flatpak-Aufruf). Auf Bazzite kann Steam als Flatpak laufen; dann funktioniert dieser Shortcut eventuell nicht. CouchDeck kann nach Zustimmung eine separate verwaltete Datei erzeugen.",
+                    "Steam-Spiel-URI mit App-ID {} erkannt (kein Flatpak-Aufruf). Bei Flatpak-Steam kann dieser Shortcut eventuell nicht funktionieren. CouchDeck kann nach Zustimmung eine separate verwaltete Datei erzeugen.",
                     steam.app_id
                 )));
                 if !flatpak_app_installed(paths, "com.valvesoftware.Steam") {
@@ -872,7 +1066,7 @@ fn sanitize_file_component(input: &str) -> String {
 }
 
 /// Quote a single literal argument for the desktop-entry Exec field.
-fn exec_quote(input: &str) -> String {
+pub(crate) fn exec_quote(input: &str) -> String {
     let needs_quotes = input.is_empty()
         || input.chars().any(|c| {
             c.is_whitespace()
@@ -936,49 +1130,6 @@ pub fn managed_steam_path(paths: &XdgPaths, app_id: &str) -> PathBuf {
 // ---------------------------------------------------------------------------
 // XDG autostart
 // ---------------------------------------------------------------------------
-
-pub fn autostart_enabled(paths: &XdgPaths) -> bool {
-    paths.autostart_path().is_file()
-}
-
-/// Write/refresh the KDE-only XDG autostart entry. The entry deliberately uses
-/// `OnlyShowIn=KDE;` so Steam Gaming Mode/Gamescope sessions do not spawn a
-/// second desktop launcher.
-pub fn write_autostart(paths: &XdgPaths, binary: &Path) -> Result<PathBuf, String> {
-    let binary = binary
-        .to_str()
-        .ok_or_else(|| "Der Programmpfad enthält kein gültiges UTF-8.".to_owned())?;
-    let contents = format!(
-        "[Desktop Entry]\n\
-         Type=Application\n\
-         Name=CouchDeck\n\
-         Comment=Controllerfreundliche Fullscreen-Spielebibliothek\n\
-         Exec={} --autostart\n\
-         Icon=couchdeck\n\
-         Terminal=false\n\
-         Categories=Game;\n\
-         StartupNotify=false\n\
-         OnlyShowIn=KDE;\n\
-         X-GNOME-Autostart-enabled=true\n\
-         X-KDE-autostart-after=panel\n\
-         X-CouchDeck-Autostart=true\n",
-        exec_quote(binary)
-    );
-    let path = paths.autostart_path();
-    crate::storage::atomic_write(&path, contents.as_bytes(), false)
-        .map_err(|err| format!("Autostart-Datei konnte nicht geschrieben werden: {err}"))?;
-    Ok(path)
-}
-
-pub fn remove_autostart(paths: &XdgPaths) -> Result<bool, String> {
-    let path = paths.autostart_path();
-    if !path.exists() {
-        return Ok(false);
-    }
-    fs::remove_file(&path)
-        .map_err(|err| format!("Autostart-Datei konnte nicht entfernt werden: {err}"))?;
-    Ok(true)
-}
 
 /// Generate a **separate** managed desktop file for Flatpak Steam. The original
 /// file is never modified. `app_id` must already have been validated as a
@@ -1140,6 +1291,230 @@ mod tests {
     }
 
     #[test]
+    fn discovery_includes_nodisplay_but_marks_menu_visibility() {
+        let tmp = tempfile::tempdir().unwrap();
+        let paths = XdgPaths::from_env_isolated(tmp.path(), |key| match key {
+            "XDG_DATA_HOME" => Some(OsString::from(tmp.path().join("data"))),
+            "XDG_DATA_DIRS" => Some(OsString::from(tmp.path().join("sys"))),
+            _ => None,
+        })
+        .unwrap();
+        let apps = paths.data_home.join("applications");
+        write(
+            &apps.join("visible.desktop"),
+            "[Desktop Entry]\nType=Application\nName=Visible\nExec=true\n",
+        );
+        write(
+            &apps.join("nodisplay.desktop"),
+            "[Desktop Entry]\nType=Application\nName=NoDisplay\nExec=true\nNoDisplay=true\n",
+        );
+        write(
+            &apps.join("hidden.desktop"),
+            "[Desktop Entry]\nType=Application\nName=Hidden\nExec=true\nHidden=true\n",
+        );
+        write(
+            &apps.join("missing-tryexec.desktop"),
+            "[Desktop Entry]\nType=Application\nName=MissingTryExec\nExec=true\nTryExec=/definitely/not/here\n",
+        );
+        let entries = discover_entries(&paths, &[]);
+        let names: Vec<_> = entries
+            .entries
+            .iter()
+            .map(|entry| entry.file.name.as_str())
+            .collect();
+        assert!(names.contains(&"NoDisplay"));
+        assert!(names.contains(&"Hidden"));
+        assert!(names.contains(&"MissingTryExec"));
+        let visible = entries
+            .entries
+            .iter()
+            .find(|entry| entry.file.name == "Visible")
+            .unwrap();
+        assert!(visible.menu_visible);
+        let nodisplay = entries
+            .entries
+            .iter()
+            .find(|entry| entry.file.name == "NoDisplay")
+            .unwrap();
+        assert!(!nodisplay.menu_visible);
+        let hidden = entries
+            .entries
+            .iter()
+            .find(|entry| entry.file.name == "Hidden")
+            .unwrap();
+        assert!(!hidden.menu_visible);
+        let missing = entries
+            .entries
+            .iter()
+            .find(|entry| entry.file.name == "MissingTryExec")
+            .unwrap();
+        assert!(!missing.menu_visible);
+        let menu = discover_applications(&paths);
+        assert_eq!(menu.len(), 1);
+        assert_eq!(menu[0].name, "Visible");
+    }
+
+    #[test]
+    fn discovery_covers_flatpak_desktop_folder_managed_and_custom() {
+        let tmp = tempfile::tempdir().unwrap();
+        let home = tmp.path();
+        let paths = XdgPaths::from_env_isolated(home, |key| match key {
+            "XDG_CONFIG_HOME" => Some(OsString::from(home.join("config"))),
+            "XDG_DATA_HOME" => Some(OsString::from(home.join("data"))),
+            "XDG_DATA_DIRS" => Some(OsString::from(home.join("sys"))),
+            _ => None,
+        })
+        .unwrap();
+        std::fs::create_dir_all(home.join("config")).unwrap();
+        std::fs::create_dir_all(home.join("Mein Desktop")).unwrap();
+        std::fs::write(
+            home.join("config/user-dirs.dirs"),
+            "XDG_DESKTOP_DIR=\"$HOME/Mein Desktop\"\n",
+        )
+        .unwrap();
+        let write_app = |path: &Path, name: &str| {
+            write(
+                path,
+                &format!("[Desktop Entry]\nType=Application\nName={name}\nExec=true\n"),
+            );
+        };
+        write_app(
+            &paths
+                .data_home
+                .join("flatpak/exports/share/applications/flat.desktop"),
+            "Flatpak User",
+        );
+        write_app(
+            &home.join("Mein Desktop/desktop-folder.desktop"),
+            "Desktop Folder",
+        );
+        write_app(
+            &paths.managed_desktop_dir().join("managed.desktop"),
+            "Managed",
+        );
+        let custom = home.join("custom apps");
+        write_app(&custom.join("custom.desktop"), "Custom");
+        let entries = discover_entries(&paths, std::slice::from_ref(&custom));
+        let source = |name: &str| {
+            entries
+                .entries
+                .iter()
+                .find(|entry| entry.file.name == name)
+                .map(|entry| entry.source)
+                .unwrap()
+        };
+        assert_eq!(source("Flatpak User"), DiscoverySource::FlatpakUser);
+        assert_eq!(source("Desktop Folder"), DiscoverySource::DesktopFolder);
+        assert_eq!(source("Managed"), DiscoverySource::Managed);
+        assert_eq!(source("Custom"), DiscoverySource::Custom);
+        assert!(entries
+            .roots
+            .iter()
+            .any(|root| root.path == custom && !root.automatic));
+    }
+
+    #[test]
+    fn xdg_dir_order_and_subdirectory_desktop_ids_are_stable() {
+        let tmp = tempfile::tempdir().unwrap();
+        let one = tmp.path().join("one");
+        let two = tmp.path().join("two");
+        let paths = XdgPaths::from_env_isolated(tmp.path(), |key| match key {
+            "XDG_DATA_HOME" => Some(OsString::from(tmp.path().join("data"))),
+            "XDG_DATA_DIRS" => Some(OsString::from(format!(
+                "{}:{}",
+                one.display(),
+                two.display()
+            ))),
+            _ => None,
+        })
+        .unwrap();
+        write(
+            &paths.data_home.join("applications/same.desktop"),
+            "[Desktop Entry]\nType=Application\nName=User\nExec=true\n",
+        );
+        write(
+            &one.join("applications/same.desktop"),
+            "[Desktop Entry]\nType=Application\nName=FirstSystem\nExec=true\n",
+        );
+        write(
+            &two.join("applications/same.desktop"),
+            "[Desktop Entry]\nType=Application\nName=SecondSystem\nExec=true\n",
+        );
+        write(
+            &one.join("applications/sub/Game With Space.desktop"),
+            "[Desktop Entry]\nType=Application\nName=Sub Game\nExec=true\n",
+        );
+        let entries = discover_entries(&paths, &[]);
+        assert_eq!(
+            entries
+                .entries
+                .iter()
+                .find(|entry| entry.desktop_id == "same.desktop")
+                .unwrap()
+                .file
+                .name,
+            "User"
+        );
+        assert!(entries
+            .entries
+            .iter()
+            .any(|entry| entry.desktop_id == "sub-Game With Space.desktop"));
+    }
+
+    #[test]
+    fn symlinked_desktop_files_work_and_symlink_loops_are_not_followed() {
+        let tmp = tempfile::tempdir().unwrap();
+        let paths = XdgPaths::from_env_isolated(tmp.path(), |key| match key {
+            "XDG_DATA_HOME" => Some(OsString::from(tmp.path().join("data"))),
+            "XDG_DATA_DIRS" => Some(OsString::from(tmp.path().join("sys"))),
+            _ => None,
+        })
+        .unwrap();
+        let apps = paths.data_home.join("applications");
+        write(
+            &apps.join("real.desktop"),
+            "[Desktop Entry]\nType=Application\nName=Real\nExec=true\n",
+        );
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::symlink;
+            symlink("real.desktop", apps.join("My Linked Game.desktop")).unwrap();
+            symlink(&apps, apps.join("loop")).unwrap();
+        }
+        let entries = discover_entries(&paths, &[]);
+        assert!(entries
+            .entries
+            .iter()
+            .any(|entry| entry.file.name == "Real"));
+        #[cfg(unix)]
+        assert!(entries
+            .entries
+            .iter()
+            .any(|entry| entry.desktop_id == "My Linked Game.desktop"));
+    }
+
+    #[test]
+    fn onlyshow_notshow_and_tryexec_are_interpreted() {
+        let file = parse_desktop_text(
+            Path::new("/tmp/desktop.desktop"),
+            "[Desktop Entry]\nType=Application\nName=Test\nExec=true\nOnlyShowIn=KDE;\n",
+        )
+        .unwrap();
+        let mut desktops = BTreeSet::new();
+        desktops.insert("KDE".to_owned());
+        assert!(shown_in_desktops(&file, &desktops));
+        desktops.clear();
+        desktops.insert("GNOME".to_owned());
+        assert!(!shown_in_desktops(&file, &desktops));
+        let file = parse_desktop_text(
+            Path::new("/tmp/desktop.desktop"),
+            "[Desktop Entry]\nType=Application\nName=Test\nExec=true\nNotShowIn=GNOME;\n",
+        )
+        .unwrap();
+        assert!(!shown_in_desktops(&file, &desktops));
+    }
+
+    #[test]
     fn user_entry_wins_over_system_entry() {
         let tmp = tempfile::tempdir().unwrap();
         let paths = XdgPaths::from_env_isolated(tmp.path(), |key| match key {
@@ -1246,28 +1621,6 @@ mod tests {
         let mut resolver = IconResolver::new(&paths);
         assert_eq!(resolver.resolve("my-game"), Some(icon));
         assert_eq!(resolver.resolve("does-not-exist"), None);
-    }
-
-    #[test]
-    fn autostart_entry_is_kde_only_and_quotes_binary() {
-        let tmp = tempfile::tempdir().unwrap();
-        let paths = XdgPaths::for_home(tmp.path());
-        assert!(!autostart_enabled(&paths));
-        let binary = tmp.path().join("My Games/couchdeck");
-        let path = write_autostart(&paths, &binary).unwrap();
-        assert_eq!(path, paths.autostart_path());
-        assert!(autostart_enabled(&paths));
-        let entry = parse_desktop_file(&path).unwrap();
-        assert!(entry.exec.as_deref().unwrap().contains("--autostart"));
-        assert!(entry.exec.as_deref().unwrap().contains("\""));
-        assert_eq!(entry.only_show_in, vec!["KDE"]);
-        let text = fs::read_to_string(&path).unwrap();
-        assert!(text.contains("X-CouchDeck-Autostart=true"));
-        assert!(text.contains("X-KDE-autostart-after=panel"));
-
-        assert!(remove_autostart(&paths).unwrap());
-        assert!(!autostart_enabled(&paths));
-        assert!(!remove_autostart(&paths).unwrap());
     }
 
     #[test]

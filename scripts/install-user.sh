@@ -15,8 +15,8 @@ for arg in "$@"; do
       cat <<EOF
 Verwendung: $0 [--autostart]
 
-  --autostart   KDE-Autostart-Eintrag für CouchDeck anlegen
-                (nur in KDE-Sitzungen, nicht im Steam Gaming Mode)
+  --autostart   desktopbezogenen XDG-Autostart anlegen
+                (nur KDE Plasma, GNOME oder XFCE; nicht im Steam Gaming Mode)
 EOF
       exit 0
       ;;
@@ -31,6 +31,52 @@ done
 if [[ ${EUID} -eq 0 ]]; then
   echo "Fehler: CouchDeck wird als normaler Benutzer installiert, nicht als root." >&2
   exit 1
+fi
+
+detect_autostart_desktop() {
+  local raw="${XDG_CURRENT_DESKTOP:-}:${XDG_SESSION_DESKTOP:-}:${DESKTOP_SESSION:-}"
+  local token upper
+  IFS=':;' read -ra tokens <<<"$raw"
+  for token in "${tokens[@]}"; do
+    token="${token//[[:space:]]/}"
+    upper="${token^^}"
+    if [[ "$upper" == *GAMESCOPE* || "$upper" == *GAMINGMODE* ]]; then
+      echo "GAMING"
+      return 0
+    fi
+  done
+  for token in "${tokens[@]}"; do
+    token="${token//[[:space:]]/}"
+    [[ -z "$token" ]] && continue
+    upper="${token^^}"
+    if [[ "$upper" == "KDE" || "$upper" == *PLASMA* ]]; then
+      echo "KDE"
+      return 0
+    fi
+    if [[ "$upper" == "GNOME" || "$upper" == GNOME* ]]; then
+      echo "GNOME"
+      return 0
+    fi
+    if [[ "$upper" == "XFCE" || "$upper" == XFCE* ]]; then
+      echo "XFCE"
+      return 0
+    fi
+  done
+  return 1
+}
+
+AUTOSTART_DESKTOP=""
+if [[ $AUTOSTART -eq 1 ]]; then
+  if ! AUTOSTART_DESKTOP="$(detect_autostart_desktop)"; then
+    echo "Fehler: Autostart wird nur für KDE Plasma, GNOME und XFCE angeboten;" >&2
+    echo "die aktuelle Desktop-Sitzung wurde nicht erkannt. Es wurde nichts installiert." >&2
+    exit 1
+  fi
+  if [[ "$AUTOSTART_DESKTOP" == "GAMING" ]]; then
+    echo "Fehler: Autostart ist in Steam Gaming Mode/Gamescope nicht verfügbar." >&2
+    echo "Bitte im Desktop-Modus installieren. Es wurde nichts installiert." >&2
+    exit 1
+  fi
 fi
 
 if [[ -n "${COUCHDECK_BINARY:-}" ]]; then
@@ -102,10 +148,11 @@ Icon=couchdeck
 Terminal=false
 Categories=Game;
 StartupNotify=false
-OnlyShowIn=KDE;
+OnlyShowIn=${AUTOSTART_DESKTOP};
+NotShowIn=gamescope;
 X-GNOME-Autostart-enabled=true
-X-KDE-autostart-after=panel
 X-CouchDeck-Autostart=true
+X-CouchDeck-Desktop=${AUTOSTART_DESKTOP};
 DESKTOP
   chmod 0644 "$AUTOSTART_FILE"
 fi
@@ -126,7 +173,7 @@ CouchDeck installiert:
 
 Start:  ~/.local/bin/couchdeck
 Debug:  ~/.local/bin/couchdeck --windowed --no-controller
-Autostart: $(if [[ $AUTOSTART -eq 1 ]]; then echo "aktiv ($AUTOSTART_FILE)"; else echo "inaktiv"; fi)
+Autostart: $(if [[ $AUTOSTART -eq 1 ]]; then echo "aktiv für $AUTOSTART_DESKTOP ($AUTOSTART_FILE)"; else echo "inaktiv"; fi)
 
 Der Autostart kann später auch in CouchDeck unter Admin → Einstellungen
 ein- und ausgeschaltet werden.

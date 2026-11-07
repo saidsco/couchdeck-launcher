@@ -15,6 +15,7 @@ use crate::artwork::ArtworkKind;
 use crate::desktop::{self, Severity};
 use crate::i18n::LanguagePreference;
 use crate::model::{GameEntry, ProfileRole};
+use crate::session;
 use crate::ui::{
     self, danger_button, paint_texture, primary_button, secondary_button, truncate, ACCENT, CARD,
     DANGER, MUTED, OK, TEXT, WARNING,
@@ -67,6 +68,7 @@ pub fn draw(ui: &mut egui::Ui, app: &mut CouchDeckApp) {
         AdminView::Games => draw_games(ui, app, content, scale),
         AdminView::GameEdit(id) => draw_game_edit(ui, app, content, scale, &id),
         AdminView::Profiles => draw_profiles(ui, app, content, scale),
+        AdminView::Discovery => draw_discovery(ui, app, content, scale),
         AdminView::Integrations => draw_integrations(ui, app, content, scale),
         AdminView::Settings => draw_settings(ui, app, content, scale),
         AdminView::Pin => draw_pin(ui, app, content, scale),
@@ -198,7 +200,7 @@ fn draw_menu(ui: &mut egui::Ui, app: &mut CouchDeckApp, rect: Rect, scale: f32) 
                 .auto_shrink([false, false])
                 .show(ui, |ui| {
                     ui.set_max_width(760.0 * scale);
-                    let entries: [(String, AdminView); 5] = [
+                    let entries: [(String, AdminView); 6] = [
                         (
                             app.tf(
                                 "admin-games-count",
@@ -213,6 +215,7 @@ fn draw_menu(ui: &mut egui::Ui, app: &mut CouchDeckApp, rect: Rect, scale: f32) 
                             ),
                             AdminView::Profiles,
                         ),
+                        (app.t("admin-discovery"), AdminView::Discovery),
                         (app.t("admin-steam-prism"), AdminView::Integrations),
                         (app.t("admin-settings"), AdminView::Settings),
                         (app.t("admin-pin-security"), AdminView::Pin),
@@ -291,6 +294,11 @@ fn enter_view(app: &mut CouchDeckApp, view: AdminView) {
                     .active_profile_id()
                     .map(ToOwned::to_owned)
                     .or_else(|| app.library.profiles.first().map(|p| p.id.clone()));
+            }
+        }
+        AdminView::Discovery => {
+            if app.discovery.is_none() && !app.discovery_loading {
+                app.start_discovery();
             }
         }
         AdminView::Integrations => {
@@ -1491,6 +1499,180 @@ fn draw_integrations(ui: &mut egui::Ui, app: &mut CouchDeckApp, rect: Rect, scal
     finish_focus(ui.ctx(), app, &focus);
 }
 
+fn draw_discovery(ui: &mut egui::Ui, app: &mut CouchDeckApp, rect: Rect, scale: f32) {
+    let mut focus = FocusOrder::default();
+    ui.scope_builder(
+        UiBuilder::new().max_rect(rect).id_salt("admin-discovery"),
+        |ui| {
+            ui.horizontal(|ui| {
+                let back = ui.add_sized(
+                    Vec2::new(170.0 * scale, 40.0 * scale),
+                    secondary_button(app.t("admin-back")),
+                );
+                note_focus(&back, &mut focus);
+                if back.clicked() {
+                    app.admin_back();
+                    return;
+                }
+                let rescan = ui.add_sized(
+                    Vec2::new(210.0 * scale, 40.0 * scale),
+                    secondary_button(app.t("admin-discovery-rescan")),
+                );
+                note_focus(&rescan, &mut focus);
+                if rescan.clicked() {
+                    app.rescan_discovery();
+                }
+                let add = ui.add_sized(
+                    Vec2::new(280.0 * scale, 40.0 * scale),
+                    primary_button(app.t("admin-discovery-add")),
+                );
+                note_focus(&add, &mut focus);
+                if add.clicked() {
+                    app.open_picker(PickerPurpose::SearchDirectory);
+                }
+                ui.label(
+                    RichText::new(app.t("admin-discovery-title"))
+                        .size(19.0 * scale)
+                        .strong(),
+                );
+            });
+            if app.discovery_loading {
+                ui.horizontal(|ui| {
+                    ui.spinner();
+                    ui.label(RichText::new(app.t("admin-discovery-scanning")));
+                });
+            }
+            ui.add_space(8.0 * scale);
+            ScrollArea::vertical()
+                .auto_shrink([false, false])
+                .show(ui, |ui| {
+                    let (roots, warnings, entry_count) = app
+                        .discovery
+                        .as_ref()
+                        .map(|discovery| {
+                            (
+                                discovery.roots.clone(),
+                                discovery.warnings.clone(),
+                                discovery.entries.len(),
+                            )
+                        })
+                        .unwrap_or_default();
+                    ui.label(
+                        RichText::new(
+                            app.tf("admin-discovery-count", &[("count", entry_count.into())]),
+                        )
+                        .size(13.0 * scale)
+                        .color(MUTED),
+                    );
+
+                    ui.add_space(10.0 * scale);
+                    ui.label(
+                        RichText::new(app.t("admin-discovery-auto"))
+                            .size(16.0 * scale)
+                            .strong(),
+                    );
+                    ui.label(
+                        RichText::new(app.t("admin-discovery-auto-hint"))
+                            .size(11.5 * scale)
+                            .color(MUTED),
+                    );
+                    for root in roots.iter().filter(|root| root.automatic) {
+                        let exists = root.path.is_dir();
+                        ui.horizontal(|ui| {
+                            ui.label(
+                                RichText::new(app.t(root.source.label_key()))
+                                    .size(12.0 * scale)
+                                    .color(ACCENT),
+                            );
+                            ui.label(
+                                RichText::new(root.path.display().to_string())
+                                    .monospace()
+                                    .size(11.5 * scale)
+                                    .color(if exists { MUTED } else { WARNING }),
+                            );
+                            if !exists {
+                                ui.label(
+                                    RichText::new(app.t("admin-discovery-missing"))
+                                        .size(11.5 * scale)
+                                        .color(WARNING),
+                                );
+                            }
+                        });
+                    }
+
+                    ui.add_space(12.0 * scale);
+                    ui.separator();
+                    ui.label(
+                        RichText::new(app.t("admin-discovery-custom"))
+                            .size(16.0 * scale)
+                            .strong(),
+                    );
+                    let custom: Vec<_> = roots
+                        .iter()
+                        .filter(|root| !root.automatic)
+                        .cloned()
+                        .collect();
+                    if custom.is_empty() {
+                        ui.label(
+                            RichText::new(app.t("admin-discovery-custom-empty"))
+                                .size(12.5 * scale)
+                                .color(MUTED),
+                        );
+                    }
+                    for root in custom {
+                        ui.horizontal(|ui| {
+                            ui.label(
+                                RichText::new(root.path.display().to_string())
+                                    .monospace()
+                                    .size(11.5 * scale)
+                                    .color(if root.path.is_dir() { MUTED } else { WARNING }),
+                            );
+                            if !root.path.is_dir() {
+                                ui.label(
+                                    RichText::new(app.t("admin-discovery-missing"))
+                                        .size(11.5 * scale)
+                                        .color(WARNING),
+                                );
+                            }
+                            let remove = ui.add_sized(
+                                Vec2::new(150.0 * scale, 34.0 * scale),
+                                danger_button(app.t("admin-discovery-remove")),
+                            );
+                            note_focus(&remove, &mut focus);
+                            if remove.clicked() {
+                                app.remove_search_dir(&root.path);
+                            }
+                        });
+                    }
+
+                    if !warnings.is_empty() {
+                        ui.add_space(12.0 * scale);
+                        ui.separator();
+                        ui.label(
+                            RichText::new(app.t("admin-discovery-warnings"))
+                                .size(16.0 * scale)
+                                .strong()
+                                .color(WARNING),
+                        );
+                        for warning in warnings.iter().take(20) {
+                            ui.label(
+                                RichText::new(format!(
+                                    "{}: {}",
+                                    warning.path.display(),
+                                    warning.message
+                                ))
+                                .monospace()
+                                .size(11.0 * scale)
+                                .color(WARNING),
+                            );
+                        }
+                    }
+                });
+        },
+    );
+    finish_focus(ui.ctx(), app, &focus);
+}
+
 fn status_chip(ui: &mut egui::Ui, name: &str, ok: bool, detail: &str, scale: f32) {
     let color = if ok { OK } else { DANGER };
     egui::Frame::NONE
@@ -1604,20 +1786,23 @@ fn draw_settings(ui: &mut egui::Ui, app: &mut CouchDeckApp, rect: Rect, scale: f
                             .size(16.0 * scale)
                             .strong(),
                     );
-                    let autostart_enabled = desktop::autostart_enabled(&app.paths);
+                    let session_info = session::detect_current();
+                    let supported = session_info.is_supported_desktop();
+                    let autostart_enabled = session::autostart_enabled(&app.paths);
+                    let autostart_file_exists = session::autostart_file_exists(&app.paths);
                     let mut autostart = autostart_enabled;
-                    let response = ui.checkbox(&mut autostart, app.t("admin-autostart"));
+                    let response = ui.add_enabled(
+                        supported,
+                        egui::Checkbox::new(&mut autostart, app.t("admin-autostart")),
+                    );
                     note_focus(&response, &mut focus);
-                    if response.changed() {
+                    if response.changed() && supported {
                         let result = if autostart {
-                            std::env::current_exe()
+                            desktop::current_launcher_binary()
                                 .map_err(|err| {
-                                    app.tf(
-                                        "admin-autostart-error",
-                                        &[("error", err.to_string().into())],
-                                    )
+                                    app.tf("admin-autostart-error", &[("error", err.into())])
                                 })
-                                .and_then(|binary| desktop::write_autostart(&app.paths, &binary))
+                                .and_then(|binary| session::write_autostart(&app.paths, &binary))
                                 .map(|path| {
                                     app.tf(
                                         "admin-autostart-enabled",
@@ -1625,7 +1810,7 @@ fn draw_settings(ui: &mut egui::Ui, app: &mut CouchDeckApp, rect: Rect, scale: f
                                     )
                                 })
                         } else {
-                            desktop::remove_autostart(&app.paths)
+                            session::remove_autostart(&app.paths)
                                 .map(|_| app.t("admin-autostart-disabled"))
                         };
                         match result {
@@ -1636,6 +1821,23 @@ fn draw_settings(ui: &mut egui::Ui, app: &mut CouchDeckApp, rect: Rect, scale: f
                             }
                         }
                     }
+                    if !supported {
+                        let reason = if session_info.gaming_mode {
+                            app.t("admin-autostart-gaming-mode")
+                        } else {
+                            app.t("admin-autostart-unsupported")
+                        };
+                        ui.label(RichText::new(reason).size(12.5 * scale).color(WARNING));
+                    } else if let Some(environment) = session_info.environment {
+                        ui.label(
+                            RichText::new(app.tf(
+                                "admin-autostart-session",
+                                &[("desktop", app.t(environment.label_key()).into())],
+                            ))
+                            .size(12.0 * scale)
+                            .color(MUTED),
+                        );
+                    }
                     ui.label(
                         RichText::new(
                             app.tf(
@@ -1645,6 +1847,8 @@ fn draw_settings(ui: &mut egui::Ui, app: &mut CouchDeckApp, rect: Rect, scale: f
                                         "status",
                                         if autostart_enabled {
                                             app.t("admin-autostart-active")
+                                        } else if autostart_file_exists {
+                                            app.t("admin-autostart-file-inactive")
                                         } else {
                                             app.t("admin-autostart-inactive")
                                         }
@@ -1661,7 +1865,27 @@ fn draw_settings(ui: &mut egui::Ui, app: &mut CouchDeckApp, rect: Rect, scale: f
                         .size(11.5 * scale)
                         .color(MUTED),
                     );
-                    if let Ok(binary) = std::env::current_exe() {
+                    if autostart_file_exists && !autostart_enabled {
+                        let remove = ui.add_sized(
+                            Vec2::new(260.0 * scale, 38.0 * scale),
+                            secondary_button(app.t("admin-autostart-remove")),
+                        );
+                        note_focus(&remove, &mut focus);
+                        if remove.clicked() {
+                            match session::remove_autostart(&app.paths) {
+                                Ok(_) => app.notify_key("admin-autostart-disabled"),
+                                Err(err) => {
+                                    let title = app.t("admin-autostart-change-error");
+                                    app.message_dialog(
+                                        title,
+                                        err,
+                                        crate::app::MessageSeverity::Error,
+                                    );
+                                }
+                            }
+                        }
+                    }
+                    if let Ok(binary) = desktop::current_launcher_binary() {
                         ui.label(
                             RichText::new(app.tf(
                                 "admin-autostart-binary",

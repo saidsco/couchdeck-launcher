@@ -7,6 +7,7 @@ use std::collections::BTreeSet;
 use std::env;
 use std::ffi::OsString;
 use std::fmt;
+use std::fs;
 use std::path::{Path, PathBuf};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -28,6 +29,7 @@ pub struct XdgPaths {
     pub cache_home: PathBuf,
     pub state_home: PathBuf,
     pub data_dirs: Vec<PathBuf>,
+    flatpak_application_dirs: Vec<PathBuf>,
 }
 
 impl XdgPaths {
@@ -85,19 +87,28 @@ impl XdgPaths {
                 data_dirs.push(path);
             }
         }
-        // Flatpak exports are normally part of XDG_DATA_DIRS on Bazzite, but
+        // Flatpak exports are normally part of XDG_DATA_DIRS on desktop systems, but
         // make sure icon/desktop discovery also works when CouchDeck is started
         // from a minimal environment.
         if include_flatpak_exports {
             for extra in [
-                data_home.join("flatpak/exports/share"),
                 PathBuf::from("/var/lib/flatpak/exports/share"),
+                data_home.join("flatpak/exports/share"),
             ] {
                 if extra.is_dir() && seen.insert(extra.clone()) {
                     data_dirs.insert(0, extra);
                 }
             }
         }
+
+        let flatpak_application_dirs = if include_flatpak_exports {
+            vec![
+                data_home.join("flatpak/exports/share/applications"),
+                PathBuf::from("/var/lib/flatpak/exports/share/applications"),
+            ]
+        } else {
+            vec![data_home.join("flatpak/exports/share/applications")]
+        };
 
         Ok(Self {
             home: home.to_path_buf(),
@@ -106,6 +117,7 @@ impl XdgPaths {
             cache_home,
             state_home,
             data_dirs,
+            flatpak_application_dirs,
         })
     }
 
@@ -175,9 +187,53 @@ impl XdgPaths {
         self.state_dir().join("couchdeck.log")
     }
 
-    /// XDG autostart entry. Only KDE sessions execute the generated entry.
+    /// XDG autostart entry. Its `OnlyShowIn=` value is generated from the
+    /// active desktop session (KDE, GNOME or XFCE).
     pub fn autostart_path(&self) -> PathBuf {
         self.config_home.join("autostart/couchdeck.desktop")
+    }
+
+    /// Instance lock. Prefer the per-user runtime directory; fall back to the
+    /// state directory when XDG_RUNTIME_DIR is unavailable.
+    pub fn instance_lock_path(&self) -> PathBuf {
+        if let Some(runtime) = env::var_os("XDG_RUNTIME_DIR").filter(|value| !value.is_empty()) {
+            PathBuf::from(runtime).join("couchdeck.lock")
+        } else {
+            self.state_dir().join("instance.lock")
+        }
+    }
+
+    /// The real XDG desktop directory from `user-dirs.dirs`, not a hard-coded
+    /// `~/Desktop` assumption. Resolves the `$HOME` token as defined by the
+    /// XDG user-dirs specification.
+    pub fn desktop_dir(&self) -> Option<PathBuf> {
+        let user_dirs = self.config_home.join("user-dirs.dirs");
+        if let Ok(text) = fs::read_to_string(&user_dirs) {
+            for line in text.lines() {
+                let line = line.trim();
+                let Some(raw) = line.strip_prefix("XDG_DESKTOP_DIR=") else {
+                    continue;
+                };
+                let raw = raw.trim().trim_matches('"');
+                let home = self.home.to_string_lossy();
+                let expanded = raw.replace("${HOME}", &home).replace("$HOME", &home);
+                let path = PathBuf::from(expanded);
+                let path = if path.is_absolute() {
+                    path
+                } else {
+                    self.home.join(path)
+                };
+                return path.is_dir().then_some(path);
+            }
+        }
+        let fallback = self.home.join("Desktop");
+        fallback.is_dir().then_some(fallback)
+    }
+
+    /// Standard Flatpak desktop exports. XDG_DATA_DIRS may already contain
+    /// these; callers de-duplicate by normalized path.
+    pub fn flatpak_application_dirs(&self) -> Vec<PathBuf> {
+        self.flatpak_application_dirs.clone()
     }
 
     /// Application directories in XDG precedence order (user first).
@@ -259,6 +315,23 @@ mod tests {
         let apps = paths.application_dirs();
         assert_eq!(apps[0], Path::new("/tmp/data/applications"));
         assert!(apps.contains(&PathBuf::from("/one/applications")));
+    }
+
+    #[test]
+    fn resolves_actual_xdg_desktop_dir() {
+        let tmp = tempfile::tempdir().unwrap();
+        fs::create_dir_all(tmp.path().join(".config")).unwrap();
+        fs::create_dir_all(tmp.path().join("Mein Schreibtisch")).unwrap();
+        fs::write(
+            tmp.path().join(".config/user-dirs.dirs"),
+            "XDG_DESKTOP_DIR=\"$HOME/Mein Schreibtisch\"\n",
+        )
+        .unwrap();
+        let paths = XdgPaths::for_home(tmp.path());
+        assert_eq!(
+            paths.desktop_dir(),
+            Some(tmp.path().join("Mein Schreibtisch"))
+        );
     }
 
     #[test]

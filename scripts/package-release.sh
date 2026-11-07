@@ -57,7 +57,7 @@ tar --sort=name --mtime="@${epoch}" --owner=0 --group=0 --numeric-owner \
 
 # AppImage: package the unmodified native binary. CouchDeck deliberately keeps
 # host glibc, GPU drivers, Wayland/X11 and libudev instead of bundling them;
-# this avoids driver/ABI conflicts and matches the Bazzite KDE target.
+# this avoids driver/ABI conflicts and matches the native Linux desktop target.
 ICON_PNG="${OUT_DIR}/couchdeck.png"
 if command -v rsvg-convert >/dev/null 2>&1; then
   rsvg-convert -w 256 -h 256 assets/couchdeck.svg -o "$ICON_PNG"
@@ -113,7 +113,7 @@ APPIMAGE_EXTRACT_AND_RUN=1 "$APPIMAGE" --version >/dev/null
 cat > "$OUT_DIR/RELEASE_NOTES.md" <<NOTES
 # CouchDeck ${VERSION}
 
-Native Linux x86_64 release for Bazzite / KDE Plasma / Wayland.
+Native Linux x86_64 release for KDE Plasma, GNOME and XFCE (Wayland or X11).
 
 ## Assets
 

@@ -66,7 +66,7 @@ menu-admin = Admin area
 menu-import = Import desktop file
 menu-fullscreen-enter = Fullscreen
 menu-fullscreen-exit = Leave fullscreen
-menu-minimize = Minimize to KDE
+menu-minimize = Minimize to desktop
 menu-reboot = Reboot system
 menu-poweroff = Shut down system
 menu-about = About CouchDeck
@@ -175,7 +175,7 @@ admin-show-backgrounds = Show background images
 admin-controller-hints = Controller hints in the library
 admin-alarm-sound = Alert sound for time warnings (best effort)
 admin-autostart-header = Autostart
-admin-autostart = Start automatically on login (KDE only)
+admin-autostart = Start automatically on login (KDE, GNOME or XFCE)
 admin-autostart-error = Cannot determine own executable path: { $error }
 admin-autostart-enabled = Autostart enabled: { $path }
 admin-autostart-disabled = Autostart disabled.
@@ -270,7 +270,7 @@ profile-role-player = Player
 profile-role-child = Child
 profile-active = Active
 
-menu-about-text = Controller-first fullscreen game library for KDE Plasma/Wayland. Data: { $data } · Settings: { $settings } · Cache: { $cache } · Log: { $log } · { $gio }. Launching always goes through `gio launch`. CouchDeck cannot know whether a game is still running. The admin PIN is a local UI lock, not an operating-system security boundary.
+menu-about-text = Family-friendly, controller-first fullscreen game library for Linux living-room PCs (KDE Plasma, GNOME, XFCE; Wayland or X11). Data: { $data } · Settings: { $settings } · Cache: { $cache } · Log: { $log } · { $gio }. Launching always goes through `gio launch`. CouchDeck cannot know whether a game is still running. The admin PIN is a local UI lock, not an operating-system security boundary.
 menu-gio-ok = GIO: available
 menu-gio-problem = GIO: problem – { $error }
 
@@ -450,7 +450,7 @@ app-prism-not-installed = org.prismlauncher.PrismLauncher is not installed as a 
 
 app-prism-created = Prism entry for “{ $id }” created. A cover can now be assigned.
 
-app-minimizing-kde = Switching to KDE …
+app-minimizing-desktop = Switching to desktop …
 
 app-minimized = Launcher minimized. Restore it from the taskbar.
 
@@ -460,7 +460,7 @@ app-launch-running = A launch is already in progress.
 
 app-gio-missing-title = GIO missing
 
-app-gio-missing-message = Without `gio` (GLib/GIO), desktop entries cannot be launched. Install GLib or check the Bazzite installation.
+app-gio-missing-message = Without `gio` (GLib/GIO), desktop entries cannot be launched. Install GLib/GIO for your distribution.
 
 app-desktop-missing-title = Desktop file missing
 
@@ -559,3 +559,77 @@ app-default-profile-name = Profile { $number }
 app-steam-entry-title = { $title } (Steam Flatpak)
 
 zz-fallback-test = English fallback works
+
+desktop-kde = KDE Plasma
+
+desktop-gnome = GNOME
+
+desktop-xfce = XFCE
+
+admin-discovery = Search paths & discovery
+
+admin-discovery-title = Search paths & discovery
+
+admin-discovery-rescan = Scan now
+
+admin-discovery-add = Add directory
+
+admin-discovery-scanning = Scanning desktop entries …
+
+admin-discovery-count = { $count } discovered desktop entries
+
+admin-discovery-auto = Automatically detected sources
+
+admin-discovery-auto-hint = XDG applications, Flatpak exports, the XDG desktop folder and CouchDeck-managed files.
+
+admin-discovery-custom = Additional search directories
+
+admin-discovery-custom-empty = No additional directories yet.
+
+admin-discovery-missing = missing
+
+admin-discovery-remove = Remove
+
+admin-discovery-warnings = Scan warnings
+
+admin-discovery-added = Search directory added.
+
+admin-discovery-removed = Search directory removed.
+
+discovery-source-user-xdg = User XDG
+
+discovery-source-flatpak-user = Flatpak (user)
+
+discovery-source-system-xdg = System XDG
+
+discovery-source-flatpak-system = Flatpak (system)
+
+discovery-source-desktop-folder = XDG desktop folder
+
+discovery-source-managed = CouchDeck-managed
+
+discovery-source-custom = Custom
+
+discovery-source-manual = Manual file
+
+dialog-discovery-loading = Scanning desktop entries …
+
+dialog-source = Source: { $source } · { $root } · ID: { $id }
+
+dialog-not-in-menu = Not visible in the current desktop menu (e.g. NoDisplay, Hidden or OnlyShowIn/NotShowIn). A deliberate admin import is still possible.
+
+dialog-picker-directory-hint = A opens folder · Left: parent · Start: use this folder · B cancel
+
+dialog-picker-use-directory = Use this folder  (Start)
+
+picker-search-directory = Select search directory
+
+admin-autostart-gaming-mode = Autostart is unavailable in Steam Gaming Mode/Gamescope. Configure it in desktop mode.
+
+admin-autostart-unsupported = Autostart is only offered for KDE Plasma, GNOME and XFCE; the current desktop session was not recognized.
+
+admin-autostart-session = Detected desktop session: { $desktop }
+
+admin-autostart-file-inactive = present, inactive for this session
+
+admin-autostart-remove = Remove autostart file

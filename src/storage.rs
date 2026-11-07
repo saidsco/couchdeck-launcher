@@ -364,6 +364,9 @@ mod tests {
             sort_order: 10,
             managed: false,
             created_at_unix: 0,
+            desktop_id: None,
+            source: Default::default(),
+            launch_method: Default::default(),
         });
         save_library(&paths, &library).unwrap();
         match load_library(&paths) {
@@ -451,11 +454,18 @@ mod tests {
         let (_tmp, paths) = test_paths();
         let settings = Settings {
             animations: false,
+            additional_desktop_dirs: vec![PathBuf::from("/tmp/extra games")],
             ..Default::default()
         };
         save_settings(&paths, &settings).unwrap();
         match load_settings(&paths) {
-            SettingsLoad::Loaded(loaded) => assert!(!loaded.animations),
+            SettingsLoad::Loaded(loaded) => {
+                assert!(!loaded.animations);
+                assert_eq!(
+                    loaded.additional_desktop_dirs,
+                    vec![PathBuf::from("/tmp/extra games")]
+                );
+            }
             other => panic!("unexpected {other:?}"),
         }
     }

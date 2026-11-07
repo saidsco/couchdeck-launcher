@@ -38,10 +38,12 @@ Prüfen:
 - [ ] A startet, B zurück, Start öffnet Menü
 - [ ] LB/RB öffnet die Profilübersicht
 - [ ] Controller-Reconnect/Hotplug funktioniert
-- [ ] Import einer `.desktop`-Datei über Admin → Spiele
+- [ ] Import einer `.desktop`-Datei über Admin → Spiele (Quelle, Desktop-ID und Exec prüfen)
+- [ ] Admin → Suchpfade: zusätzliches Verzeichnis hinzufügen/entfernen, Rescan
+- [ ] Autostart nur nach Opt-in; `OnlyShowIn` entspricht der aktuellen Sitzung
 - [ ] Spielstart über `gio launch` (Test-Desktop-Datei mit Leerzeichen im Pfad)
 - [ ] Admin-PIN mit On-Screen-Pad
-- [ ] Minimieren zu KDE
+- [ ] Zum Desktop minimieren
 - [ ] Systemaktionen: Bestätigungsdialog und systemctl/Polkit (Neustart/
       Herunterfahren nur auf einem Wegwerf-Testsystem wirklich ausführen)
 
@@ -56,7 +58,7 @@ tar -xzf couchdeck-<version>-linux-x86_64.tar.gz
 Danach dieselben UI-/Controller-/GIO-Tests wie oben. Zusätzlich:
 
 - [ ] `~/.local/bin/couchdeck` existiert und ist ausführbar
-- [ ] Desktop-Eintrag und Icon erscheinen in KDE
+- [ ] Desktop-Eintrag und Icon erscheinen in der Desktop-Anwendungsliste
 - [ ] `ldd ~/.local/bin/couchdeck` enthält kein `not found`
 - [ ] `ldd --version` erfüllt die dokumentierte glibc-Anforderung
 - [ ] `~/.local/share/couchdeck/` wird bei einem Update nicht überschrieben
@@ -77,7 +79,7 @@ prüfen:
 
 ## D. Ergebnis dokumentieren
 
-Datum, Bazzite-Version, Kernel, KDE-Plasma-Version, GPU/Treiber, Controller
+Datum, Bazzite-Version, Kernel, Desktop-Sitzung, GPU/Treiber, Controller
 (Modell und USB/Bluetooth/Dongle-Modus) sowie alle Abweichungen in
 `docs/TEST_REPORT.md` ergänzen. Nicht ausgeführte Punkte bleiben ausdrücklich
-offen.
+offen. Weitere Desktop-Kombinationen: [`DESKTOP-TEST-MATRIX.md`](DESKTOP-TEST-MATRIX.md).

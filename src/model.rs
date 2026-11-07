@@ -99,6 +99,25 @@ impl Profile {
     }
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
+#[serde(rename_all = "snake_case")]
+pub enum GameSource {
+    #[default]
+    DesktopEntry,
+    ManagedDesktop,
+    Steam,
+    Prism,
+    Manual,
+    Other,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
+#[serde(rename_all = "snake_case")]
+pub enum LaunchMethod {
+    #[default]
+    GioDesktop,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct GameEntry {
     pub id: String,
@@ -132,6 +151,15 @@ pub struct GameEntry {
     pub managed: bool,
     #[serde(default)]
     pub created_at_unix: u64,
+    /// XDG desktop-file id when the entry was imported from a discovery root.
+    #[serde(default)]
+    pub desktop_id: Option<String>,
+    /// Origin of the entry. `desktop_file` stays the launch source.
+    #[serde(default)]
+    pub source: GameSource,
+    /// How CouchDeck launches the entry. Only GIO desktop launches exist in 0.4.
+    #[serde(default)]
+    pub launch_method: LaunchMethod,
 }
 
 impl GameEntry {
@@ -323,6 +351,10 @@ pub struct Settings {
     /// Play a best-effort alert sound at time-budget warnings.
     #[serde(default = "default_true")]
     pub alarm_sound: bool,
+    /// Extra administrator-configured `.desktop` roots. Absolute paths are
+    /// preferred; relative paths are resolved by the caller.
+    #[serde(default)]
+    pub additional_desktop_dirs: Vec<PathBuf>,
 }
 
 impl Default for Settings {
@@ -336,6 +368,7 @@ impl Default for Settings {
             show_backgrounds: true,
             language: LanguagePreference::Auto,
             alarm_sound: true,
+            additional_desktop_dirs: Vec::new(),
         }
     }
 }
@@ -420,6 +453,9 @@ mod tests {
             sort_order: 10,
             managed: false,
             created_at_unix: 0,
+            desktop_id: None,
+            source: Default::default(),
+            launch_method: Default::default(),
         });
         lib.games.push(GameEntry {
             id: "g2".into(),
@@ -434,6 +470,9 @@ mod tests {
             sort_order: 20,
             managed: false,
             created_at_unix: 0,
+            desktop_id: None,
+            source: Default::default(),
+            launch_method: Default::default(),
         });
         assert_eq!(lib.games_for_profile("admin").len(), 2);
         assert_eq!(lib.games_for_profile("kid").len(), 1);
@@ -454,6 +493,23 @@ mod tests {
             serde_json::from_str(r#"{"schema_version":1,"animations":true}"#).unwrap();
         assert_eq!(settings.language, LanguagePreference::Auto);
         assert!(settings.alarm_sound);
+    }
+
+    #[test]
+    fn v031_data_defaults_040_game_fields() {
+        let game: GameEntry = serde_json::from_str(
+            r#"{"id":"old-game","desktop_file":"/tmp/old.desktop","created_at_unix":1}"#,
+        )
+        .unwrap();
+        assert!(game.desktop_id.is_none());
+        assert_eq!(game.source, GameSource::DesktopEntry);
+        assert_eq!(game.launch_method, LaunchMethod::GioDesktop);
+
+        let settings: Settings = serde_json::from_str(
+            r#"{"schema_version":1,"animations":true,"language":"auto","alarm_sound":true}"#,
+        )
+        .unwrap();
+        assert!(settings.additional_desktop_dirs.is_empty());
     }
 
     #[test]

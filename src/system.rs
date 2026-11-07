@@ -196,7 +196,7 @@ fn run(action: SystemAction, started: Instant) -> SystemOutcome {
                 action,
                 success: false,
                 message: format!(
-                    "`systemctl` konnte nicht gestartet werden: {err}. Auf Bazzite ist systemd normalerweise vorhanden."
+                    "`systemctl` konnte nicht gestartet werden: {err}. Auf Desktop-Distributionen mit systemd ist das normalerweise vorhanden."
                 ),
                 duration: started.elapsed(),
             }

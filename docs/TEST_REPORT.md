@@ -1,6 +1,6 @@
 # Test- und Messbericht
 
-**Stand:** 6. November 2026 · **Version:** CouchDeck 0.3.1
+**Stand:** 7. November 2026 · **Version:** CouchDeck 0.4.0
 
 **Getestete Umgebung:** Manjaro Linux (KDE Plasma, Wayland-Session), Kernel `6.18.55-1-MANJARO`, NVIDIA RTX 4070 Ti SUPER
 **Release-Buildumgebung:** Fedora 42 Container, glibc 2.41, Rust 1.89.0, x86_64
@@ -22,6 +22,7 @@
 | toml | `0.8.23` |
 | GIO | `2.88.3` (Host) / `2.84.4` (Fedora-42-Release-Container) |
 | Release-Build | Fedora 42, glibc 2.41, Rust 1.89.0 |
+| Desktop-Ziele | KDE Plasma, GNOME, XFCE (Wayland/X11); Steam Gaming Mode nicht zugesichert |
 
 `Cargo.lock` ist eingecheckt.
 
@@ -35,8 +36,8 @@ $ cargo clippy --all-targets -- -D warnings
 Finished `dev` profile ... (Exit 0)
 
 $ cargo test
-running 62 tests
-test result: ok. 62 passed; 0 failed
+running 73 tests
+test result: ok. 73 passed; 0 failed
 running 2 tests
 test result: ok. 2 passed; 0 failed
 (running 0 tests: main.rs, Doc-Tests)
@@ -45,7 +46,7 @@ $ cargo build --release
 Finished `release` profile [optimized]
 ```
 
-Das sind **64 Tests insgesamt** (62 Unit-Tests + 2 GIO-Integrationstests).
+Das sind **75 Tests insgesamt** (73 Unit-Tests + 2 GIO-Integrationstests).
 
 Zusätzlich wurde die Release-Paketierung im Fedora-42-Container geprüft:
 
@@ -76,6 +77,13 @@ sha256sum -c SHA256SUMS
 - Zeitkontingent v0.3.0: Zusatzminuten addieren sich, Nutzung wird am Budget gedeckelt, Tageswechsel setzt Nutzung/Zusatz/Warnflags zurück, Warnflags re-armieren nach Zusatzzeit, Reset der Zusatzzeit lässt Nutzung stehen, Speichern/Laden (Neustart), beschädigte `timekeeping.json` wird gesichert.
 - Eltern-/Kindersperren v0.3.0: beliebige Nicht-Kind-Admin-PIN wird akzeptiert (Spieler-PIN nicht), Profilwechsel aus Kinderprofil erfordert ParentAuth, erschöpftes Budget blockiert neue Starts.
 - Datenkompatibilität v0.3.0: Profile/Settings aus v0.2.5 ohne neue Felder werden mit Defaults geladen (`background=null`, `is_child=false`, `daily_limit_minutes=null`, `language=auto`, `alarm_sound=true`).
+- Desktop-/Discovery v0.4.0: XDG_DATA_HOME-vor-XDG_DATA_DIRS-Priorität, XDG_DATA_DIRS-Reihenfolge, Flatpak-Benutzerexport, XDG-Desktopordner aus `user-dirs.dirs`, Managed-Desktop, zusätzliche Suchverzeichnisse und Desktop-IDs in Unterverzeichnissen.
+- Sichtbarkeit v0.4.0: `NoDisplay`/`Hidden`/fehlendes `TryExec` bleiben für den bewussten Admin-Import sichtbar, sind aber nicht menü-sichtbar; `OnlyShowIn`/`NotShowIn` werden geprüft; `discover_applications` filtert menü-sichtbare Einträge.
+- Symlinks v0.4.0: Symlink-Dateien werden gelesen; Symlink-Verzeichnisse werden nicht rekursiv verfolgt (keine Schleifen).
+- Autostart v0.4.0: Erkennung von KDE, `ubuntu:GNOME`, XFCE und mehrteiligen Werten; Gamescope/Gaming-Mode wird nie als Desktop-Sitzung akzeptiert; Entry ist an `OnlyShowIn=<Sitzung>` gebunden.
+- Single Instance v0.4.0: zweiter Lock-Acquire wird abgelehnt; nach Drop ist erneuter Acquire möglich.
+- Kindersicherheit v0.4.0: neue Importe werden bei vorhandenen Kinderprofilen standardmäßig nur für Nicht-Kinderprofile sichtbar.
+- GameEntry-Kompatibilität v0.4.0: 0.3.1-JSON ohne `desktop_id`/`source`/`launch_method` lädt mit Defaults.
 - GIO-Integrationstest: Desktop-Datei mit Leerzeichen im Pfad und gequotetem `Exec` wird über `gio launch` gestartet; fehlende Datei liefert einen Fehler.
 
 ## Manuelle UI-Smoke-Tests
@@ -120,7 +128,13 @@ Die UI wurde zusätzlich mit dem X11-Backend (Xwayland) gestartet, damit Fenster
 | ldd/glibc-Report (v0.3.1) | OK; Build-glibc 2.41, max. referenziertes Symbol `GLIBC_2.39`, keine `not found`-Einträge |
 | Installation/Update in temporärem `$HOME` (v0.3.1) | Installer installiert Binary/Entry/Icon; XDG-Datenordner werden nicht angefasst |
 | GitHub Release v0.3.1 (v0.3.1) | Assets veröffentlicht; erneut heruntergeladen und mit `SHA256SUMS` geprüft, AppImage `--version` OK |
+| v0.4.0-Releasepaket lokal (v0.4.0) | OK; Fedora-42-Container, tar.gz/AppImage/SHA256SUMS, Installer mit KDE-Autostart, XDG-Daten unverändert, AppImage `--version`; kein Tag/Release erzeugt |
 | AppImage/Archiv auf frischer Bazzite-KDE-Installation (v0.3.1) | **Nicht ausgeführt**; manuelle Checkliste in `docs/BAZZITE-RELEASE-TEST.md` |
+| Autostart-Installer mit `XDG_CURRENT_DESKTOP=ubuntu:GNOME` (v0.4.0) | OK; `OnlyShowIn=GNOME`, `NotShowIn=gamescope`, kein `X-KDE-autostart-after` |
+| Autostart-Installer mit `XDG_CURRENT_DESKTOP=gamescope:KDE` (v0.4.0) | OK; Installation/Autostart verweigert, kein Binary installiert |
+| Single-Instance-Smoke mit zwei Prozessen (v0.4.0) | OK; zweiter Prozess beendet sich mit Hinweis, erster läuft weiter |
+| Discovery-UI unter KDE/Wayland (v0.4.0) | Automatisierte Discovery-Tests grün; Admin-Ansicht „Suchpfade“ nicht vollständig manuell durchgeklickt |
+| GNOME/Wayland, XFCE/X11, SteamOS Desktop Mode (v0.4.0) | **Nicht ausgeführt**; Matrix in `docs/DESKTOP-TEST-MATRIX.md` |
 
 Screenshots: [Zeitkontingent verbraucht](screenshots/time-budget.png), [Bibliothek](screenshots/library.png), [Bibliothek als Mia](screenshots/library-profile-mia.png), [Profile](screenshots/profiles.png), [Admin](screenshots/admin.png), [Spieleeditor](screenshots/game-editor.png), [Import](screenshots/import.png), [PIN](screenshots/pinpad.png), [Start-Overlay](screenshots/launch.png), [Power-Menü](screenshots/menu.png), [Autostart-Einstellungen](screenshots/autostart-settings.png), [Fatal](screenshots/corrupt-data.png).
 
@@ -133,8 +147,16 @@ Die Screenshots verwenden fiktive Demo-Spiele und Demo-Cover aus der Testumgebun
 - `scripts/fetch-release-tools.sh` lädt ein gepinntes linuxdeploy-Build-Werkzeug mit SHA256-Prüfung und stellt daraus `appimagetool` bereit.
 - Das AppImage enthält die unveränderte native Binary sowie Desktop-/Icon-Metadaten; glibc, GPU-Treiber, Wayland/X11 und `libudev` kommen von Bazzite. Dadurch keine gebündelten System-ABI-Konflikte.
 - `SHA256SUMS` wird nach dem Packaging aus den finalen Dateien erzeugt.
+- v0.4.0-Paketierung lokal im Fedora-42-Container geprüft: tar.gz, AppImage, SHA256SUMS, ldd/glibc-Report, AppImage-Start unter Xvfb und Installer/Update in temporärem `$HOME`. Kein Git-Tag/GitHub-Release ohne Freigabe erzeugt.
 - AppImage und Archiv-Binary wurden mit `env -i PATH=/usr/bin:/bin` (ohne Cargo/Toolchain im Suchpfad) per `--version` gestartet.
 - Der echte Bazzite-KDE-Zielhardware-Test (Controller, GIO-Spielstart, Systemaktionen, AppImage/Archiv) ist noch offen und in `docs/BAZZITE-RELEASE-TEST.md` beschrieben.
+
+## Desktop-/Discovery-Testmatrix (v0.4.0)
+
+Die vollständige Matrix steht in [`DESKTOP-TEST-MATRIX.md`](DESKTOP-TEST-MATRIX.md).
+KDE/Wayland (Manjaro) und X11/Xwayland wurden teilweise geprüft; GNOME/Wayland,
+XFCE/X11, SteamOS Desktop Mode und Bazzite bleiben offen. Es wird nicht
+behauptet, dass diese Sitzungen getestet wurden.
 
 ## Idle-/Performance-Messung
 
