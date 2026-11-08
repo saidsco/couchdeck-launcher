@@ -19,8 +19,8 @@ einen Test von AppImage und Archiv getrennt.
 
 ## 0.4.1 Fix-Retest (offen)
 
-- [ ] Menü-Icon wird nach Installation/Update korrekt angezeigt (PNG + absoluter Pfad)
-- [ ] Fullscreen → „Zum Desktop minimieren“ → über Taskleiste zurück → Fullscreen wieder aktiv
+- [X] Menü-Icon wird nach Installation/Update korrekt angezeigt (PNG + absoluter Pfad)
+- [X] Fullscreen → „Zum Desktop minimieren“ → über Taskleiste zurück → Fullscreen wieder aktiv
 - [ ] Mit `--windowed` gestartet: Minimieren/Wiederherstellen bleibt im Windowed-Modus
 
 ## 0.4.5 Fensteraktivierung (manuell)
