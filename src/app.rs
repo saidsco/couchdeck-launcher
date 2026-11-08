@@ -1,13 +1,15 @@
 //! Application state machine, navigation and user actions.
 
 use std::path::{Path, PathBuf};
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::mpsc::Receiver;
+use std::sync::Arc;
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
 use eframe::egui;
 use eframe::egui::{Key, Modifiers, ViewportCommand};
 
-use crate::activation::ActivationServer;
+use crate::activation::{ActivationRequest, ActivationServer};
 use crate::artwork::{self, ArtworkCache, ArtworkKind};
 use crate::controller::{self, ControllerEvent, ControllerHandle, NavAction};
 use crate::desktop::{self, DiscoveredEntry, DiscoveryResult, DiscoverySource, IconResolver};
@@ -16,9 +18,26 @@ use crate::launch::{self, LaunchOutcome};
 use crate::logging::{log_error, log_info, log_warn};
 use crate::model::{new_id, resolve_data_path, AdminSecrets, GameEntry, Library, Settings};
 use crate::paths::XdgPaths;
+use crate::session::{self, DesktopEnvironment};
 use crate::storage::{self, LibraryLoad, SecretsLoad, SettingsLoad};
 use crate::system::{SystemAction, SystemController};
 use crate::timekeeping::{self, TimeStatus, TimeWarning, Timekeeping};
+use crate::wayland_activation::{self, WaylandSurface};
+
+fn capture_wayland_surface(cc: &eframe::CreationContext<'_>) -> Option<WaylandSurface> {
+    use raw_window_handle::{HasDisplayHandle, HasWindowHandle, RawDisplayHandle, RawWindowHandle};
+
+    let display = cc.display_handle().ok()?.as_raw();
+    let window = cc.window_handle().ok()?.as_raw();
+    let (RawDisplayHandle::Wayland(display), RawWindowHandle::Wayland(window)) = (display, window)
+    else {
+        return None;
+    };
+    Some(WaylandSurface {
+        display: display.display,
+        surface: window.surface,
+    })
+}
 
 fn profile_switch_requires_parent(
     active_is_child: bool,
@@ -380,11 +399,15 @@ pub struct CouchDeckApp {
     pub discovery: Option<DiscoveryResult>,
     pub discovery_rx: Option<Receiver<DiscoveryResult>>,
     pub discovery_loading: bool,
-    pub activation_rx: Option<Receiver<()>>,
+    pub activation_rx: Option<Receiver<ActivationRequest>>,
     pub activation_server: Option<ActivationServer>,
-    pub activation_focus_pending: bool,
+    pub wayland_surface: Option<WaylandSurface>,
     pub activation_fullscreen_pending: bool,
     pub activation_requested_at: Option<Instant>,
+    pub activation_token_present: bool,
+    pub activation_token_applied: bool,
+    pub activation_kwin_attempted: bool,
+    pub activation_focus_state: Arc<AtomicBool>,
     pub diagnose_window: bool,
     pub last_diag_minimized: Option<bool>,
     pub last_diag_focused: Option<bool>,
@@ -538,9 +561,13 @@ impl CouchDeckApp {
             discovery_loading: false,
             activation_rx: None,
             activation_server: None,
-            activation_focus_pending: false,
+            wayland_surface: capture_wayland_surface(cc),
             activation_fullscreen_pending: false,
             activation_requested_at: None,
+            activation_token_present: false,
+            activation_token_applied: false,
+            activation_kwin_attempted: false,
+            activation_focus_state: Arc::new(AtomicBool::new(false)),
             diagnose_window: options.diagnose_window,
             last_diag_minimized: None,
             last_diag_focused: None,
@@ -592,6 +619,19 @@ impl CouchDeckApp {
             ),
         );
         app.start_discovery();
+        log_info(
+            "activation",
+            format!(
+                "Aktivierungs-Setup: wayland_surface={}, session={:?}, token_env={}.",
+                app.wayland_surface.is_some(),
+                session::detect_current().environment,
+                if std::env::var_os("XDG_ACTIVATION_TOKEN").is_some() {
+                    "vorhanden"
+                } else {
+                    "nicht vorhanden"
+                }
+            ),
+        );
         let (activation_tx, activation_rx) = std::sync::mpsc::channel();
         app.activation_rx = Some(activation_rx);
         let activation_paths = app.paths.clone();
@@ -626,22 +666,40 @@ impl CouchDeckApp {
         self.save_settings();
     }
 
-    pub fn request_activation(&mut self, ctx: &egui::Context) {
+    pub fn request_activation(&mut self, ctx: &egui::Context, request: ActivationRequest) {
         let focused = ctx.input(|input| input.focused);
-        let minimized = ctx
-            .input(|input| input.viewport().minimized)
-            .unwrap_or(false);
+        let minimized = ctx.input(|input| input.viewport().minimized);
+        let wayland = self.wayland_surface.is_some();
+        let session = session::detect_current();
+        let desktop = session.environment;
+        let token = request
+            .token
+            .as_deref()
+            .filter(|token| !token.trim().is_empty());
         log_info(
             "activation",
             format!(
-                "Anforderung empfangen: focused={focused}, minimized={minimized}, fullscreen={}, was_fullscreen={}",
-                self.fullscreen, self.restore_fullscreen_after_minimize
+                "IPC empfangen: focused={focused}, minimized={minimized:?}, fullscreen={}, was_fullscreen={}, wayland={}, token={}",
+                self.fullscreen,
+                self.restore_fullscreen_after_minimize,
+                wayland,
+                if token.is_some() { "vorhanden" } else { "nicht vorhanden" }
             ),
         );
+        if wayland {
+            log_info(
+                "activation",
+                format!(
+                    "Wayland meldet minimized={minimized:?}; der Minimierungszustand ist über winit nicht zuverlässig (einige Compositor-Backends liefern immer false)."
+                ),
+            );
+        }
         if focused
-            && !minimized
-            && !self.activation_focus_pending
+            && minimized != Some(true)
+            && self.activation_requested_at.is_none()
             && !self.activation_fullscreen_pending
+            && !self.pending_minimize
+            && !self.restore_fullscreen_after_minimize
         {
             log_info(
                 "activation",
@@ -650,23 +708,117 @@ impl CouchDeckApp {
             return;
         }
 
-        ctx.send_viewport_cmd(ViewportCommand::Visible(true));
-        if minimized {
+        if self.pending_minimize || self.restore_fullscreen_after_minimize {
             log_info(
                 "activation",
-                "Minimierten Zustand erkannt; Wiederherstellung wird angefordert.",
+                "Ausstehende Minimierung wird zugunsten der Aktivierung verworfen.",
             );
-            ctx.send_viewport_cmd(ViewportCommand::Minimized(false));
+            self.pending_minimize = false;
+            self.minimize_observed_unfocus = false;
+            self.minimize_observed_minimized = false;
         }
-        // The compositor may process unminimizing asynchronously. Focus and
-        // fullscreen are therefore applied again in maybe_finish_activation.
-        self.activation_focus_pending = true;
-        self.activation_requested_at = Some(Instant::now());
-        if self.fullscreen || self.restore_fullscreen_after_minimize {
-            self.activation_fullscreen_pending = true;
-            self.restore_fullscreen_after_minimize = false;
+
+        if !focused || minimized == Some(true) {
+            // A minimized/hidden window may not have delivered a focus-lost
+            // event yet. Do not let a stale true value suppress the fallback.
+            self.activation_focus_state.store(false, Ordering::Release);
         }
+
+        let now = Instant::now();
+        self.activation_requested_at = Some(now);
+        self.activation_token_present = token.is_some();
+        self.activation_token_applied = false;
+        self.activation_kwin_attempted = false;
+        self.activation_fullscreen_pending = self.restore_fullscreen_after_minimize;
+        self.restore_fullscreen_after_minimize = false;
+
+        let mut token_applied = false;
+        if wayland {
+            if let Some(token) = token {
+                match self.wayland_surface {
+                    Some(surface) => match wayland_activation::activate(surface, token) {
+                        Ok(()) => {
+                            token_applied = true;
+                            log_info(
+                                "activation",
+                                "Activation-Token an die bestehende Wayland-Oberfläche angewendet (Compositor-Entscheidung steht aus).",
+                            );
+                        }
+                        Err(err) => {
+                            log_warn(
+                                "activation",
+                                format!("Activation-Token konnte nicht angewendet werden: {err}"),
+                            );
+                        }
+                    },
+                    None => log_warn(
+                        "activation",
+                        "Activation-Token vorhanden, aber keine Wayland-Oberfläche verfügbar.",
+                    ),
+                }
+            } else {
+                log_warn(
+                    "activation",
+                    "Kein XDG_ACTIVATION_TOKEN vorhanden; unter Wayland ist fokussierte Wiederherstellung nicht garantiert.",
+                );
+            }
+
+            // Visible/Focus/Minimized are no-ops for winit's Wayland backend.
+            // RequestUserAttention is only a fallback when no token could be
+            // forwarded; a valid token is the compositor-authorized path.
+            if !token_applied {
+                log_info(
+                    "activation",
+                    "Fallback: RequestUserAttention (Compositor kann dies nur als Hinweis behandeln).",
+                );
+                ctx.send_viewport_cmd(ViewportCommand::RequestUserAttention(
+                    egui::UserAttentionType::Critical,
+                ));
+            }
+
+            if desktop == Some(DesktopEnvironment::Kde) {
+                // Let a valid token act first. KWin scripting is the fallback
+                // when no token exists or the compositor ignores/rejects it.
+                // The delayed attempt checks the shared focus flag and makes
+                // no second request when focus was already observed.
+                let delay = if token_applied { 800 } else { 50 };
+                if crate::kwin_activation::activate_after(
+                    self.paths.clone(),
+                    Duration::from_millis(delay),
+                    self.activation_focus_state.clone(),
+                ) {
+                    self.activation_kwin_attempted = true;
+                    log_info(
+                        "activation",
+                        format!("KWin-Fallback in {delay} ms geplant (nur falls Fokus ausbleibt)."),
+                    );
+                } else {
+                    log_warn(
+                        "activation",
+                        "KWin-Fallback läuft bereits; keine weitere Anforderung.",
+                    );
+                }
+            }
+        } else {
+            if minimized == Some(true) {
+                log_info(
+                    "activation",
+                    "Beobachtete Minimierung; X11-Wiederherstellung wird angefordert.",
+                );
+                ctx.send_viewport_cmd(ViewportCommand::Minimized(false));
+            }
+            ctx.send_viewport_cmd(ViewportCommand::Visible(true));
+            ctx.send_viewport_cmd(ViewportCommand::Focus);
+            log_info("activation", "X11-Fensterfokus angefordert.");
+        }
+
+        self.activation_token_applied = token_applied;
         ctx.request_repaint();
+        if wayland {
+            // A minimized/unminimized surface may need one additional frame
+            // after the compositor has mapped it again.
+            ctx.request_repaint_after(Duration::from_millis(300));
+        }
         self.maybe_finish_activation(ctx);
     }
 
@@ -674,62 +826,66 @@ impl CouchDeckApp {
         let Some(rx) = &self.activation_rx else {
             return;
         };
-        let mut requested = false;
-        while rx.try_recv().is_ok() {
-            requested = true;
+        let mut token = None;
+        let mut received = false;
+        while let Ok(request) = rx.try_recv() {
+            received = true;
+            if request.token.is_some() {
+                token = request.token;
+            }
         }
-        if requested {
-            self.request_activation(ctx);
+        if received {
+            self.request_activation(ctx, ActivationRequest { token });
         }
     }
 
     fn maybe_finish_activation(&mut self, ctx: &egui::Context) {
-        if !self.activation_focus_pending && !self.activation_fullscreen_pending {
+        let Some(started) = self.activation_requested_at else {
             return;
-        }
-        let minimized = ctx
-            .input(|input| input.viewport().minimized)
-            .unwrap_or(false);
-        if minimized {
-            if self
-                .activation_requested_at
-                .map(|started| started.elapsed() > Duration::from_secs(2))
-                .unwrap_or(false)
-            {
-                log_warn(
-                    "activation",
-                    "Fenster konnte innerhalb von 2 s nicht wiederhergestellt werden; Anforderung wird verworfen.",
-                );
-                self.activation_focus_pending = false;
-                self.activation_fullscreen_pending = false;
-                self.activation_requested_at = None;
-                return;
-            }
-            ctx.request_repaint_after(Duration::from_millis(100));
-            return;
-        }
-        if self.activation_fullscreen_pending {
-            self.activation_fullscreen_pending = false;
-            self.fullscreen = true;
-            ctx.send_viewport_cmd(ViewportCommand::Decorations(false));
-            ctx.send_viewport_cmd(ViewportCommand::Fullscreen(true));
-            log_info("activation", "Fullscreen wird wiederhergestellt.");
-        }
-        self.activation_requested_at = None;
-        if self.activation_focus_pending {
-            self.activation_focus_pending = false;
-            ctx.send_viewport_cmd(ViewportCommand::Focus);
-            if !ctx.input(|input| input.focused) {
-                ctx.send_viewport_cmd(ViewportCommand::RequestUserAttention(
-                    egui::UserAttentionType::Informational,
-                ));
-            }
+        };
+        let elapsed = started.elapsed();
+        let focused = ctx.input(|input| input.focused);
+        if focused {
             log_info(
                 "activation",
-                "Fokus angefordert (Compositor kann die Anforderung ablehnen).",
+                format!(
+                    "Fokus tatsächlich beobachtet nach {} ms (token_applied={}, kwin_fallback_attempted={}).",
+                    elapsed.as_millis(),
+                    self.activation_token_applied,
+                    self.activation_kwin_attempted
+                ),
             );
+            self.activation_requested_at = None;
+            if self.activation_fullscreen_pending {
+                self.activation_fullscreen_pending = false;
+                self.fullscreen = true;
+                ctx.send_viewport_cmd(ViewportCommand::Decorations(false));
+                ctx.send_viewport_cmd(ViewportCommand::Fullscreen(true));
+                log_info(
+                    "activation",
+                    "Fullscreen wird nach bestätigtem Fokus wiederhergestellt.",
+                );
+            }
+            ctx.request_repaint();
+            ctx.request_repaint_after(Duration::from_millis(300));
+            return;
         }
-        ctx.request_repaint();
+
+        if elapsed > Duration::from_secs(2) {
+            log_warn(
+                "activation",
+                format!(
+                    "Timeout: keine Fokusänderung beobachtet (token_present={}, token_applied={}, kwin_fallback_attempted={}).",
+                    self.activation_token_present,
+                    self.activation_token_applied,
+                    self.activation_kwin_attempted
+                ),
+            );
+            self.activation_requested_at = None;
+            self.activation_fullscreen_pending = false;
+            return;
+        }
+        ctx.request_repaint_after(Duration::from_millis(100));
     }
 
     fn log_window_diagnostics(&mut self, ctx: &egui::Context) {
@@ -2393,6 +2549,7 @@ impl CouchDeckApp {
     /// otherwise some Wayland compositors ignore the minimize request.
     pub fn minimize_to_desktop(&mut self, ctx: &egui::Context) {
         self.overlay = Overlay::None;
+        self.activation_focus_state.store(false, Ordering::Release);
         if self.fullscreen {
             self.fullscreen = false;
             self.pending_minimize = true;
@@ -2598,6 +2755,8 @@ impl CouchDeckApp {
 
     fn update_window_focus(&mut self, ctx: &egui::Context) {
         let focused = ctx.input(|input| input.focused);
+        self.activation_focus_state
+            .store(focused, Ordering::Release);
         let changed = match self.window_focused {
             None => {
                 self.window_focused = Some(focused);

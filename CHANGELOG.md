@@ -1,5 +1,30 @@
 # Changelog
 
+## 0.4.6 – 2026-11-08
+
+### Bugfix: Fensteraktivierung unter KDE/Wayland
+
+- Ursache: Winit/Wayland kann ein bestehendes Fenster weder per `Focus` fokussieren noch per `Minimized(false)` entminimieren; `is_minimized()` liefert auf Wayland keine verlässliche Information. Die bisherige 0.4.5-Logik sandte daher wirkungslose ViewportCommands.
+- `couchdeck --activate` liest jetzt ein vom Aufrufer bereitgestelltes `XDG_ACTIVATION_TOKEN` und übermittelt es über den lokalen IPC-Socket an die laufende Instanz.
+- Die Instanz wendet den Token über einen minimalen `xdg-activation-v1`-Guest-Client auf ihre bereits bestehende Wayland-Oberfläche an. Es wird kein neues Fenster erzeugt und kein Token erfunden.
+- KDE/Wayland: Begrenzter, einmaliger KWin-Scripting-Fallback für Terminalaufrufe ohne Token oder wenn ein Token nicht fokussiert. Das Skript aktiviert ausschließlich das CouchDeck-Fenster, wiederholt die Aktivierung nach 180 ms einmalig (falls KWin die Minimierung erst verzögert mapped), fordert danach einen zusätzlichen Repaint an und wird entfernt; keine Polling-Schleife, keine Manipulation fremder Fenster.
+- Fullscreen wird nur nach tatsächlich beobachtetem Fokus wiederhergestellt, wenn CouchDeck zuvor für das Minimieren aus dem Fullscreen gewechselt wurde. Ein extern minimiertes Fullscreen-Fenster wird nicht unnötig umgeschaltet.
+- Kein automatischer Fokusgewinn beim Spielstart; laufende Spiele/Launcher werden nicht beendet.
+
+### Diagnose
+
+- Getrennte Logs für IPC-Empfang, Token vorhanden/nicht vorhanden, Token angewendet/fehlgeschlagen, Fokus angefordert, Fokus tatsächlich beobachtet und Timeout.
+- Wayland-Minimierungszustand wird ausdrücklich als nicht zuverlässig protokolliert.
+- KWin-Fallback meldet fehlenden Fokus nach seinem Lauf; KDE-spezifische Aktionen bleiben auf KDE beschränkt.
+
+### Doku / Tests
+
+- `docs/WINDOW-ACTIVATION.md` um Token-Übergabe, KWin-Fallback, Terminal-vs-Shortcut-Verhalten und Grenzen erweitert.
+- Manuelle Tests auf Manjaro/KDE 6.7.5/Wayland: Token-Aktivierung aus einem KDE/KIO-gestarteten Prozess, Terminal ohne Token mit KWin-Fallback, minimiertes Windowed- und Fullscreen-Fenster, Fake-Token-Fallback, X11-Regressionen.
+- 81 Unit-Tests + 2 GIO-Integrationstests (83 gesamt).
+- Kein Git-Tag/GitHub-Release/Push ohne Freigabe.
+
+
 ## 0.4.5 – 2026-11-08
 
 ### Fensteraktivierung

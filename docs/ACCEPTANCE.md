@@ -10,7 +10,7 @@ Legende:
 - [ ] Reproduzierbarer Build in Distrobox auf passendem Fedora-Release — Befehle dokumentiert, aber nicht auf Bazzite ausgeführt (Entwicklungsumgebung: Manjaro).
 - [x] `cargo fmt --check` erfolgreich.
 - [x] `cargo clippy --all-targets -- -D warnings` erfolgreich.
-- [x] `cargo test` erfolgreich: 77 Unit-Tests + 2 GIO-Integrationstests.
+- [x] `cargo test` erfolgreich: 81 Unit-Tests + 2 GIO-Integrationstests.
 - [x] `cargo build --release` erfolgreich.
 - [~] Fullscreen unter KDE/GNOME/XFCE (Wayland/X11) + `--windowed` — Fensterbetrieb auf KDE/Xwayland geprüft; andere Sitzungen offen.
 - [x] Install/Uninstall ohne sudo, kein `rpm-ostree`-Layer — in temporärem `$HOME` getestet.
@@ -104,7 +104,7 @@ Legende:
 - [~] Steam-Flatpak tatsächlich starten (nicht installiert).
 - [x] Manuell importiertes Nicht-Steam-Spiel startet über GIO (Integrationstest).
 - [~] Fehlerhafter Steam-Exec wird erkannt, nicht still geändert, nach Zustimmung separat korrigiert; echter Steam-Flatpak-Test offen.
-- [~] Manuelle Rückkehr via `--activate` unter X11 geprüft; Wayland-/GNOME-/XFCE-Fokus und echte Steam-/Launcher-Rückkehr offen.
+- [~] Manuelle Rückkehr via `--activate` unter X11 und KDE/Wayland (Entwicklungshost) geprüft; Bazzite-/GNOME-/XFCE-Fokus und echte Steam-/Launcher-Rückkehr offen.
 
 ## Desktop-/Discovery-Härtung (v0.4.0)
 
@@ -130,7 +130,19 @@ Legende:
 - [x] Fullscreen-Wiederherstellung nach „Zum Desktop minimieren“ implementiert und per Unit-Test für die Zustandslogik abgesichert.
 - [~] Sichtprüfung des Icons und echtes Taskleisten-Minimieren/Wiederherstellen auf Bazzite/GNOME/XFCE offen.
 
-## Fensteraktivierung (v0.4.5)
+## Fensteraktivierung (v0.4.6)
+
+- [x] `XDG_ACTIVATION_TOKEN` wird vom CLI gelesen, über den lokalen IPC-Socket weitergegeben und nicht geloggt.
+- [x] Eingehender Token wird über `xdg-activation-v1` auf die bereits bestehende Wayland-Oberfläche angewendet; kein neues Fenster.
+- [x] KDE/Wayland-Fallback per einmaligem KWin-Scripting nur für das CouchDeck-Fenster; keine Polling-Schleife, keine fremden Fenster.
+- [x] Minimierungszustand unter Wayland wird als nicht zuverlässig erkannt und nicht als Steuerungsgrundlage verwendet.
+- [x] Fullscreen wird nur nach beobachtetem Fokus und interner Minimierung aus dem Fullscreen wiederhergestellt; extern minimiertes Fullscreen bleibt ohne unnötigen Toggle.
+- [x] Getrennte Diagnose für IPC, Token vorhanden/angewendet, Fokus angefordert/beobachtet, Timeout und KWin-Fallback.
+- [x] Manjaro/KDE 6.7.5/Wayland: Terminal ohne Token (KWin-Fallback), KIO-Prozess mit gültigem Token, minimiertes Windowed-/Fullscreen-Fenster, ungültiger Token und `--windowed` praktisch geprüft.
+- [x] X11-Regressionen aus 0.4.5 bleiben grün.
+- [~] Bazzite-KDE-Zielhardware, echter benutzerdefinierter KDE-Shortcut, GNOME/Wayland, XFCE/X11, SteamOS Desktop Mode und echte Steam-/Proton-/Launcher-Rückkehr offen.
+
+## Fensteraktivierung (v0.4.5, historisch)
 
 - [x] `couchdeck --activate` existiert und kontaktiert die laufende Instanz über lokalen Unix-Socket.
 - [x] Kein zweiter UI-Prozess; Single-Instance-Lock bleibt maßgeblich.
@@ -143,7 +155,7 @@ Legende:
 - [x] X11-Smoke-Tests für fokussiert, minimiert, Fullscreen-minimiert, mehrfache Aufrufe und No-Instance.
 - [~] Wayland-/Bazzite-/GNOME-/XFCE-Fokusverhalten und echte Steam-/Proton-/Launcher-Tests offen.
 
-## Release-Distribution (v0.4.5-Vorbereitung)
+## Release-Distribution (v0.4.6-Vorbereitung)
 
 - [x] GitHub-Actions-Workflow für Tags `v*` und manuellen Dispatch.
 - [x] Portables x86_64-`.tar.gz` mit Binary, Installer, Doku und Runtime-Report.
@@ -156,8 +168,8 @@ Legende:
 - [x] AppImage/Archiv im Fedora-42-Container gebaut, per `--version` und Xvfb-Start geprüft.
 - [x] GitHub Release `v0.3.1` mit allen Assets veröffentlicht; Download und SHA256-Prüfung erneut verifiziert.
 - [~] AppImage und Archiv auf einer frischen Bazzite-KDE-Installation inkl. Controller, GIO-Spielstart und Systemaktionen getestet — manuelle Checkliste offen.
-- [x] Release-Metadaten, Installer, AppImage-Skripte und Workflow auf 0.4.5-Kompatibilität geprüft; lokales 0.4.5-Paket im Fedora-42-Container gebaut und geprüft.
-- [~] Kein v0.4.5-Tag/Release/Push ohne ausdrückliche Freigabe erzeugt.
+- [x] Release-Metadaten, Installer, AppImage-Skripte und Workflow auf 0.4.6-Kompatibilität geprüft; lokales 0.4.6-Paket im Fedora-42-Container gebaut und mit SHA256SUMS, `--version` und Xvfb-Start geprüft.
+- [~] Kein v0.4.6-Tag/Release/Push ohne ausdrückliche Freigabe erzeugt.
 
 ## Nicht Teil des MVP
 

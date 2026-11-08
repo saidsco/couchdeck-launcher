@@ -83,6 +83,7 @@ sie von der Desktop-Sitzung bereitgestellt:
 - `libX11`, `libXcursor`, `libXrandr`, `libXi`, `libxcb`
 - `libGL`/`libEGL` und der jeweils aktive Mesa-/NVIDIA-Treiber
 - `libudev.so.1`, `libcap.so.2`
+- optional `qdbus6`/`qdbus` für den begrenzten KDE/KWin-Aktivierungsfallback
 
 Das AppImage verpackt die **unveränderte native Binary** und die Desktop-/Icon-
 Metadaten. glibc, GPU-Treiber, Wayland/X11 und `libudev` kommen bewusst von

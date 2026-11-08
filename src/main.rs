@@ -91,6 +91,19 @@ fn run() -> Result<(), String> {
         return Err(result.user_message());
     }
     storage::ensure_directories(&paths)?;
+    // A token from the environment is only meaningful for a window that is
+    // being created. CouchDeck's window already exists here; do not leak the
+    // one-shot token into games/launchers started later.
+    if std::env::var_os("XDG_ACTIVATION_TOKEN").is_some()
+        || std::env::var_os("DESKTOP_STARTUP_ID").is_some()
+    {
+        logging::log_info(
+            "activation",
+            "Start-Activation-Token wird nach dem Fensterstart nicht an Kindprozesse weitergegeben.",
+        );
+        std::env::remove_var("XDG_ACTIVATION_TOKEN");
+        std::env::remove_var("DESKTOP_STARTUP_ID");
+    }
 
     let _instance_guard = match instance::InstanceGuard::acquire(&paths.instance_lock_path()) {
         Ok(guard) => guard,

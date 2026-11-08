@@ -21,7 +21,7 @@ einen Test von AppImage und Archiv getrennt.
 
 - [X] Menü-Icon wird nach Installation/Update korrekt angezeigt (PNG + absoluter Pfad)
 - [X] Fullscreen → „Zum Desktop minimieren“ → über Taskleiste zurück → Fullscreen wieder aktiv
-- [ ] Mit `--windowed` gestartet: Minimieren/Wiederherstellen bleibt im Windowed-Modus
+- [X] Mit `--windowed` gestartet: Minimieren/Wiederherstellen bleibt im Windowed-Modus
 
 ## 0.4.5 Fensteraktivierung (manuell)
 
@@ -29,16 +29,66 @@ Die Aktivierung ist Best-Effort. Unter Wayland kann der Compositor den Fokus
 verweigern. `/home/USER/.local/bin/couchdeck` durch den tatsächlichen Pfad
 ersetzen; bei AppImage den AppImage-Pfad verwenden.
 
-- [ ] `couchdeck --activate` bei fokussiertem CouchDeck: keine sichtbare Störung
-- [ ] CouchDeck minimieren → `--activate` → Fenster wieder sichtbar
-- [ ] CouchDeck im Fullscreen minimieren → `--activate` → Fullscreen und Fokus wieder da
-- [ ] CouchDeck mit `--windowed` minimieren → `--activate` → bleibt Windowed
-- [ ] Zwei schnelle `--activate`-Aufrufe → keine zweite Instanz, stabiler Zustand
-- [ ] CouchDeck beenden → `--activate` → Exit-Code ungleich 0, verständliche Meldung
+- [X] `couchdeck --activate` bei fokussiertem CouchDeck: keine sichtbare Störung
+- [ ] CouchDeck minimieren → `--activate` → Fenster wieder sichtbar - Defekt: da passiert nichts
+- [ ] CouchDeck im Fullscreen minimieren → `--activate` → Fullscreen und Fokus wieder da - Defekt: da passiert nichts
+- [ ] CouchDeck mit `--windowed` minimieren → `--activate` → bleibt Windowed - auch defekt
+- [X] Zwei schnelle `--activate`-Aufrufe → keine zweite Instanz, stabiler Zustand
+- [X] CouchDeck beenden → `--activate` → Exit-Code ungleich 0, verständliche Meldung
 - [ ] Steam-Spiel starten, Steam-/Proton-/Launcher-Fenster zulassen, danach
       manuell `--activate`; CouchDeck darf den Fokus nur auf Anforderung holen
 - [ ] `--diagnose-window` aktivieren; Fokus-/Minimierungs-/Fullscreen-Wechsel im Log prüfen
+Fehlerlog:
+[1794151262] INFO  couchdeck: Logdatei: /home/cr/.local/state/couchdeck/couchdeck.log
+[1794151262] INFO  main: couchdeck 0.4.5 | Session=wayland | Wayland=wayland-1 | Desktop=Some(Kde) | DesktopTokens=["KDE", "/USR/SHARE/WAYLAND-SESSIONS/PLASMA.DESKTOP"] | XDG_DATA_HOME=/home/cr/.local/share | Autostart=false | Diagnose=true
+[1794151262] INFO  launch: GIO: 2.90.1
+[1794151262] INFO  app: Start: 3 Profile, 2 Spiele, Daten: /home/cr/.local/share/couchdeck
+[1794151262] INFO  app: Hintergrund: None, anzeigen=true
+[1794151262] INFO  window: Fokus verloren (Hintergrund); fullscreen=true; minimized=Some(false)
+[1794151262] INFO  controller: Fensterfokus verloren; Gamepad-Navigation pausiert.
+[1794151262] INFO  window: diagnose: focused=false, minimized=Some(false), fullscreen=true
+[1794151262] INFO  window: Fokus gewonnen; fullscreen=true; minimized=Some(false)
+[1794151262] INFO  controller: Fensterfokus gewonnen; Eingabepuffer wird verworfen.
+[1794151262] INFO  window: diagnose: focused=true, minimized=Some(false), fullscreen=true
+[1794151262] INFO  controller: Verbunden: 8BitDo Ultimate 2C
+[1794151262] INFO  controller: 1 Controller bereit.
+[1794151262] INFO  discovery: 221 Desktop-Einträge, 8 Quellen, 0 Warnungen
+[1794151266] INFO  window: Fokus verloren (Hintergrund); fullscreen=true; minimized=Some(false)
+[1794151266] INFO  controller: Fensterfokus verloren; Gamepad-Navigation pausiert.
+[1794151266] INFO  window: diagnose: focused=false, minimized=Some(false), fullscreen=true
+[1794151272] INFO  couchdeck: Logdatei: /home/cr/.local/state/couchdeck/couchdeck.log
+[1794151272] INFO  main: couchdeck 0.4.5 | Session=wayland | Wayland=wayland-1 | Desktop=Some(Kde) | DesktopTokens=["KDE", "/USR/SHARE/WAYLAND-SESSIONS/PLASMA.DESKTOP"] | XDG_DATA_HOME=/home/cr/.local/share | Autostart=false | Diagnose=false
+[1794151272] INFO  activation: Aktivierungsanforderung an die UI übermittelt.
+[1794151272] INFO  activation: CLI --activate: Accepted - Aktivierungsanforderung übermittelt (Fensterfokus nicht bestätigt).
+[1794151272] INFO  activation: Anforderung empfangen: focused=false, minimized=false, fullscreen=true, was_fullscreen=false
+[1794151272] INFO  activation: Fullscreen wird wiederhergestellt.
+[1794151272] INFO  activation: Fokus angefordert (Compositor kann die Anforderung ablehnen).
+
 - [ ] Globalen Shortcut für `couchdeck --activate` einrichten und testen
+
+## 0.4.6 Bugfix Fensteraktivierung – Bazzite Retest (offen)
+
+Hintergrund: 0.4.5 sendete unter Wayland wirkungslose `Focus`-/
+`Minimized(false)`-Befehle. 0.4.6 gibt `XDG_ACTIVATION_TOKEN` per IPC weiter und
+nutzt unter KDE/Wayland zusätzlich einen begrenzten KWin-Scripting-Fallback.
+
+Die folgenden Fälle sind auf **Bazzite/KDE/Wayland** noch nicht durchgeführt:
+
+- [ ] Terminal ohne Token: `couchdeck --activate` bei minimiertem CouchDeck → Fenster sichtbar und fokussiert, **ohne** Maus-Hover über der Taskleiste
+- [ ] Terminal ohne Token bei minimiertem Fullscreen-Fenster → Fullscreen/Fokus korrekt, kein unnötiger Toggle
+- [ ] Taskleisten-Minimierung (Windowed und Fullscreen) → `--activate` → sofort sichtbar, kein Hover nötig
+- [ ] `couchdeck --windowed`, minimieren, `--activate` → bleibt Windowed
+- [ ] Benutzerdefinierter KDE-Shortcut auf `couchdeck --activate` → Verhalten dokumentieren (Token vorhanden/nicht vorhanden)
+- [ ] KDE/KIO- oder Launcher-gestarteter Prozess mit `XDG_ACTIVATION_TOKEN` → Token wird angewendet, Fokus beobachtet
+- [ ] Absichtlich ungültiger/leerer Token → KWin-Fallback oder verständlicher Timeout, keine falsche Erfolgsmeldung
+- [ ] `--diagnose-window`: Logs für IPC, Token, KWin-Fallback, Fokus und Timeout prüfen
+- [ ] Zwei schnelle `--activate`-Aufrufe → keine zweite Instanz, stabiler Zustand
+- [ ] Laufendes Steam-/Proton-/Launcher-/Spiel-Szenario: CouchDeck kehrt nur auf Anforderung zurück, Spiel/Launcher läuft weiter
+
+Auf dem Entwicklungsystem **Manjaro/KDE 6.7.5/Wayland** wurden Terminal-Fallback,
+KIO-Token, minimiertes Windowed-/Fullscreen-Fenster, `--windowed` und ein
+ungültiger Token praktisch geprüft. Diese Ergebnisse ersetzen **nicht** den
+Bazzite-Zielhardware-Test.
 
 ## A. AppImage
 

@@ -25,7 +25,7 @@ Du bist ein erfahrener Rust-/Linux-Desktop-Entwicklungsagent. Implementiere ein 
 12. **Sicherheitsmodell**: Eine `.desktop`-Datei kann beliebige Befehle ausführen. Zeige Admin beim Import Name, Pfad, Quelle, Desktop-ID und `Exec`-Inhalt zur Prüfung. Nur lokal explizit vom Admin freigegebene Einträge ausführbar. Neu gefundene Einträge werden **nie automatisch** in die Bibliothek übernommen und **nie automatisch für Kinderprofile freigeschaltet**. Keine ungeprüften Downloads.
 13. **Desktopunabhängiger Autostart**: XDG-Autostart ist opt-in und an die erkannte Sitzung (KDE, GNOME, XFCE) gebunden. Unbekannte Sitzungen und Gamescope/Steam Gaming Mode erhalten keinen Autostart. Kein blindes Entfernen von `OnlyShowIn`-Beschränkungen.
 14. **Single Instance**: Ein benutzerspezifischer Lock verhindert parallele UIs gegen dieselbe Bibliothek und dasselbe Zeitbudget. Der Lock muss bei Abstürzen automatisch freigegeben werden.
-15. **Manuelle Fensteraktivierung (0.4.5)**: `couchdeck --activate` kontaktiert die laufende Instanz über einen lokalen, benutzergebundenen Unix-Socket. Aktivierung ist Best-Effort; sie darf keinen zweiten Prozess starten, keine Spiele/Launcher beenden und keine PIN-/Kinderrechte umgehen. Ein Spielstart fordert niemals automatisch den Fokus zurück. Fullscreen/Windowing-Zustand wird respektiert; Wayland-Compositor-Grenzen werden dokumentiert.
+15. **Manuelle Fensteraktivierung (0.4.6)**: `couchdeck --activate` kontaktiert die laufende Instanz über einen lokalen, benutzergebundenen Unix-Socket und gibt optional `XDG_ACTIVATION_TOKEN` weiter. Wayland-Token werden über `xdg-activation-v1` auf die bestehende Fläche angewendet; KDE/Wayland nutzt nur bei Bedarf einen begrenzten KWin-Scripting-Fallback. Aktivierung ist Best-Effort; sie darf keinen zweiten Prozess starten, keine Spiele/Launcher beenden und keine PIN-/Kinderrechte umgehen. Ein Spielstart fordert niemals automatisch den Fokus zurück. Fullscreen/Windowing-Zustand wird respektiert; Wayland-Compositor-Grenzen werden dokumentiert.
 
 ## Implementationsphasen
 **Phase 0 – Probe**: Minimal-Binary fullscreen in der aktiven Desktop-Sitzung, Controller-Input mit gilrs auf echtem Gerät, `gio launch` für Test-Desktop-Datei. Dokumentiere potenzielle Steam-Input-Konflikte. Trenne Probleme der Game-Session (Gamescope/Steam Gaming Mode) vom Desktop.
@@ -38,7 +38,7 @@ Du bist ein erfahrener Rust-/Linux-Desktop-Entwicklungsagent. Implementiere ein 
 
 **Phase 4 – Desktop-/Discovery-Härtung (0.4)**: generalisierter Autostart, XDG-/Flatpak-Discovery, konfigurierbare Suchpfade, erweiterte Importübersicht, zukunftsfähiges Spielemodell, Single-Instance-Schutz, Desktop-Testmatrix.
 
-**Phase 5 – Fensteraktivierung (0.4.5)**: lokaler Aktivierungs-Socket, `--activate`, manuelle Desktop-Shortcuts, Fokusdiagnose, Wiederherstellung aus Minimierung/Fullscreen, keine automatische Fokusübernahme beim Spielstart.
+**Phase 5 – Fensteraktivierung (0.4.5/0.4.6)**: lokaler Aktivierungs-Socket, `--activate`, xdg-activation-Token, begrenzter KDE/KWin-Fallback, manuelle Desktop-Shortcuts, Fokusdiagnose, Wiederherstellung aus Minimierung/Fullscreen, keine automatische Fokusübernahme beim Spielstart.
 
 ## Abnahmefälle (müssen beschrieben und getestet werden)
 - KDE Plasma, GNOME und XFCE unter Wayland/X11: Launcher startet fullscreen direkt in eigene Bibliothek; `--windowed` für Entwicklung; tatsächlich getestete Umgebungen werden klar von nur unterstützten getrennt.

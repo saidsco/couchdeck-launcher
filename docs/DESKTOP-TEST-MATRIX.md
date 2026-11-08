@@ -1,4 +1,4 @@
-# Desktop-Testmatrix (Stand 0.4.5)
+# Desktop-Testmatrix (Stand 0.4.6)
 
 CouchDeck ist desktopunabhängig konzipiert. Die folgende Matrix trennt
 **automatisierte/Unit-geprüfte Logik** von tatsächlich durchgeführten
@@ -6,25 +6,33 @@ Sitzungstests. Nicht ausgeführte Kombinationen sind ausdrücklich offen.
 
 | Umgebung | Start/UI | Fullscreen | Controller | Autostart | Minimize | Activate | GIO-Launch | Systemaktionen | Status |
 |---|---|---|---|---|---|---|---|---|---|
-| KDE Plasma / Wayland (Manjaro, Entwicklung) | App läuft; Screenshots über Xwayland | fullscreen konfiguriert, nicht auf Zielhardware verifiziert | 8BitDo Ultimate erkannt; vollständige Navigation nicht dokumentiert | Logik unit-getestet; echte Anmeldung offen | Code vorhanden; Wayland-Verhalten offen | Socket/IPC unit-getestet; Wayland-Fokus offen | GIO-Integrationstest grün; UI-Start gesehen | nicht real ausgeführt | **teilweise** |
+| KDE Plasma / Wayland (Manjaro, Entwicklung) | App läuft; native Wayland-Aktivierung praktisch getestet | `fullscreen=true` in App-Logs; kein unnötiger Toggle bei externer Minimierung | 8BitDo Ultimate erkannt; vollständige Navigation nicht dokumentiert | Logik unit-getestet; echte Anmeldung offen | KWin-Scripting praktisch getestet | Token-/KWin-Fallback praktisch getestet; Bazzite offen | GIO-Integrationstest grün; UI-Start gesehen | nicht real ausgeführt | **teilweise** |
 | KDE Plasma / X11 (Xwayland-Smoke) | Fensterstart sichtbar | Windowed/Fullscreen getestet | nicht getestet | nicht getestet | minimiert/wiederhergestellt | fokussiert, minimiert, Fullscreen-minimiert, No-Instance | Integrationstest | nicht getestet | **teilweise** |
 | GNOME / Wayland | nicht ausgeführt | nicht ausgeführt | nicht ausgeführt | Session-Erkennung unit-getestet | nicht ausgeführt | IPC unit-getestet; Fokus offen | nicht ausgeführt | nicht ausgeführt | **offen** |
 | XFCE / X11 | nicht ausgeführt | nicht ausgeführt | nicht ausgeführt | Session-Erkennung unit-getestet | nicht ausgeführt | IPC unit-getestet; Fokus offen | nicht ausgeführt | nicht ausgeführt | **offen** |
 | SteamOS Desktop Mode | nicht ausgeführt | nicht ausgeführt | nicht ausgeführt | Session-Erkennung unterscheidet Gamescope; Desktop-Mode-Erkennung offen | nicht ausgeführt | IPC unit-getestet; Fokus offen | nicht ausgeführt | nicht ausgeführt | **offen** |
 | Steam Gaming Mode / Gamescope | bewusst nicht Ziel | – | – | ausgeschlossen | – | – | – | – | **nicht unterstützt** |
 
-## Fensteraktivierung (0.4.5)
+## Fensteraktivierung (0.4.6)
 
-`couchdeck --activate` wurde unter X11/Xwayland praktisch geprüft:
+`couchdeck --activate` wurde unter X11/Xwayland und KDE 6.7.5/Wayland
+praktisch geprüft:
 
 - fokussiert → IPC angenommen, keine Fensteraktion
-- minimiert → wiederhergestellt und fokussiert
-- minimiert aus Fullscreen → Fullscreen und Fokus wiederhergestellt
+- minimiert (X11) → wiederhergestellt und fokussiert
+- minimiert aus Fullscreen (X11) → Fullscreen und Fokus wiederhergestellt
 - keine laufende Instanz → Exit-Code ungleich 0, keine zweite Instanz
 - mehrere schnelle Aufrufe → stabiler Zustand
+- KDE/Wayland, Terminal ohne Token → KWin-Fallback, sichtbar/fokussiert
+- KDE/Wayland, KIO-gestarteter Prozess mit Token → Token angewendet, Fokus
+  beobachtet
+- KDE/Wayland, minimiertes Windowed-/Fullscreen-Fenster → Fokus beobachtet,
+  Fullscreen ohne zusätzlichen Toggle
+- KDE/Wayland, ungültiger Token → KWin-Fallback nach 800 ms
 
-Unter Wayland entscheidet der Compositor. Fokus kann verweigert werden; die IPC-
-Annahme ist keine Fokusbestätigung. Bazzite/GNOME/XFCE/SteamOS bleiben offen.
+Unter GNOME/XFCE/SteamOS entscheidet der Compositor; die IPC-Annahme ist keine
+Fokusbestätigung. Bazzite-Zielhardware, echter KDE-Shortcut und die weiteren
+Desktops bleiben offen.
 
 ## Autostart-Tests
 

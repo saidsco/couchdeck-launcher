@@ -210,7 +210,8 @@ X-CouchDeck-Desktop=GNOME;
 - `$XDG_RUNTIME_DIR/couchdeck.lock` (Fallback `$XDG_STATE_HOME/couchdeck/instance.lock`) enthält die PID der laufenden Instanz und wird mit einem exklusiven `flock` gehalten.
 - Der Kernel gibt den Lock bei normalem Ende und bei Abstürzen frei. Eine zurückbleibende Lock-Datei blockiert keinen Neustart.
 - Ein zweiter Start beendet sich mit einem Hinweis, bevor Bibliothek oder Zeitbudget verändert werden.
-- `$XDG_RUNTIME_DIR/couchdeck-activate.sock` (Fallback `$XDG_STATE_HOME/couchdeck/activate.sock`) ist der lokale Aktivierungs-Socket für `couchdeck --activate`. Modus `0600`; der Server prüft zusätzlich die Peer-UID. Der Socket enthält keine Spiel- oder Profildaten.
+- `$XDG_RUNTIME_DIR/couchdeck-activate.sock` (Fallback `$XDG_STATE_HOME/couchdeck/activate.sock`) ist der lokale Aktivierungs-Socket für `couchdeck --activate`. Modus `0600`; der Server prüft zusätzlich die Peer-UID. Das Protokoll überträgt optional einen hex-kodierten `XDG_ACTIVATION_TOKEN`; Token werden weder geloggt noch dauerhaft gespeichert. Der Socket enthält keine Spiel- oder Profildaten.
+- Der KDE/Wayland-Fallback schreibt kurzlebige KWin-Skripte nach `$XDG_RUNTIME_DIR` (Fallback State-Verzeichnis), lädt sie einmalig und entfernt sie anschließend. Es gibt keine permanente systemweite Konfiguration.
 
 ## Cache und Logs
 

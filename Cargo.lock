@@ -687,7 +687,7 @@ dependencies = [
 
 [[package]]
 name = "couchdeck"
-version = "0.4.5"
+version = "0.4.6"
 dependencies = [
  "argon2",
  "chrono",
@@ -698,11 +698,14 @@ dependencies = [
  "image",
  "libc",
  "rand_core",
+ "raw-window-handle",
  "serde",
  "serde_json",
  "tempfile",
  "toml",
  "unic-langid",
+ "wayland-client",
+ "wayland-protocols",
 ]
 
 [[package]]
