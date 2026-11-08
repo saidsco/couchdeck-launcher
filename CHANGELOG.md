@@ -1,5 +1,33 @@
 # Changelog
 
+## 0.4.5 – 2026-11-08
+
+### Fensteraktivierung
+
+- Neuer CLI-Befehl `couchdeck --activate` kontaktiert die bereits laufende Instanz über einen lokalen Unix-Domain-Socket.
+- Kein zweiter UI-Prozess; bestehender Single-Instance-Lock bleibt maßgeblich.
+- Socket unter `$XDG_RUNTIME_DIR` (Fallback State-Verzeichnis), Modus `0600`, zusätzliche `SO_PEERCRED`-Prüfung auf die eigene lokale UID.
+- Veraltete Sockets nach Abstürzen werden sicher ersetzt; keine falsche Erfolgsmeldung bei fehlender/defekter IPC.
+- Aktivierung ist Best-Effort: IPC-Annahme und tatsächlicher Compositor-Fokus werden getrennt.
+- Minimiertes CouchDeck wird wiederhergestellt; vorheriger Fullscreen wird wiederhergestellt, Windowed bleibt Windowed.
+- Ist CouchDeck bereits fokussiert, erfolgt keine Fensteraktion.
+- Kein automatischer Fokusgewinn beim Spielstart; Steam-/Proton-/Launcher-Dialoge bleiben ungestört.
+- Keine Prozessmanipulation, keine PIN-/Kinderrechte-Umgehung, keine Aggression gegen andere Fenster.
+
+### Diagnose
+
+- Neue Fokus-, Minimierungs-, Fullscreen-, Aktivierungs- und IPC-Logzeilen.
+- `--diagnose-window` für zusätzliche Zustandswechsel.
+- Sitzungsinformationen (Wayland/X11, erkannte Desktopumgebung, Token) beim Start.
+
+### Doku / Tests
+
+- Neue Doku `docs/WINDOW-ACTIVATION.md` mit CLI, Architektur, Desktop-Shortcuts für KDE/GNOME/XFCE, Steam-Input-Vorbereitung und Wayland-/X11-Grenzen.
+- Manuelle Aktivierungs-, Minimize-, Fullscreen- und No-Instance-Tests unter X11 durchgeführt; Wayland-/Bazzite-Tests bleiben offen.
+- 77 Unit-Tests + 2 GIO-Integrationstests (79 gesamt).
+- Kein Git-Tag/GitHub-Release/Push ohne Freigabe.
+
+
 ## 0.4.1 – 2026-11-07
 
 ### Fixes

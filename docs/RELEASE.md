@@ -38,7 +38,7 @@ für einen vorhandenen Tag gestartet werden. Der Workflow:
 1. prüft, dass der Tag exakt `v<Cargo.toml-Version>` entspricht,
 2. baut und testet in Fedora 42 (Rust 1.89, `cargo fmt`, Clippy, Tests),
 3. prüft `ldd` und erzeugt den Runtime-Report,
-4. packt das portable tar.gz und baut das AppImage mit dem gepinnten `appimagetool`-Build-Werkzeug,
+4. packt das portable tar.gz und baut das AppImage mit dem gepinnten `appimagetool`-Build-Werkzeug und der AppImage-type2-Runtime,
 5. prüft das AppImage mit `--version` ohne Rust-Toolchain,
 6. erzeugt `SHA256SUMS` und veröffentlicht die Assets über GitHub Releases.
 
@@ -58,6 +58,10 @@ scripts/check-runtime.sh target/release/couchdeck dist/runtime-info.txt
 
 # Gepinntes appimagetool aus dem linuxdeploy-Build-Werkzeug holen
 APPIMAGETOOL="$(scripts/fetch-release-tools.sh /tmp/couchdeck-release-tools)"
+
+# Optional: eine bereits geladene type2-Runtime verwenden. Ohne diese Variable
+# lädt appimagetool die Runtime selbst herunter.
+# APPIMAGE_RUNTIME_FILE=/tmp/appimage-runtime-x86_64
 
 VERSION="$(sed -n 's/^version = "\(.*\)"/\1/p' Cargo.toml | head -1)" \
 APPIMAGETOOL="$APPIMAGETOOL" \
@@ -125,6 +129,14 @@ Es trägt sich nicht automatisch in das Desktop-Menü ein.
 Entfernt Binary, Menüeintrag, Icon und Autostart; Benutzerdaten bleiben
 erhalten. `--purge` löscht zusätzlich Bibliothek, Profile, Artwork,
 Einstellungen, Cache und Logs nach expliziter Bestätigung.
+
+## Fensteraktivierung im Release
+
+Das Release-Binary enthält `couchdeck --activate` und den lokalen
+Aktivierungs-Socket. Es sind keine zusätzlichen Systemdienste, Root-Rechte oder
+Desktop-spezifischen Installationen nötig. Wayland-Compositor-Fokus bleibt
+Best-Effort. Desktop-Shortcuts werden ausschließlich vom Benutzer eingerichtet;
+Details: [`WINDOW-ACTIVATION.md`](WINDOW-ACTIVATION.md).
 
 ## Integrität und Sicherheit
 

@@ -7,6 +7,7 @@ use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 use eframe::egui;
 use eframe::egui::{Key, Modifiers, ViewportCommand};
 
+use crate::activation::ActivationServer;
 use crate::artwork::{self, ArtworkCache, ArtworkKind};
 use crate::controller::{self, ControllerEvent, ControllerHandle, NavAction};
 use crate::desktop::{self, DiscoveredEntry, DiscoveryResult, DiscoverySource, IconResolver};
@@ -78,6 +79,7 @@ pub const APP_VERSION: &str = env!("CARGO_PKG_VERSION");
 pub struct AppOptions {
     pub windowed: bool,
     pub no_controller: bool,
+    pub diagnose_window: bool,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -378,6 +380,14 @@ pub struct CouchDeckApp {
     pub discovery: Option<DiscoveryResult>,
     pub discovery_rx: Option<Receiver<DiscoveryResult>>,
     pub discovery_loading: bool,
+    pub activation_rx: Option<Receiver<()>>,
+    pub activation_server: Option<ActivationServer>,
+    pub activation_focus_pending: bool,
+    pub activation_fullscreen_pending: bool,
+    pub activation_requested_at: Option<Instant>,
+    pub diagnose_window: bool,
+    pub last_diag_minimized: Option<bool>,
+    pub last_diag_focused: Option<bool>,
     pub last_time_tick: Instant,
     pub last_time_save: Instant,
     pub time_remainder: Duration,
@@ -526,6 +536,14 @@ impl CouchDeckApp {
             discovery: None,
             discovery_rx: None,
             discovery_loading: false,
+            activation_rx: None,
+            activation_server: None,
+            activation_focus_pending: false,
+            activation_fullscreen_pending: false,
+            activation_requested_at: None,
+            diagnose_window: options.diagnose_window,
+            last_diag_minimized: None,
+            last_diag_focused: None,
             last_time_tick: Instant::now(),
             last_time_save: Instant::now(),
             time_remainder: Duration::ZERO,
@@ -574,6 +592,16 @@ impl CouchDeckApp {
             ),
         );
         app.start_discovery();
+        let (activation_tx, activation_rx) = std::sync::mpsc::channel();
+        app.activation_rx = Some(activation_rx);
+        let activation_paths = app.paths.clone();
+        match ActivationServer::start(&activation_paths, cc.egui_ctx.clone(), activation_tx) {
+            Ok(server) => app.activation_server = Some(server),
+            Err(err) => {
+                log_warn("activation", &err);
+                app.notify_error(format!("Aktivierungsdienst nicht verfügbar: {err}"));
+            }
+        }
         app
     }
 
@@ -596,6 +624,131 @@ impl CouchDeckApp {
         self.settings.language = preference;
         self.i18n.set_preference(preference);
         self.save_settings();
+    }
+
+    pub fn request_activation(&mut self, ctx: &egui::Context) {
+        let focused = ctx.input(|input| input.focused);
+        let minimized = ctx
+            .input(|input| input.viewport().minimized)
+            .unwrap_or(false);
+        log_info(
+            "activation",
+            format!(
+                "Anforderung empfangen: focused={focused}, minimized={minimized}, fullscreen={}, was_fullscreen={}",
+                self.fullscreen, self.restore_fullscreen_after_minimize
+            ),
+        );
+        if focused
+            && !minimized
+            && !self.activation_focus_pending
+            && !self.activation_fullscreen_pending
+        {
+            log_info(
+                "activation",
+                "CouchDeck ist bereits fokussiert; keine Fensteraktion nötig.",
+            );
+            return;
+        }
+
+        ctx.send_viewport_cmd(ViewportCommand::Visible(true));
+        if minimized {
+            log_info(
+                "activation",
+                "Minimierten Zustand erkannt; Wiederherstellung wird angefordert.",
+            );
+            ctx.send_viewport_cmd(ViewportCommand::Minimized(false));
+        }
+        // The compositor may process unminimizing asynchronously. Focus and
+        // fullscreen are therefore applied again in maybe_finish_activation.
+        self.activation_focus_pending = true;
+        self.activation_requested_at = Some(Instant::now());
+        if self.fullscreen || self.restore_fullscreen_after_minimize {
+            self.activation_fullscreen_pending = true;
+            self.restore_fullscreen_after_minimize = false;
+        }
+        ctx.request_repaint();
+        self.maybe_finish_activation(ctx);
+    }
+
+    fn poll_activation(&mut self, ctx: &egui::Context) {
+        let Some(rx) = &self.activation_rx else {
+            return;
+        };
+        let mut requested = false;
+        while rx.try_recv().is_ok() {
+            requested = true;
+        }
+        if requested {
+            self.request_activation(ctx);
+        }
+    }
+
+    fn maybe_finish_activation(&mut self, ctx: &egui::Context) {
+        if !self.activation_focus_pending && !self.activation_fullscreen_pending {
+            return;
+        }
+        let minimized = ctx
+            .input(|input| input.viewport().minimized)
+            .unwrap_or(false);
+        if minimized {
+            if self
+                .activation_requested_at
+                .map(|started| started.elapsed() > Duration::from_secs(2))
+                .unwrap_or(false)
+            {
+                log_warn(
+                    "activation",
+                    "Fenster konnte innerhalb von 2 s nicht wiederhergestellt werden; Anforderung wird verworfen.",
+                );
+                self.activation_focus_pending = false;
+                self.activation_fullscreen_pending = false;
+                self.activation_requested_at = None;
+                return;
+            }
+            ctx.request_repaint_after(Duration::from_millis(100));
+            return;
+        }
+        if self.activation_fullscreen_pending {
+            self.activation_fullscreen_pending = false;
+            self.fullscreen = true;
+            ctx.send_viewport_cmd(ViewportCommand::Decorations(false));
+            ctx.send_viewport_cmd(ViewportCommand::Fullscreen(true));
+            log_info("activation", "Fullscreen wird wiederhergestellt.");
+        }
+        self.activation_requested_at = None;
+        if self.activation_focus_pending {
+            self.activation_focus_pending = false;
+            ctx.send_viewport_cmd(ViewportCommand::Focus);
+            if !ctx.input(|input| input.focused) {
+                ctx.send_viewport_cmd(ViewportCommand::RequestUserAttention(
+                    egui::UserAttentionType::Informational,
+                ));
+            }
+            log_info(
+                "activation",
+                "Fokus angefordert (Compositor kann die Anforderung ablehnen).",
+            );
+        }
+        ctx.request_repaint();
+    }
+
+    fn log_window_diagnostics(&mut self, ctx: &egui::Context) {
+        if !self.diagnose_window {
+            return;
+        }
+        let focused = ctx.input(|input| input.focused);
+        let minimized = ctx.input(|input| input.viewport().minimized);
+        if self.last_diag_focused != Some(focused) || self.last_diag_minimized != minimized {
+            log_info(
+                "window",
+                format!(
+                    "diagnose: focused={focused}, minimized={minimized:?}, fullscreen={}",
+                    self.fullscreen
+                ),
+            );
+            self.last_diag_focused = Some(focused);
+            self.last_diag_minimized = minimized;
+        }
     }
 
     pub fn start_discovery(&mut self) {
@@ -1332,6 +1485,10 @@ impl CouchDeckApp {
             MenuAction::ToggleFullscreen => {
                 self.restore_fullscreen_after_minimize = false;
                 self.fullscreen = !self.fullscreen;
+                log_info(
+                    "window",
+                    format!("Fullscreen manuell auf {} gesetzt.", self.fullscreen),
+                );
                 ctx.send_viewport_cmd(ViewportCommand::Decorations(!self.fullscreen));
                 ctx.send_viewport_cmd(ViewportCommand::Fullscreen(self.fullscreen));
                 self.overlay = Overlay::None;
@@ -2245,11 +2402,16 @@ impl CouchDeckApp {
             self.restore_fullscreen_after_minimize = true;
             self.minimize_observed_unfocus = false;
             self.minimize_observed_minimized = false;
+            log_info(
+                "window",
+                "Minimieren angefordert; vorheriger Fullscreen wird gemerkt.",
+            );
             ctx.send_viewport_cmd(ViewportCommand::Decorations(true));
             ctx.send_viewport_cmd(ViewportCommand::Fullscreen(false));
             self.notify_key("app-minimizing-desktop");
         } else {
             self.restore_fullscreen_after_minimize = false;
+            log_info("window", "Minimieren angefordert (Windowed-Modus).");
             ctx.send_viewport_cmd(ViewportCommand::Minimized(true));
             self.notify_key("app-minimized");
         }
@@ -2261,6 +2423,10 @@ impl CouchDeckApp {
             return;
         }
         self.pending_minimize = false;
+        log_info(
+            "window",
+            "Beobachteter Minimierungszustand wird angewendet.",
+        );
         ctx.send_viewport_cmd(ViewportCommand::Minimized(true));
         self.notify_key("app-minimized");
         ctx.request_repaint();
@@ -2446,6 +2612,16 @@ impl CouchDeckApp {
             _ => false,
         };
         if changed {
+            log_info(
+                "window",
+                format!(
+                    "Fokus {}{}; fullscreen={}; minimized={:?}",
+                    if focused { "gewonnen" } else { "verloren" },
+                    if focused { "" } else { " (Hintergrund)" },
+                    self.fullscreen,
+                    ctx.input(|input| input.viewport().minimized)
+                ),
+            );
             if focused {
                 self.discard_controller_nav = true;
                 // A previous parent-authorized minimise is over once the user
@@ -3244,6 +3420,10 @@ impl CouchDeckApp {
             if fullscreen {
                 self.restore_fullscreen_after_minimize = false;
                 self.fullscreen = !self.fullscreen;
+                log_info(
+                    "window",
+                    format!("Fullscreen per F11 auf {} gesetzt.", self.fullscreen),
+                );
                 ctx.send_viewport_cmd(ViewportCommand::Decorations(!self.fullscreen));
                 ctx.send_viewport_cmd(ViewportCommand::Fullscreen(self.fullscreen));
             }
@@ -3387,8 +3567,11 @@ impl eframe::App for CouchDeckApp {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         self.frame_count += 1;
         self.update_window_focus(ctx);
+        self.log_window_diagnostics(ctx);
         self.handle_child_window_controls(ctx);
         self.maybe_restore_fullscreen_from_minimize(ctx);
+        self.poll_activation(ctx);
+        self.maybe_finish_activation(ctx);
         self.poll_controller(ctx);
         self.flush_admin_confirm(ctx);
         self.poll_launch();

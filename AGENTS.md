@@ -25,6 +25,7 @@ Du bist ein erfahrener Rust-/Linux-Desktop-Entwicklungsagent. Implementiere ein 
 12. **Sicherheitsmodell**: Eine `.desktop`-Datei kann beliebige Befehle ausführen. Zeige Admin beim Import Name, Pfad, Quelle, Desktop-ID und `Exec`-Inhalt zur Prüfung. Nur lokal explizit vom Admin freigegebene Einträge ausführbar. Neu gefundene Einträge werden **nie automatisch** in die Bibliothek übernommen und **nie automatisch für Kinderprofile freigeschaltet**. Keine ungeprüften Downloads.
 13. **Desktopunabhängiger Autostart**: XDG-Autostart ist opt-in und an die erkannte Sitzung (KDE, GNOME, XFCE) gebunden. Unbekannte Sitzungen und Gamescope/Steam Gaming Mode erhalten keinen Autostart. Kein blindes Entfernen von `OnlyShowIn`-Beschränkungen.
 14. **Single Instance**: Ein benutzerspezifischer Lock verhindert parallele UIs gegen dieselbe Bibliothek und dasselbe Zeitbudget. Der Lock muss bei Abstürzen automatisch freigegeben werden.
+15. **Manuelle Fensteraktivierung (0.4.5)**: `couchdeck --activate` kontaktiert die laufende Instanz über einen lokalen, benutzergebundenen Unix-Socket. Aktivierung ist Best-Effort; sie darf keinen zweiten Prozess starten, keine Spiele/Launcher beenden und keine PIN-/Kinderrechte umgehen. Ein Spielstart fordert niemals automatisch den Fokus zurück. Fullscreen/Windowing-Zustand wird respektiert; Wayland-Compositor-Grenzen werden dokumentiert.
 
 ## Implementationsphasen
 **Phase 0 – Probe**: Minimal-Binary fullscreen in der aktiven Desktop-Sitzung, Controller-Input mit gilrs auf echtem Gerät, `gio launch` für Test-Desktop-Datei. Dokumentiere potenzielle Steam-Input-Konflikte. Trenne Probleme der Game-Session (Gamescope/Steam Gaming Mode) vom Desktop.
@@ -36,6 +37,8 @@ Du bist ein erfahrener Rust-/Linux-Desktop-Entwicklungsagent. Implementiere ein 
 **Phase 3 – Qualität**: Animationen, Performance-/Idle-Prüfung, Auflösungen 1080p und 4K, Xbox-/PlayStation-Controller, lokaler XDG-Autostart, Hintergrundänderung, Tastatur-/Mausbedienung, Release-Packaging.
 
 **Phase 4 – Desktop-/Discovery-Härtung (0.4)**: generalisierter Autostart, XDG-/Flatpak-Discovery, konfigurierbare Suchpfade, erweiterte Importübersicht, zukunftsfähiges Spielemodell, Single-Instance-Schutz, Desktop-Testmatrix.
+
+**Phase 5 – Fensteraktivierung (0.4.5)**: lokaler Aktivierungs-Socket, `--activate`, manuelle Desktop-Shortcuts, Fokusdiagnose, Wiederherstellung aus Minimierung/Fullscreen, keine automatische Fokusübernahme beim Spielstart.
 
 ## Abnahmefälle (müssen beschrieben und getestet werden)
 - KDE Plasma, GNOME und XFCE unter Wayland/X11: Launcher startet fullscreen direkt in eigene Bibliothek; `--windowed` für Entwicklung; tatsächlich getestete Umgebungen werden klar von nur unterstützten getrennt.
@@ -50,6 +53,8 @@ Du bist ein erfahrener Rust-/Linux-Desktop-Entwicklungsagent. Implementiere ein 
 - User ohne Admin kann keine Edit-Aktionen in der UI ausführen. Admin-PIN ist gehasht und mit Controller eingebbar. Profilwechsel zeigt unterschiedliche Auswahl/Cover wenn konfiguriert.
 - Autostart wird nur für erkannte KDE-/GNOME-/XFCE-Sitzungen und nur nach expliziter Entscheidung erzeugt; Gamescope/unbekannte Sitzungen bleiben ausgeschlossen.
 - Ein zweiter gleichzeitiger Start beendet sich mit Hinweis, ohne Bibliothek, Zeitbudget oder PIN zu beschädigen.
+- `couchdeck --activate` erreicht eine laufende Instanz über lokale IPC; bei fehlender Instanz, veraltetem Socket oder verweigerter Aktivierung gibt es einen verständlichen Fehler und keine falsche Erfolgsmeldung.
+- Ein Spielstart löst keine automatische Fokusübernahme aus; manuelle Aktivierung stellt Fullscreen nur wieder her, wenn CouchDeck zuvor fullscreen war.
 - Entfernte `.desktop`-Datei, unlesbares Bild, fehlendes GIO, fehlendes Controllergerät und fehlerhaftes JSON erzeugen keine Abstürze.
 - Benutzerinstallation und -deinstallation ohne root; `cargo test`, `cargo fmt --check`, `cargo clippy` laufen im passenden Build-Container.
 
@@ -66,6 +71,7 @@ src/
   desktop.rs          # Discovery, Import, Validierung, Icon resolution
   session.rs          # Desktop-Erkennung, XDG-Autostart
   instance.rs         # benutzerspezifischer Instanz-Lock
+  activation.rs       # Unix-Socket, `--activate`-Client und Aktivierungs-Server
   launch.rs           # GIO-Launch + Diagnose, Steam/Prism optional
   controller.rs       # gilrs -> normalisierte Navigationsereignisse
   artwork.rs          # Bildimport, Thumbnail-Cache, Fallback
@@ -89,7 +95,7 @@ Keine unnötige Microservice-/Backend-Struktur. `UI -> AppState -> Library/Profi
 - `~/.local/share/couchdeck/managed-desktop/`: optionale *eigene* verwaltete Launcher-Dateien; GIO muss absolute Pfade akzeptieren. Originaldateien bleiben unangetastet.
 - `~/.local/share/couchdeck/timekeeping.json`: Tagesnutzung und Zusatzzeit der Kinderprofile.
 - PIN-Hash lokal getrennt gespeichert (XDG_DATA_HOME, private Dateirechte), kein Anspruch auf OS-Sicherheitsisolation.
-- `~/.local/state/couchdeck/` bzw. `$XDG_RUNTIME_DIR`: Logs und Instanz-Lock.
+- `~/.local/state/couchdeck/` bzw. `$XDG_RUNTIME_DIR`: Logs, Instanz-Lock und Aktivierungs-Socket (`couchdeck-activate.sock`).
 - `~/.cache/couchdeck/`: decodierte/skalierte Thumbnails nach Bedarf.
 Nutze XDG-Variablen und `HOME`, niemals feste Benutzernamen, niemals blindes Parsen/Expansion aus importierten `Exec=`.
 

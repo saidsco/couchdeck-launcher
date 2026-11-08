@@ -30,10 +30,27 @@ scripts/check-runtime.sh \
   /tmp/couchdeck-runtime-info.txt
 
 APPIMAGETOOL="$(scripts/fetch-release-tools.sh /tmp/couchdeck-release-tools)"
+APPIMAGE_RUNTIME_FILE="${APPIMAGE_RUNTIME_FILE:-/tmp/appimage-runtime-x86_64}"
+if [[ ! -s "$APPIMAGE_RUNTIME_FILE" ]]; then
+  rm -f "$APPIMAGE_RUNTIME_FILE"
+  for attempt in 1 2 3 4 5; do
+    if curl -L --fail --retry 5 --retry-delay 3 --retry-all-errors \
+      -o "$APPIMAGE_RUNTIME_FILE" \
+      https://github.com/AppImage/type2-runtime/releases/download/continuous/runtime-x86_64; then
+      break
+    fi
+    sleep 5
+  done
+fi
+if [[ ! -s "$APPIMAGE_RUNTIME_FILE" ]]; then
+  echo "Fehler: AppImage-Runtime konnte nicht geladen werden." >&2
+  exit 1
+fi
 
 VERSION="$VERSION" \
 BINARY="$CARGO_TARGET_DIR/release/couchdeck" \
 APPIMAGETOOL="$APPIMAGETOOL" \
+APPIMAGE_RUNTIME_FILE="$APPIMAGE_RUNTIME_FILE" \
 OUT_DIR=/work/dist \
 scripts/package-release.sh
 

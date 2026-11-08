@@ -9,7 +9,7 @@ SHA256="c20cd71e3a4e3b80c3483cef793cda3f4e990aca14014d23c544ca3ce1270b4d"
 mkdir -p "$TOOLS_DIR"
 LINUXDEPLOY="$TOOLS_DIR/linuxdeploy-x86_64.AppImage"
 if [[ ! -f "$LINUXDEPLOY" ]]; then
-  curl -L --fail -o "$LINUXDEPLOY" "$URL"
+  curl -L --fail --retry 5 --retry-delay 3 --retry-all-errors -o "$LINUXDEPLOY" "$URL"
 fi
 echo "$SHA256  $LINUXDEPLOY" | sha256sum -c - >&2
 chmod +x "$LINUXDEPLOY"

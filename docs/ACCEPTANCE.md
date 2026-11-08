@@ -10,7 +10,7 @@ Legende:
 - [ ] Reproduzierbarer Build in Distrobox auf passendem Fedora-Release — Befehle dokumentiert, aber nicht auf Bazzite ausgeführt (Entwicklungsumgebung: Manjaro).
 - [x] `cargo fmt --check` erfolgreich.
 - [x] `cargo clippy --all-targets -- -D warnings` erfolgreich.
-- [x] `cargo test` erfolgreich: 74 Unit-Tests + 2 GIO-Integrationstests.
+- [x] `cargo test` erfolgreich: 77 Unit-Tests + 2 GIO-Integrationstests.
 - [x] `cargo build --release` erfolgreich.
 - [~] Fullscreen unter KDE/GNOME/XFCE (Wayland/X11) + `--windowed` — Fensterbetrieb auf KDE/Xwayland geprüft; andere Sitzungen offen.
 - [x] Install/Uninstall ohne sudo, kein `rpm-ostree`-Layer — in temporärem `$HOME` getestet.
@@ -104,7 +104,7 @@ Legende:
 - [~] Steam-Flatpak tatsächlich starten (nicht installiert).
 - [x] Manuell importiertes Nicht-Steam-Spiel startet über GIO (Integrationstest).
 - [~] Fehlerhafter Steam-Exec wird erkannt, nicht still geändert, nach Zustimmung separat korrigiert; echter Steam-Flatpak-Test offen.
-- [~] Rückkehr und Fokus nach Spielstart/-ende unter KDE/Wayland geprüft; GNOME/XFCE offen.
+- [~] Manuelle Rückkehr via `--activate` unter X11 geprüft; Wayland-/GNOME-/XFCE-Fokus und echte Steam-/Launcher-Rückkehr offen.
 
 ## Desktop-/Discovery-Härtung (v0.4.0)
 
@@ -130,7 +130,20 @@ Legende:
 - [x] Fullscreen-Wiederherstellung nach „Zum Desktop minimieren“ implementiert und per Unit-Test für die Zustandslogik abgesichert.
 - [~] Sichtprüfung des Icons und echtes Taskleisten-Minimieren/Wiederherstellen auf Bazzite/GNOME/XFCE offen.
 
-## Release-Distribution (v0.3.1 / 0.4.0-Vorbereitung)
+## Fensteraktivierung (v0.4.5)
+
+- [x] `couchdeck --activate` existiert und kontaktiert die laufende Instanz über lokalen Unix-Socket.
+- [x] Kein zweiter UI-Prozess; Single-Instance-Lock bleibt maßgeblich.
+- [x] Socket `0600` und `SO_PEERCRED`-Prüfung auf gleiche lokale UID.
+- [x] Veralteter Socket wird ersetzt; fehlende Instanz liefert Exit-Code ungleich 0.
+- [x] Minimiertes Fenster wird wiederhergestellt; vorheriger Fullscreen wird wiederhergestellt; Windowed bleibt Windowed.
+- [x] Fokussiertes CouchDeck erhält keine störende Aktion.
+- [x] Spielstart fordert keinen Fokus automatisch zurück.
+- [x] Fokus-/Minimierungs-/Fullscreen-/IPC-Logging und `--diagnose-window`.
+- [x] X11-Smoke-Tests für fokussiert, minimiert, Fullscreen-minimiert, mehrfache Aufrufe und No-Instance.
+- [~] Wayland-/Bazzite-/GNOME-/XFCE-Fokusverhalten und echte Steam-/Proton-/Launcher-Tests offen.
+
+## Release-Distribution (v0.4.5-Vorbereitung)
 
 - [x] GitHub-Actions-Workflow für Tags `v*` und manuellen Dispatch.
 - [x] Portables x86_64-`.tar.gz` mit Binary, Installer, Doku und Runtime-Report.
@@ -143,7 +156,8 @@ Legende:
 - [x] AppImage/Archiv im Fedora-42-Container gebaut, per `--version` und Xvfb-Start geprüft.
 - [x] GitHub Release `v0.3.1` mit allen Assets veröffentlicht; Download und SHA256-Prüfung erneut verifiziert.
 - [~] AppImage und Archiv auf einer frischen Bazzite-KDE-Installation inkl. Controller, GIO-Spielstart und Systemaktionen getestet — manuelle Checkliste offen.
-- [x] Release-Metadaten, Installer, AppImage-Skripte und Workflow auf 0.4.0-Kompatibilität geprüft; kein v0.4.0-Tag/Release ohne Freigabe erzeugt.
+- [x] Release-Metadaten, Installer, AppImage-Skripte und Workflow auf 0.4.5-Kompatibilität geprüft; lokales 0.4.5-Paket im Fedora-42-Container gebaut und geprüft.
+- [~] Kein v0.4.5-Tag/Release/Push ohne ausdrückliche Freigabe erzeugt.
 
 ## Nicht Teil des MVP
 

@@ -203,6 +203,16 @@ impl XdgPaths {
         }
     }
 
+    /// Local activation socket. Kept next to the instance lock so both share
+    /// the same per-user runtime/state permissions.
+    pub fn activation_socket_path(&self) -> PathBuf {
+        if let Some(runtime) = env::var_os("XDG_RUNTIME_DIR").filter(|value| !value.is_empty()) {
+            PathBuf::from(runtime).join("couchdeck-activate.sock")
+        } else {
+            self.state_dir().join("activate.sock")
+        }
+    }
+
     /// The real XDG desktop directory from `user-dirs.dirs`, not a hard-coded
     /// `~/Desktop` assumption. Resolves the `$HOME` token as defined by the
     /// XDG user-dirs specification.

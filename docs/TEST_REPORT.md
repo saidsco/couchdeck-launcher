@@ -1,6 +1,6 @@
 # Test- und Messbericht
 
-**Stand:** 7. November 2026 · **Version:** CouchDeck 0.4.1
+**Stand:** 8. November 2026 · **Version:** CouchDeck 0.4.5
 
 **Getestete Umgebung:** Manjaro Linux (KDE Plasma, Wayland-Session), Kernel `6.18.55-1-MANJARO`, NVIDIA RTX 4070 Ti SUPER
 **Release-Buildumgebung:** Fedora 42 Container, glibc 2.41, Rust 1.89.0, x86_64
@@ -36,8 +36,8 @@ $ cargo clippy --all-targets -- -D warnings
 Finished `dev` profile ... (Exit 0)
 
 $ cargo test
-running 74 tests
-test result: ok. 74 passed; 0 failed
+running 77 tests
+test result: ok. 77 passed; 0 failed
 running 2 tests
 test result: ok. 2 passed; 0 failed
 (running 0 tests: main.rs, Doc-Tests)
@@ -46,7 +46,7 @@ $ cargo build --release
 Finished `release` profile [optimized]
 ```
 
-Das sind **76 Tests insgesamt** (74 Unit-Tests + 2 GIO-Integrationstests).
+Das sind **79 Tests insgesamt** (77 Unit-Tests + 2 GIO-Integrationstests).
 
 Zusätzlich wurde die Release-Paketierung im Fedora-42-Container geprüft:
 
@@ -84,6 +84,9 @@ sha256sum -c SHA256SUMS
 - Single Instance v0.4.0: zweiter Lock-Acquire wird abgelehnt; nach Drop ist erneuter Acquire möglich.
 - Kindersicherheit v0.4.0: neue Importe werden bei vorhandenen Kinderprofilen standardmäßig nur für Nicht-Kinderprofile sichtbar.
 - GameEntry-Kompatibilität v0.4.0: 0.3.1-JSON ohne `desktop_id`/`source`/`launch_method` lädt mit Defaults.
+- Aktivierung v0.4.5: Unix-Socket-Server akzeptiert `ACTIVATE 1` und benachrichtigt die UI; veralteter Socket wird ersetzt; Server entfernt den Socket beim Drop; fehlende Instanz liefert `NotRunning` und entfernt einen veralteten Socket.
+- Aktivierungs-Sicherheit v0.4.5: Socket-Modus `0600`, `SO_PEERCRED`-Prüfung auf die eigene lokale UID; keine zweite Instanz über `--activate`.
+- Fullscreen-Aktivierung v0.4.5: Zustandslogik für Minimize/Focus/Fenster-Modus ergänzt.
 - GIO-Integrationstest: Desktop-Datei mit Leerzeichen im Pfad und gequotetem `Exec` wird über `gio launch` gestartet; fehlende Datei liefert einen Fehler.
 
 ## Manuelle UI-Smoke-Tests
@@ -129,6 +132,7 @@ Die UI wurde zusätzlich mit dem X11-Backend (Xwayland) gestartet, damit Fenster
 | Installation/Update in temporärem `$HOME` (v0.3.1) | Installer installiert Binary/Entry/Icon; XDG-Datenordner werden nicht angefasst |
 | GitHub Release v0.3.1 (v0.3.1) | Assets veröffentlicht; erneut heruntergeladen und mit `SHA256SUMS` geprüft, AppImage `--version` OK |
 | v0.4.0-Releasepaket lokal (v0.4.0) | OK; Fedora-42-Container, tar.gz/AppImage/SHA256SUMS, Installer mit KDE-Autostart, XDG-Daten unverändert, AppImage `--version`; kein Tag/Release erzeugt |
+| v0.4.5-Releasepaket lokal (v0.4.5) | OK; Fedora-42-Container, tar.gz/AppImage/SHA256SUMS, Runtime-Report, AppImage `--version` = 0.4.5, Xvfb-Start bis Bibliothek, `--activate` gegen laufende AppImage-Instanz angenommen; kein Tag/Release erzeugt |
 | AppImage/Archiv auf frischer Bazzite-KDE-Installation (v0.3.1) | **Nicht ausgeführt**; manuelle Checkliste in `docs/BAZZITE-RELEASE-TEST.md` |
 | Autostart-Installer mit `XDG_CURRENT_DESKTOP=ubuntu:GNOME` (v0.4.0) | OK; `OnlyShowIn=GNOME`, `NotShowIn=gamescope`, kein `X-KDE-autostart-after` |
 | Autostart-Installer mit `XDG_CURRENT_DESKTOP=gamescope:KDE` (v0.4.0) | OK; Installation/Autostart verweigert, kein Binary installiert |
@@ -136,22 +140,39 @@ Die UI wurde zusätzlich mit dem X11-Backend (Xwayland) gestartet, damit Fenster
 | Icon-Installation (v0.4.1) | OK; Installer legt 256-/512-PNG und SVG an, Desktop-/Autostart-Eintrag referenziert absolutes PNG |
 | Fullscreen-Wiederherstellung (v0.4.1) | Zustandslogik unit-getestet; echtes Minimieren/Wiederherstellen auf Bazzite/GNOME/XFCE offen |
 | Discovery-UI unter KDE/Wayland (v0.4.0) | Automatisierte Discovery-Tests grün; Admin-Ansicht „Suchpfade“ nicht vollständig manuell durchgeklickt |
+| `--activate` bei fokussiertem CouchDeck (X11, v0.4.5) | OK; IPC angenommen, keine störende Fensteraktion |
+| `--activate` bei minimiertem CouchDeck (X11, v0.4.5) | OK; Fenster aus `_NET_WM_STATE_HIDDEN` wiederhergestellt und fokussiert |
+| `--activate` bei minimiertem Fullscreen (X11, v0.4.5) | OK; `_NET_WM_STATE_FULLSCREEN` und Fokus wiederhergestellt |
+| `--activate` ohne laufende Instanz (v0.4.5) | OK; Exit-Code 1, verständliche Meldung, kein zweiter Prozess |
+| Mehrfache schnelle `--activate`-Aufrufe (X11, v0.4.5) | OK; keine zweite Instanz, stabiler Zustand |
+| Wayland-Compositor-Fokus für `--activate` | Nicht auf Bazzite/GNOME getestet; Best-Effort, `Focus` kann ignoriert werden |
 | GNOME/Wayland, XFCE/X11, SteamOS Desktop Mode (v0.4.0) | **Nicht ausgeführt**; Matrix in `docs/DESKTOP-TEST-MATRIX.md` |
 
 Screenshots: [Zeitkontingent verbraucht](screenshots/time-budget.png), [Bibliothek](screenshots/library.png), [Bibliothek als Mia](screenshots/library-profile-mia.png), [Profile](screenshots/profiles.png), [Admin](screenshots/admin.png), [Spieleeditor](screenshots/game-editor.png), [Import](screenshots/import.png), [PIN](screenshots/pinpad.png), [Start-Overlay](screenshots/launch.png), [Power-Menü](screenshots/menu.png), [Autostart-Einstellungen](screenshots/autostart-settings.png), [Fatal](screenshots/corrupt-data.png).
 
 Die Screenshots verwenden fiktive Demo-Spiele und Demo-Cover aus der Testumgebung. Sie zeigen keinen Shop und keine echten Spieleplattform-Daten.
 
-## Release-Distribution (v0.3.1)
+## Release-Distribution (v0.4.5)
 
 - GitHub-Actions-Workflow `.github/workflows/release.yml` für Tags `v*` und Workflow-Dispatch.
 - Build und Tests laufen in einem frischen Fedora-42-Container; das Release-Binary wird ohne Rust-Toolchain weiterverpackt.
 - `scripts/fetch-release-tools.sh` lädt ein gepinntes linuxdeploy-Build-Werkzeug mit SHA256-Prüfung und stellt daraus `appimagetool` bereit.
 - Das AppImage enthält die unveränderte native Binary sowie Desktop-/Icon-Metadaten; glibc, GPU-Treiber, Wayland/X11 und `libudev` kommen von Bazzite. Dadurch keine gebündelten System-ABI-Konflikte.
 - `SHA256SUMS` wird nach dem Packaging aus den finalen Dateien erzeugt.
-- v0.4.0-Paketierung lokal im Fedora-42-Container geprüft: tar.gz, AppImage, SHA256SUMS, ldd/glibc-Report, AppImage-Start unter Xvfb und Installer/Update in temporärem `$HOME`. Kein Git-Tag/GitHub-Release ohne Freigabe erzeugt.
+- v0.4.5-Paketierung lokal im Fedora-42-Container geprüft: tar.gz, AppImage, SHA256SUMS, ldd/glibc-Report, AppImage-Start unter Xvfb und Installer/Update in temporärem `$HOME`. Kein Git-Tag/GitHub-Release ohne Freigabe erzeugt.
+- Die AppImage-type2-Runtime wird im CI mit Wiederholungsversuchen geladen und beim Packaging explizit übergeben; ein vorhandener lokaler Runtime-Cache wird wiederverwendet.
 - AppImage und Archiv-Binary wurden mit `env -i PATH=/usr/bin:/bin` (ohne Cargo/Toolchain im Suchpfad) per `--version` gestartet.
 - Der echte Bazzite-KDE-Zielhardware-Test (Controller, GIO-Spielstart, Systemaktionen, AppImage/Archiv) ist noch offen und in `docs/BAZZITE-RELEASE-TEST.md` beschrieben.
+
+## Fensteraktivierung (v0.4.5)
+
+- Neue CLI `--activate`, lokaler Unix-Socket und IPC-Server.
+- X11-Smoke-Tests bestätigen Wiederherstellung aus minimiertem und minimiertem
+  Fullscreen-Zustand; der Fokus wird nachweislich zurückgeholt.
+- `--diagnose-window` und Fokus-/Minimierungs-/Fullscreen-Logs ergänzt.
+- Wayland-Fokus ist Best-Effort und auf Bazzite/GNOME nicht real verifiziert.
+- Ein Spielstart ruft niemals `request_activation` auf; Steam-/Proton-/Launcher-
+  Fenster werden nicht unterdrückt.
 
 ## Desktop-/Discovery-Testmatrix (v0.4.0)
 

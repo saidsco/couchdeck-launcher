@@ -14,6 +14,7 @@ VERSION="${VERSION:-$(sed -n 's/^version = "\([^"]*\)"/\1/p' Cargo.toml | head -
 BINARY="${BINARY:-target/release/couchdeck}"
 OUT_DIR="${OUT_DIR:-dist}"
 APPIMAGETOOL="${APPIMAGETOOL:-}"
+APPIMAGE_RUNTIME_FILE="${APPIMAGE_RUNTIME_FILE:-}"
 DIST_NAME="couchdeck-${VERSION}-linux-x86_64"
 STAGE="${OUT_DIR}/${DIST_NAME}"
 APPIMAGE="${OUT_DIR}/CouchDeck-${VERSION}-x86_64.AppImage"
@@ -91,8 +92,12 @@ APPRUN
 chmod 0755 "$APPDIR/AppRun"
 
 APPIMAGETOOL="$(realpath "$APPIMAGETOOL")"
+APPIMAGETOOL_ARGS=("$APPDIR" "$APPIMAGE")
+if [[ -n "$APPIMAGE_RUNTIME_FILE" ]]; then
+  APPIMAGETOOL_ARGS=(--runtime-file "$APPIMAGE_RUNTIME_FILE" "${APPIMAGETOOL_ARGS[@]}")
+fi
 ARCH=x86_64 APPIMAGE_EXTRACT_AND_RUN=1 \
-  "$APPIMAGETOOL" "$APPDIR" "$APPIMAGE"
+  "$APPIMAGETOOL" "${APPIMAGETOOL_ARGS[@]}"
 rm -rf "$APPDIR" "$ICON_PNG"
 
 if [[ ! -f "$APPIMAGE" ]]; then

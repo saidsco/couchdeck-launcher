@@ -687,7 +687,7 @@ dependencies = [
 
 [[package]]
 name = "couchdeck"
-version = "0.4.1"
+version = "0.4.5"
 dependencies = [
  "argon2",
  "chrono",
@@ -696,6 +696,7 @@ dependencies = [
  "fs2",
  "gilrs",
  "image",
+ "libc",
  "rand_core",
  "serde",
  "serde_json",
