@@ -6,7 +6,7 @@ It opens directly into a personal game library – no store, no news, no cloud, 
 
 Primary desktop targets are **KDE Plasma, GNOME and XFCE** on Wayland or X11. Bazzite and SteamOS Desktop Mode are supported target platforms, but not technical requirements. Steam Gaming Mode/Gamescope is not a guaranteed target yet.
 
-**Current version:** 0.4.6 · **Language:** English · [Deutsch](README-de.md)
+**Current version:** 0.4.7 · **Language:** English · [Deutsch](README-de.md)
 
 The application UI is available in **German and English** via Fluent, with automatic locale detection and English as fallback. Some detailed documents under `docs/` are still in German.
 
@@ -266,7 +266,7 @@ Desktop shortcuts are deliberately **manual**: configure a global shortcut in
 KDE Plasma, GNOME or XFCE that runs the absolute path to `couchdeck --activate`.
 See [docs/WINDOW-ACTIVATION.md](docs/WINDOW-ACTIVATION.md) for exact steps and
 Wayland limitations. Steam Input can map a controller button to such a shortcut,
-but this is documented preparation only; 0.4.6 does not implement a global
+but this is documented preparation only; 0.4.7 does not implement a global
 controller-home feature.
 
 Use `couchdeck --diagnose-window` for additional focus/minimize/fullscreen
@@ -432,6 +432,7 @@ Data flow: `UI → AppState → Library/Profiles → GIO (gio launch)`.
 
 ## Changelog
 
+- **v0.4.7**: fixed taskbar-minimized and fullscreen-minimized recovery by starting the bounded KWin fallback from the IPC background thread when the eframe UI is not receiving frames, and by deferring fullscreen restore until focus/mapping has stabilized.
 - **v0.4.6**: fixed Wayland/KDE activation by forwarding xdg-activation tokens to the existing surface and adding a bounded KDE/KWin fallback for terminal/no-token invocations; improved focus diagnostics.
 - **v0.4.5**: added local `--activate` IPC, window/focus diagnostics, fullscreen-aware return, documented desktop shortcuts; launch focus is never stolen automatically.
 - **v0.4.1**: fixed installed menu icon (PNG + absolute icon path) and restored fullscreen when returning from minimize.

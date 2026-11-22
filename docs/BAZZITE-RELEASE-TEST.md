@@ -90,6 +90,24 @@ KIO-Token, minimiertes Windowed-/Fullscreen-Fenster, `--windowed` und ein
 ungültiger Token praktisch geprüft. Diese Ergebnisse ersetzen **nicht** den
 Bazzite-Zielhardware-Test.
 
+**Realtest 0.4.6 auf Bazzite/KDE/Wayland:** `--activate` wurde angenommen und
+Fokus geloggt, aber ein aus dem Fullscreen minimiertes Fenster wurde erst nach
+Maus-Hover über der Taskleiste sichtbar. Ursache: Die minimierte eframe-UI
+verarbeitete keine Frames, sodass der IPC-Auftrag liegen blieb. 0.4.7 startet
+den KWin-Fallback deshalb direkt aus dem IPC-Hintergrundthread.
+
+## 0.4.7 IPC-Thread-Fix – Bazzite Retest (offen)
+
+0.4.6 konnte bei minimierter UI hängen bleiben, weil eframe keine Frames mehr
+lieferte. 0.4.7 startet den KWin-Fallback direkt aus dem IPC-Hintergrundthread
+und stellt Fullscreen erst nach stabilisiertem Fokus wieder her.
+
+- [ ] Taskleisten-Minimierung aus Fullscreen → `--activate` → sofort sichtbar, ohne Maus-Hover
+- [ ] KWin meldet danach `minimized=false`, `active=true`, `fullScreen=true`
+- [ ] Taskleisten-Minimierung aus Windowed → `--activate` → bleibt Windowed, sofort sichtbar
+- [ ] Keine zweite Instanz, laufendes Spiel/Launcher bleibt unangetastet
+- [ ] Log enthält `KDE/Wayland: KWin-Fallback aus dem IPC-Thread wird geprüft.`
+
 ## A. AppImage
 
 ```bash

@@ -6,7 +6,7 @@ Die App startet direkt in eine persönliche Spielebibliothek – kein Shop, kein
 
 Primäre Desktop-Ziele sind **KDE Plasma, GNOME und XFCE** unter Wayland oder X11. Bazzite und SteamOS im Desktop Mode sind unterstützte Zielplattformen, aber keine technischen Voraussetzungen. Steam Gaming Mode/Gamescope ist derzeit kein zugesichertes Ziel.
 
-**Aktuelle Version:** 0.4.6 · **Sprache:** Deutsch · [English](README.md)
+**Aktuelle Version:** 0.4.7 · **Sprache:** Deutsch · [English](README.md)
 
 Die Anwendungsoberfläche ist über Fluent **auf Deutsch und Englisch** verfügbar, mit automatischer Spracherkennung und Englisch als Fallback. Einzelne Detaildokumente unter `docs/` sind weiterhin auf Deutsch.
 
@@ -267,7 +267,7 @@ Desktop-Shortcuts werden bewusst **manuell** eingerichtet: in KDE Plasma, GNOME
 oder XFCE auf den absoluten Pfad `couchdeck --activate` legen. Genaue Schritte
 und Wayland-Grenzen: [docs/WINDOW-ACTIVATION.md](docs/WINDOW-ACTIVATION.md).
 Steam Input kann eine Controller-Taste auf einen solchen Shortcut abbilden; das
-ist in 0.4.6 nur dokumentierte Vorbereitung, keine globale Controller-Home-
+ist in 0.4.7 nur dokumentierte Vorbereitung, keine globale Controller-Home-
 Funktion.
 
 `couchdeck --diagnose-window` schreibt zusätzliche Fokus-/Minimierungs-/
@@ -433,6 +433,7 @@ Datenfluss: `UI → AppState → Library/Profiles → GIO (gio launch)`.
 
 ## Changelog
 
+- **v0.4.7**: Taskleisten- und Fullscreen-Minimierung korrigiert: Der begrenzte KWin-Fallback startet jetzt aus dem IPC-Hintergrundthread, wenn die eframe-UI keine Frames mehr erhält; Fullscreen wird erst nach stabilisiertem Fokus/Mapping wiederhergestellt.
 - **v0.4.6**: Wayland-/KDE-Aktivierung korrigiert: xdg-activation-Token werden an die bestehende Oberfläche weitergegeben, plus begrenzter KDE-/KWin-Fallback für Terminal-/No-Token-Aufrufe; verbesserte Fokusdiagnose.
 - **v0.4.5**: Lokale `--activate`-IPC, Fenster-/Fokusdiagnose, fullscreenbewusste Rückkehr, dokumentierte Desktop-Shortcuts; beim Spielstart wird der Fokus nie automatisch gestohlen.
 - **v0.4.1**: Menü-Icon zuverlässig installiert (PNG + absoluter Icon-Pfad) und Fullscreen beim Zurückholen aus dem Minimieren wiederhergestellt.

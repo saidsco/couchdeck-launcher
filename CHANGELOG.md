@@ -1,5 +1,25 @@
 # Changelog
 
+## 0.4.7 – 2026-11-08
+
+### Bugfix: Taskleisten-/Fullscreen-Minimierung
+
+- Ursache: Bei minimiertem eframe-Fenster erhält die UI teilweise keine Frames mehr. Der Aktivierungsauftrag lag dann im IPC-Kanal, bis Maus-Hover einen Frame auslöste.
+- Der IPC-Server startet unter KDE/Wayland den begrenzten KWin-Fallback jetzt direkt aus dem Hintergrundthread, sofern kein beobachteter Fokus vorliegt. Die Wiederherstellung hängt nicht mehr von einem UI-Frame ab.
+- `RequestUserAttention` wird unter KDE/Wayland bei fehlendem Token nicht mehr vor dem KWin-Fallback gesendet; ein früher Fokus auf ein noch verborgenes Fenster wird vermieden.
+- Der KWin-Fallback wiederholt die Aktivierung nach 180 ms einmalig, damit KWin die zuvor minimierte Fläche tatsächlich mapped.
+- Fullscreen wird nach bestätigtem Fokus erst nach einer kurzen Stabilisierungszeit wiederhergestellt; der zusätzliche Repaint nach 300 ms bleibt begrenzt.
+- `--windowed` bleibt windowed; externe Fullscreen-Minimierung erzeugt keinen unnötigen Fullscreen-Toggle.
+- Kein Spiel-/Launcher-Prozess wird beendet, keine PIN-/Kinderrechte-Umgehung.
+
+### Diagnose / Tests
+
+- Neue Logzeile für den KWin-Fallback aus dem IPC-Thread.
+- Manuell auf Manjaro/KDE 6.7.5/Wayland: interne Fullscreen-Minimierung → `--activate` → KWin-Zustand `minimized=false`, `active=true`, `fullScreen=true`; kein Maus-Hover nötig.
+- 81 Unit-Tests + 2 GIO-Integrationstests (83 gesamt).
+- Kein Git-Tag/GitHub-Release/Push ohne Freigabe.
+
+
 ## 0.4.6 – 2026-11-08
 
 ### Bugfix: Fensteraktivierung unter KDE/Wayland

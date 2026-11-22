@@ -49,14 +49,29 @@ impl ActivationServer {
         paths: &XdgPaths,
         ctx: egui::Context,
         tx: Sender<ActivationRequest>,
+        focus_state: Arc<AtomicBool>,
     ) -> Result<Self, String> {
-        Self::start_at(paths.activation_socket_path(), ctx, tx)
+        Self::start_inner(
+            paths.activation_socket_path(),
+            ctx,
+            tx,
+            Some((paths.clone(), focus_state)),
+        )
     }
 
     pub fn start_at(
         path: PathBuf,
         ctx: egui::Context,
         tx: Sender<ActivationRequest>,
+    ) -> Result<Self, String> {
+        Self::start_inner(path, ctx, tx, None)
+    }
+
+    fn start_inner(
+        path: PathBuf,
+        ctx: egui::Context,
+        tx: Sender<ActivationRequest>,
+        fallback: Option<(XdgPaths, Arc<AtomicBool>)>,
     ) -> Result<Self, String> {
         if let Some(parent) = path.parent() {
             fs::create_dir_all(parent).map_err(|err| {
@@ -125,6 +140,32 @@ impl ActivationServer {
                             break;
                         }
                         ctx.request_repaint();
+                        if let Some((paths, focus_state)) = &fallback {
+                            if crate::session::detect_current().environment
+                                == Some(crate::session::DesktopEnvironment::Kde)
+                                && std::env::var_os("WAYLAND_DISPLAY").is_some()
+                            {
+                                // The eframe UI may be minimized and not process
+                                // the channel until the pointer enters the
+                                // window. Start the bounded KWin fallback from
+                                // this background thread so recovery does not
+                                // depend on a UI frame.
+                                crate::logging::log_info(
+                                    "activation",
+                                    "KDE/Wayland: KWin-Fallback aus dem IPC-Thread wird geprüft.",
+                                );
+                                if !crate::kwin_activation::activate_after(
+                                    paths.clone(),
+                                    Duration::from_millis(50),
+                                    focus_state.clone(),
+                                ) {
+                                    crate::logging::log_info(
+                                        "activation",
+                                        "KWin-Fallback läuft bereits; keine weitere Anforderung.",
+                                    );
+                                }
+                            }
+                        }
                         let _ = stream.write_all(RESPONSE_OK.as_bytes());
                         crate::logging::log_info(
                             "activation",

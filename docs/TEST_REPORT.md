@@ -1,6 +1,6 @@
 # Test- und Messbericht
 
-**Stand:** 8. November 2026 · **Version:** CouchDeck 0.4.6
+**Stand:** 8. November 2026 · **Version:** CouchDeck 0.4.7
 
 **Getestete Umgebung:** Manjaro Linux (KDE Plasma, Wayland-Session), Kernel `6.18.55-1-MANJARO`, NVIDIA RTX 4070 Ti SUPER
 **Release-Buildumgebung:** Fedora 42 Container, glibc 2.41, Rust 1.89.0, x86_64
@@ -136,6 +136,7 @@ Die UI wurde zusätzlich mit dem X11-Backend (Xwayland) gestartet, damit Fenster
 | GitHub Release v0.3.1 (v0.3.1) | Assets veröffentlicht; erneut heruntergeladen und mit `SHA256SUMS` geprüft, AppImage `--version` OK |
 | v0.4.0-Releasepaket lokal (v0.4.0) | OK; Fedora-42-Container, tar.gz/AppImage/SHA256SUMS, Installer mit KDE-Autostart, XDG-Daten unverändert, AppImage `--version`; kein Tag/Release erzeugt |
 | v0.4.6-Releasepaket lokal (v0.4.6) | OK; Fedora-42-Container, tar.gz/AppImage/SHA256SUMS, Runtime-Report, AppImage `--version` = 0.4.6, Xvfb-Start bis Bibliothek; kein Tag/Release erzeugt |
+| v0.4.7-Releasepaket lokal (v0.4.7) | OK; Fedora-42-Container, tar.gz/AppImage/SHA256SUMS, Runtime-Report, AppImage `--version` = 0.4.7, Xvfb-Start bis Bibliothek; kein Tag/Release erzeugt |
 | AppImage/Archiv auf frischer Bazzite-KDE-Installation (v0.3.1) | **Nicht ausgeführt**; manuelle Checkliste in `docs/BAZZITE-RELEASE-TEST.md` |
 | Autostart-Installer mit `XDG_CURRENT_DESKTOP=ubuntu:GNOME` (v0.4.0) | OK; `OnlyShowIn=GNOME`, `NotShowIn=gamescope`, kein `X-KDE-autostart-after` |
 | Autostart-Installer mit `XDG_CURRENT_DESKTOP=gamescope:KDE` (v0.4.0) | OK; Installation/Autostart verweigert, kein Binary installiert |
@@ -154,7 +155,9 @@ Die UI wurde zusätzlich mit dem X11-Backend (Xwayland) gestartet, damit Fenster
 | KDE/KIO-gestarteter Prozess mit echtem `XDG_ACTIVATION_TOKEN` (v0.4.6) | OK; Token per IPC weitergegeben und in 7 ms Fokus beobachtet |
 | Absichtlich ungültiger Token unter KDE/Wayland (v0.4.6) | OK; Token-Anwendung versucht, KWin-Fallback nach 800 ms, Fokus beobachtet |
 | KDE/Wayland Taskleisten-Minimierung, Nutzerbeobachtung vor finalem Timer-Fix | Fenster wurde erst nach Maus-Hover sichtbar; 0.4.6 ergänzt eine einmalige verzögerte KWin-Nachaktivierung und einen verzögerten Repaint |
-| KDE/Wayland mit `--windowed` (v0.4.6) | OK; Fenster bleibt windowed |
+| KDE/Wayland interne Fullscreen-Minimierung → `--activate` (v0.4.7) | OK; KWin meldete danach `minimized=false`, `active=true`, `fullScreen=true`; IPC-Thread startete den KWin-Fallback ohne UI-Frame |
+| KDE/Wayland Taskleisten-Minimierung, IPC-Thread-Fix (v0.4.7) | Auf Manjaro/KDE 6.7.5 nachvollzogen; Bazzite-Retest offen |
+| KDE/Wayland mit `--windowed` (v0.4.7) | OK; Fenster bleibt windowed |
 | Wayland-Compositor-Fokus für `--activate` | Bazzite/GNOME nicht getestet; GNOME ohne Token Best-Effort, `Focus`/`Activation` kann verweigert werden |
 | GNOME/Wayland, XFCE/X11, SteamOS Desktop Mode (v0.4.0) | **Nicht ausgeführt**; Matrix in `docs/DESKTOP-TEST-MATRIX.md` |
 
@@ -162,25 +165,25 @@ Screenshots: [Zeitkontingent verbraucht](screenshots/time-budget.png), [Biblioth
 
 Die Screenshots verwenden fiktive Demo-Spiele und Demo-Cover aus der Testumgebung. Sie zeigen keinen Shop und keine echten Spieleplattform-Daten.
 
-## Release-Distribution (v0.4.6)
+## Release-Distribution (v0.4.7)
 
 - GitHub-Actions-Workflow `.github/workflows/release.yml` für Tags `v*` und Workflow-Dispatch.
 - Build und Tests laufen in einem frischen Fedora-42-Container; das Release-Binary wird ohne Rust-Toolchain weiterverpackt.
 - `scripts/fetch-release-tools.sh` lädt ein gepinntes linuxdeploy-Build-Werkzeug mit SHA256-Prüfung und stellt daraus `appimagetool` bereit.
 - Das AppImage enthält die unveränderte native Binary sowie Desktop-/Icon-Metadaten; glibc, GPU-Treiber, Wayland/X11 und `libudev` kommen von Bazzite. Dadurch keine gebündelten System-ABI-Konflikte.
 - `SHA256SUMS` wird nach dem Packaging aus den finalen Dateien erzeugt.
-- v0.4.5-Release veröffentlicht und Assets verifiziert; v0.4.6-Paketierung nach dem Bugfix erneut im Fedora-42-Container gebaut und mit `sha256sum -c`, `--version` und Xvfb-Start geprüft. Kein Git-Tag/GitHub-Release ohne Freigabe erzeugt.
+- v0.4.5- und v0.4.6-Releases veröffentlicht; v0.4.7-Paketierung nach dem IPC-Thread-Fix im Fedora-42-Container gebaut und mit `sha256sum -c`, `--version` und Xvfb-Start geprüft. Kein Git-Tag/GitHub-Release ohne Freigabe erzeugt.
 - Die AppImage-type2-Runtime wird im CI mit Wiederholungsversuchen geladen und beim Packaging explizit übergeben; ein vorhandener lokaler Runtime-Cache wird wiederverwendet.
 - AppImage und Archiv-Binary wurden mit `env -i PATH=/usr/bin:/bin` (ohne Cargo/Toolchain im Suchpfad) per `--version` gestartet.
 - Der echte Bazzite-KDE-Zielhardware-Test (Controller, GIO-Spielstart, Systemaktionen, AppImage/Archiv) ist noch offen und in `docs/BAZZITE-RELEASE-TEST.md` beschrieben.
 
-## Fensteraktivierung (v0.4.6)
+## Fensteraktivierung (v0.4.7)
 
 - Neue CLI `--activate`, lokaler Unix-Socket und IPC-Server.
 - X11-Smoke-Tests bestätigen Wiederherstellung aus minimiertem und minimiertem
   Fullscreen-Zustand; der Fokus wird nachweislich zurückgeholt.
 - KDE/Wayland: Winit meldet den Minimierungszustand nicht zuverlässig und kann
-  bestehende Fenster nicht fokussieren/entminimieren. 0.4.6 überträgt daher
+  bestehende Fenster nicht fokussieren/entminimieren. 0.4.6/0.4.7 übertragen daher
   `XDG_ACTIVATION_TOKEN` per IPC und wendet ihn über `xdg-activation-v1` auf die
   bestehende Fläche an. Für Terminalaufrufe ohne Token greift ein begrenzter
   KWin-Scripting-Fallback.
@@ -190,6 +193,10 @@ Die Screenshots verwenden fiktive Demo-Spiele und Demo-Cover aus der Testumgebun
   im Log beobachtet; das Fullscreen-Fenster blieb ohne zusätzlichen Toggle.
 - `--diagnose-window` und getrennte Fokus-/Minimierungs-/Fullscreen-/Token-Logs
   ergänzt.
+- 0.4.7: Der IPC-Server startet den KDE/KWin-Fallback selbst, wenn die UI
+  minimiert keine Frames erhält; Fullscreen-Restore wartet auf stabilisierten
+  Fokus. Interne Fullscreen-Minimierung wurde auf Manjaro/KDE 6.7.5 praktisch
+  geprüft (KWin: minimized=false, active=true, fullScreen=true).
 - Bazzite-, GNOME-/Wayland-, XFCE-/X11-, echter KDE-Shortcut- und
   Steam-/Proton-/Launcher-Rückkehr bleiben offen.
 - Ein Spielstart ruft niemals `request_activation` auf; Steam-/Proton-/Launcher-

@@ -1,4 +1,4 @@
-# Fensteraktivierung und Rückkehr (0.4.6)
+# Fensteraktivierung und Rückkehr (0.4.7)
 
 CouchDeck fordert den Fokus **nicht** automatisch zurück, wenn ein Spiel, Steam,
 ein vorgeschalteter Launcher (z. B. Larian), Heroic, Lutris, Wine, Prism oder ein
@@ -79,6 +79,8 @@ KWin-Scripting-Fallback:
 - das Skript sucht ausschließlich das CouchDeck-Fenster anhand von
   `desktopFileName`, `resourceClass` oder dem Titel `CouchDeck`,
 - es setzt `minimized = false` und `workspace.activeWindow`,
+- es wird bei KDE/Wayland aus dem IPC-Thread gestartet, wenn die UI keine
+  Frames erhält (Taskleisten-Minimierung),
 - es wiederholt die Aktivierung nach 180 ms einmalig, weil KWin die
   Minimierung in manchen Fällen erst verzögert mapped,
 - es beendet oder verschiebt keine anderen Anwendungen,
@@ -171,14 +173,14 @@ Befehl: /home/USER/.local/bin/couchdeck --activate
 Für AppImage-Nutzer zeigt der Pfad auf die AppImage-Datei:
 
 ```text
-/home/USER/Applications/CouchDeck-0.4.6-x86_64.AppImage --activate
+/home/USER/Applications/CouchDeck-0.4.7-x86_64.AppImage --activate
 ```
 
 ## Steam Input (Vorbereitung für 0.5)
 
 Steam Input kann eine Controller-Taste auf eine Desktop-Aktion abbilden, z. B.
 über ein Steam-Input-Layout mit einem „Guide“-/Home-Button und einem
-Desktop-Shortcut. In 0.4.6 gibt es **keine** globale Controller-Home-Funktion
+Desktop-Shortcut. In 0.4.7 gibt es **keine** globale Controller-Home-Funktion
 und keine zusätzliche Controllerüberwachung im Hintergrund. Die Tastenkombination
 wird ausschließlich vom Benutzer in Steam Input eingerichtet.
 
@@ -226,7 +228,9 @@ XDG-Verzeichnissen geprüft:
    IPC weitergegeben und in 7 ms in einen beobachteten Fokus umgesetzt.
 5. Absichtlich ungültiger Token → Token-Anwendung wird versucht, danach greift
    der KWin-Fallback nach 800 ms; Fokus wird beobachtet.
-6. Mehrfache schnelle Aufrufe → keine zweite Instanz, stabiler Zustand.
+6. Interne Fullscreen-Minimierung → `--activate` → KWin meldet
+   `minimized=false`, `active=true`, `fullScreen=true`, kein Hover nötig.
+7. Mehrfache schnelle Aufrufe → keine zweite Instanz, stabiler Zustand.
 
 Noch offen:
 

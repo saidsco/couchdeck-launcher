@@ -403,6 +403,8 @@ pub struct CouchDeckApp {
     pub activation_server: Option<ActivationServer>,
     pub wayland_surface: Option<WaylandSurface>,
     pub activation_fullscreen_pending: bool,
+    pub activation_fullscreen_due_at: Option<Instant>,
+    pub activation_focus_logged: bool,
     pub activation_requested_at: Option<Instant>,
     pub activation_token_present: bool,
     pub activation_token_applied: bool,
@@ -563,6 +565,8 @@ impl CouchDeckApp {
             activation_server: None,
             wayland_surface: capture_wayland_surface(cc),
             activation_fullscreen_pending: false,
+            activation_fullscreen_due_at: None,
+            activation_focus_logged: false,
             activation_requested_at: None,
             activation_token_present: false,
             activation_token_applied: false,
@@ -635,7 +639,12 @@ impl CouchDeckApp {
         let (activation_tx, activation_rx) = std::sync::mpsc::channel();
         app.activation_rx = Some(activation_rx);
         let activation_paths = app.paths.clone();
-        match ActivationServer::start(&activation_paths, cc.egui_ctx.clone(), activation_tx) {
+        match ActivationServer::start(
+            &activation_paths,
+            cc.egui_ctx.clone(),
+            activation_tx,
+            app.activation_focus_state.clone(),
+        ) {
             Ok(server) => app.activation_server = Some(server),
             Err(err) => {
                 log_warn("activation", &err);
@@ -729,7 +738,11 @@ impl CouchDeckApp {
         self.activation_token_present = token.is_some();
         self.activation_token_applied = false;
         self.activation_kwin_attempted = false;
+        self.activation_focus_logged = false;
         self.activation_fullscreen_pending = self.restore_fullscreen_after_minimize;
+        self.activation_fullscreen_due_at = self
+            .activation_fullscreen_pending
+            .then_some(now + Duration::from_millis(350));
         self.restore_fullscreen_after_minimize = false;
 
         let mut token_applied = false;
@@ -767,13 +780,23 @@ impl CouchDeckApp {
             // RequestUserAttention is only a fallback when no token could be
             // forwarded; a valid token is the compositor-authorized path.
             if !token_applied {
-                log_info(
-                    "activation",
-                    "Fallback: RequestUserAttention (Compositor kann dies nur als Hinweis behandeln).",
-                );
-                ctx.send_viewport_cmd(ViewportCommand::RequestUserAttention(
-                    egui::UserAttentionType::Critical,
-                ));
+                if desktop == Some(DesktopEnvironment::Kde) {
+                    // RequestUserAttention can produce a focus event for a still-
+                    // minimized/unmapped KWin window. Avoid that premature focus
+                    // signal and let the bounded KWin fallback unminimize first.
+                    log_info(
+                        "activation",
+                        "Kein Token: KWin-Fallback statt RequestUserAttention, damit kein Fokus auf ein noch verborgenes Fenster entsteht.",
+                    );
+                } else {
+                    log_info(
+                        "activation",
+                        "Fallback: RequestUserAttention (Compositor kann dies nur als Hinweis behandeln).",
+                    );
+                    ctx.send_viewport_cmd(ViewportCommand::RequestUserAttention(
+                        egui::UserAttentionType::Critical,
+                    ));
+                }
             }
 
             if desktop == Some(DesktopEnvironment::Kde) {
@@ -846,26 +869,43 @@ impl CouchDeckApp {
         let elapsed = started.elapsed();
         let focused = ctx.input(|input| input.focused);
         if focused {
-            log_info(
-                "activation",
-                format!(
-                    "Fokus tatsächlich beobachtet nach {} ms (token_applied={}, kwin_fallback_attempted={}).",
-                    elapsed.as_millis(),
-                    self.activation_token_applied,
-                    self.activation_kwin_attempted
-                ),
-            );
-            self.activation_requested_at = None;
+            if !self.activation_focus_logged {
+                log_info(
+                    "activation",
+                    format!(
+                        "Fokus tatsächlich beobachtet nach {} ms (token_applied={}, kwin_fallback_attempted={}).",
+                        elapsed.as_millis(),
+                        self.activation_token_applied,
+                        self.activation_kwin_attempted
+                    ),
+                );
+                self.activation_focus_logged = true;
+            }
+
             if self.activation_fullscreen_pending {
+                // A minimized Wayland surface can receive keyboard focus before
+                // KWin has completed mapping/unminimizing it. Sending
+                // Fullscreen(true) immediately can leave the window in a
+                // hidden state until the pointer enters it. Wait for the
+                // bounded KWin reassert and a stable mapped state first.
+                if self
+                    .activation_fullscreen_due_at
+                    .is_some_and(|due| Instant::now() < due)
+                {
+                    ctx.request_repaint_after(Duration::from_millis(100));
+                    return;
+                }
+                self.activation_fullscreen_due_at = None;
                 self.activation_fullscreen_pending = false;
                 self.fullscreen = true;
                 ctx.send_viewport_cmd(ViewportCommand::Decorations(false));
                 ctx.send_viewport_cmd(ViewportCommand::Fullscreen(true));
                 log_info(
                     "activation",
-                    "Fullscreen wird nach bestätigtem Fokus wiederhergestellt.",
+                    "Fullscreen wird nach bestätigtem, stabilisiertem Fokus wiederhergestellt.",
                 );
             }
+            self.activation_requested_at = None;
             ctx.request_repaint();
             ctx.request_repaint_after(Duration::from_millis(300));
             return;
@@ -883,6 +923,7 @@ impl CouchDeckApp {
             );
             self.activation_requested_at = None;
             self.activation_fullscreen_pending = false;
+            self.activation_fullscreen_due_at = None;
             return;
         }
         ctx.request_repaint_after(Duration::from_millis(100));

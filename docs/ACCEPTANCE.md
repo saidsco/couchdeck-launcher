@@ -130,7 +130,7 @@ Legende:
 - [x] Fullscreen-Wiederherstellung nach „Zum Desktop minimieren“ implementiert und per Unit-Test für die Zustandslogik abgesichert.
 - [~] Sichtprüfung des Icons und echtes Taskleisten-Minimieren/Wiederherstellen auf Bazzite/GNOME/XFCE offen.
 
-## Fensteraktivierung (v0.4.6)
+## Fensteraktivierung (v0.4.7)
 
 - [x] `XDG_ACTIVATION_TOKEN` wird vom CLI gelesen, über den lokalen IPC-Socket weitergegeben und nicht geloggt.
 - [x] Eingehender Token wird über `xdg-activation-v1` auf die bereits bestehende Wayland-Oberfläche angewendet; kein neues Fenster.
@@ -139,6 +139,7 @@ Legende:
 - [x] Fullscreen wird nur nach beobachtetem Fokus und interner Minimierung aus dem Fullscreen wiederhergestellt; extern minimiertes Fullscreen bleibt ohne unnötigen Toggle.
 - [x] Getrennte Diagnose für IPC, Token vorhanden/angewendet, Fokus angefordert/beobachtet, Timeout und KWin-Fallback.
 - [x] Manjaro/KDE 6.7.5/Wayland: Terminal ohne Token (KWin-Fallback), KIO-Prozess mit gültigem Token, minimiertes Windowed-/Fullscreen-Fenster, ungültiger Token und `--windowed` praktisch geprüft.
+- [x] 0.4.7: KWin-Fallback startet aus dem IPC-Thread, wenn die minimierte UI keine Frames erhält; interne Fullscreen-Minimierung wurde mit KWin-Zustand `minimized=false`, `active=true`, `fullScreen=true` geprüft.
 - [x] X11-Regressionen aus 0.4.5 bleiben grün.
 - [~] Bazzite-KDE-Zielhardware, echter benutzerdefinierter KDE-Shortcut, GNOME/Wayland, XFCE/X11, SteamOS Desktop Mode und echte Steam-/Proton-/Launcher-Rückkehr offen.
 
@@ -155,7 +156,7 @@ Legende:
 - [x] X11-Smoke-Tests für fokussiert, minimiert, Fullscreen-minimiert, mehrfache Aufrufe und No-Instance.
 - [~] Wayland-/Bazzite-/GNOME-/XFCE-Fokusverhalten und echte Steam-/Proton-/Launcher-Tests offen.
 
-## Release-Distribution (v0.4.6-Vorbereitung)
+## Release-Distribution (v0.4.7-Vorbereitung)
 
 - [x] GitHub-Actions-Workflow für Tags `v*` und manuellen Dispatch.
 - [x] Portables x86_64-`.tar.gz` mit Binary, Installer, Doku und Runtime-Report.
@@ -168,8 +169,8 @@ Legende:
 - [x] AppImage/Archiv im Fedora-42-Container gebaut, per `--version` und Xvfb-Start geprüft.
 - [x] GitHub Release `v0.3.1` mit allen Assets veröffentlicht; Download und SHA256-Prüfung erneut verifiziert.
 - [~] AppImage und Archiv auf einer frischen Bazzite-KDE-Installation inkl. Controller, GIO-Spielstart und Systemaktionen getestet — manuelle Checkliste offen.
-- [x] Release-Metadaten, Installer, AppImage-Skripte und Workflow auf 0.4.6-Kompatibilität geprüft; lokales 0.4.6-Paket im Fedora-42-Container gebaut und mit SHA256SUMS, `--version` und Xvfb-Start geprüft.
-- [~] Kein v0.4.6-Tag/Release/Push ohne ausdrückliche Freigabe erzeugt.
+- [x] Release-Metadaten, Installer, AppImage-Skripte und Workflow auf 0.4.7-Kompatibilität geprüft; lokales 0.4.7-Paket im Fedora-42-Container gebaut und mit SHA256SUMS, `--version` und Xvfb-Start geprüft.
+- [~] Kein v0.4.7-Tag/Release/Push ohne ausdrückliche Freigabe erzeugt.
 
 ## Nicht Teil des MVP
 
