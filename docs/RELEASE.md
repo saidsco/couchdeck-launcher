@@ -131,10 +131,13 @@ Entfernt Binary, Menüeintrag, Icon und Autostart; Benutzerdaten bleiben
 erhalten. `--purge` löscht zusätzlich Bibliothek, Profile, Artwork,
 Einstellungen, Cache und Logs nach expliziter Bestätigung.
 
-## Fensteraktivierung im Release
+## Fensteraktivierung / Controller Home im Release
 
-Das Release-Binary enthält `couchdeck --activate` und den lokalen
-Aktivierungs-Socket. Es sind keine zusätzlichen Systemdienste, Root-Rechte oder
+Das Release-Binary enthält `couchdeck --activate`, `couchdeck --home` und den lokalen
+Aktivierungs-Socket. `--home` aktiviert eine laufende Instanz oder startet die UI;
+optional kann mit `--install-home-launcher` ein benutzerspezifischer Menüeintrag
+angelegt werden. Globale Shortcuts/Steam-Input werden nicht automatisch
+registriert. Es sind keine zusätzlichen Systemdienste, Root-Rechte oder
 Desktop-spezifischen Installationen nötig. Wayland-Compositor-Fokus bleibt
 Best-Effort. Desktop-Shortcuts werden ausschließlich vom Benutzer eingerichtet;
 Details: [`WINDOW-ACTIVATION.md`](WINDOW-ACTIVATION.md).

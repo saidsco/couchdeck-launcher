@@ -1,4 +1,4 @@
-# Fensteraktivierung und Rückkehr (0.4.7)
+# Fensteraktivierung und Rückkehr (0.5.0)
 
 CouchDeck fordert den Fokus **nicht** automatisch zurück, wenn ein Spiel, Steam,
 ein vorgeschalteter Launcher (z. B. Larian), Heroic, Lutris, Wine, Prism oder ein
@@ -136,6 +136,26 @@ Viewport-/Window-Manager-Fähigkeiten.
   automatisch registriert; die Einrichtung bleibt eine manuelle
   Benutzerentscheidung und ist auf Bazzite zu prüfen.
 
+## `--home`: aktivieren oder starten
+
+`couchdeck --home` ist der empfohlene Befehl für Controller-/Desktop-Shortcuts:
+
+- läuft CouchDeck bereits → Aktivierung wie bei `--activate`
+- läuft CouchDeck nicht → normaler UI-Start
+- keine zweite Instanz, keine Prozessbeendigung, keine PIN-/Kinderumgehung
+- `--activate` bleibt der reine Aktivierungsbefehl und endet ohne Instanz mit Fehler
+
+Optional kann ein benutzerspezifischer Menüeintrag angelegt werden:
+
+```bash
+couchdeck --install-home-launcher
+couchdeck --remove-home-launcher
+```
+
+Der Eintrag landete in `$XDG_DATA_HOME/applications/couchdeck-home.desktop` und
+startet `couchdeck --home`. Eine globale Tastenkombination wird dabei **nicht**
+registriert.
+
 ## Desktop-Shortcuts
 
 Der Shortcut ist eine **manuelle Benutzerentscheidung**. CouchDeck registriert
@@ -147,7 +167,7 @@ Systemeinstellungen → Kurzbefehle → Benutzerdefinierte Kurzbefehle → Neuer
 globaler Kurzbefehl:
 
 ```text
-/home/USER/.local/bin/couchdeck --activate
+/home/USER/.local/bin/couchdeck --home
 ```
 
 Der vollständige Pfad ist zuverlässiger als ein PATH-Aufruf.
@@ -158,7 +178,7 @@ Einstellungen → Tastatur → Tastenkürzel → Benutzerdefiniert:
 
 ```text
 Name:    CouchDeck aktivieren
-Befehl:  /home/USER/.local/bin/couchdeck --activate
+Befehl:  /home/USER/.local/bin/couchdeck --home
 Tasten:  z. B. Super+Alt+C
 ```
 
@@ -167,27 +187,28 @@ Tasten:  z. B. Super+Alt+C
 Einstellungen → Tastatur → Tastenkürzel → Hinzufügen:
 
 ```text
-Befehl: /home/USER/.local/bin/couchdeck --activate
+Befehl: /home/USER/.local/bin/couchdeck --home
 ```
 
 Für AppImage-Nutzer zeigt der Pfad auf die AppImage-Datei:
 
 ```text
-/home/USER/Applications/CouchDeck-0.4.7-x86_64.AppImage --activate
+/home/USER/Applications/CouchDeck-0.5.0-x86_64.AppImage --home
 ```
 
-## Steam Input (Vorbereitung für 0.5)
+## Steam Input
 
-Steam Input kann eine Controller-Taste auf eine Desktop-Aktion abbilden, z. B.
-über ein Steam-Input-Layout mit einem „Guide“-/Home-Button und einem
-Desktop-Shortcut. In 0.4.7 gibt es **keine** globale Controller-Home-Funktion
-und keine zusätzliche Controllerüberwachung im Hintergrund. Die Tastenkombination
-wird ausschließlich vom Benutzer in Steam Input eingerichtet.
+Steam Input kann eine Controller-Kombination auf eine Desktop-Tastenkombination
+abbilden; diese startet `couchdeck --home`. Die vollständige Anleitung steht in
+[`STEAM-INPUT.md`](STEAM-INPUT.md). CouchDeck überwacht keine Controller-Eingaben
+global, schreibt keine Steam-Konfiguration und registriert keinen systemweiten
+Hotkey automatisch.
 
 ## Diagnose
 
 ```bash
 couchdeck --diagnose-window
+couchdeck --home
 couchdeck --activate
 ```
 
@@ -206,7 +227,8 @@ Relevante Logzeilen:
 
 Fehlerfälle:
 
-- keine laufende Instanz → Exit-Code ungleich 0, verständliche Meldung
+- `--activate` ohne laufende Instanz → Exit-Code ungleich 0, verständliche Meldung
+- `--home` ohne laufende Instanz → normaler Start
 - Socket vorhanden, aber nicht erreichbar → keine falsche Erfolgsmeldung
 - veralteter Socket nach Crash → wird beim nächsten Start/Client-Aufruf ersetzt
 - anderer lokaler Benutzer → Socket-Permissions/`SO_PEERCRED` verweigern die

@@ -358,6 +358,13 @@ impl ActivationResult {
         matches!(self, Self::Accepted { .. })
     }
 
+    /// True only when no instance exists. `Unavailable` means an instance may
+    /// exist but its IPC endpoint is not usable; callers must not start a
+    /// second UI in that case.
+    pub fn is_not_running(&self) -> bool {
+        matches!(self, Self::NotRunning)
+    }
+
     pub fn user_message(&self) -> String {
         match self {
             Self::Accepted { token_forwarded } => {
@@ -540,6 +547,16 @@ mod tests {
         let request = rx.recv_timeout(Duration::from_secs(2)).unwrap();
         assert_eq!(request.token.as_deref(), Some("kwin-test-token"));
         drop(server);
+    }
+
+    #[test]
+    fn only_not_running_permits_home_to_start_a_new_ui() {
+        assert!(ActivationResult::NotRunning.is_not_running());
+        assert!(!ActivationResult::Accepted {
+            token_forwarded: false
+        }
+        .is_not_running());
+        assert!(!ActivationResult::Unavailable("socket".to_owned()).is_not_running());
     }
 
     #[test]

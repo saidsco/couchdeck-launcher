@@ -1,10 +1,10 @@
 # Test- und Messbericht
 
-**Stand:** 8. November 2026 · **Version:** CouchDeck 0.4.7
+**Stand:** 24. November 2026 · **Version:** CouchDeck 0.5.0
 
-**Getestete Umgebung:** Manjaro Linux (KDE Plasma, Wayland-Session), Kernel `6.18.55-1-MANJARO`, NVIDIA RTX 4070 Ti SUPER
+**Getestete Umgebung:** Manjaro Linux (KDE Plasma, Wayland-Session), Kernel `6.18.55-1-MANJARO`, NVIDIA RTX 4070 Ti SUPER; zusätzlich Bazzite/KDE/Wayland durch den Betreiber bestätigt.
 **Release-Buildumgebung:** Fedora 42 Container, glibc 2.41, Rust 1.89.0, x86_64
-**Nicht die Zielhardware:** Bazzite KDE Plasma auf Wayland wurde in dieser Umgebung nicht ausgeführt.
+**Weiterhin offen:** GNOME/Wayland, XFCE/X11 und SteamOS Desktop Mode wurden nicht real getestet.
 
 ## Toolchain und Abhängigkeiten
 
@@ -37,8 +37,8 @@ $ cargo clippy --all-targets -- -D warnings
 Finished `dev` profile ... (Exit 0)
 
 $ cargo test
-running 81 tests
-test result: ok. 81 passed; 0 failed
+running 85 tests
+test result: ok. 85 passed; 0 failed
 running 2 tests
 test result: ok. 2 passed; 0 failed
 (running 0 tests: main.rs, Doc-Tests)
@@ -47,7 +47,7 @@ $ cargo build --release
 Finished `release` profile [optimized]
 ```
 
-Das sind **83 Tests insgesamt** (81 Unit-Tests + 2 GIO-Integrationstests).
+Das sind **87 Tests insgesamt** (85 Unit-Tests + 2 GIO-Integrationstests).
 
 Zusätzlich wurde die Release-Paketierung im Fedora-42-Container geprüft:
 
@@ -90,6 +90,8 @@ sha256sum -c SHA256SUMS
 - KDE-Fallback v0.4.6: Skript matcht ausschließlich CouchDeck; keine dauerhaften Dateien; Fokus-/Timeout-Logging im Hintergrundthread.
 - Aktivierungs-Sicherheit v0.4.6: Socket-Modus `0600`, `SO_PEERCRED`-Prüfung auf die eigene lokale UID; keine zweite Instanz über `--activate`; Token wird nicht geloggt.
 - Fullscreen-Aktivierung v0.4.6: Fullscreen wird nur nach beobachtetem Fokus und nur nach interner Minimierung aus dem Fullscreen wiederhergestellt.
+- `--home` v0.5.0: `ActivationResult::NotRunning` ist die einzige Bedingung, die einen UI-Start erlaubt; `Accepted`/`Unavailable` starten keine zweite UI.
+- Home-Launcher v0.5.0: Desktop-Entry-Quoting für Leerzeichen, `%`, Backslash und Anführungszeichen; atomisches Installieren/Entfernen in XDG_DATA_HOME.
 - GIO-Integrationstest: Desktop-Datei mit Leerzeichen im Pfad und gequotetem `Exec` wird über `gio launch` gestartet; fehlende Datei liefert einen Fehler.
 
 ## Manuelle UI-Smoke-Tests
@@ -137,6 +139,7 @@ Die UI wurde zusätzlich mit dem X11-Backend (Xwayland) gestartet, damit Fenster
 | v0.4.0-Releasepaket lokal (v0.4.0) | OK; Fedora-42-Container, tar.gz/AppImage/SHA256SUMS, Installer mit KDE-Autostart, XDG-Daten unverändert, AppImage `--version`; kein Tag/Release erzeugt |
 | v0.4.6-Releasepaket lokal (v0.4.6) | OK; Fedora-42-Container, tar.gz/AppImage/SHA256SUMS, Runtime-Report, AppImage `--version` = 0.4.6, Xvfb-Start bis Bibliothek; kein Tag/Release erzeugt |
 | v0.4.7-Releasepaket lokal (v0.4.7) | OK; Fedora-42-Container, tar.gz/AppImage/SHA256SUMS, Runtime-Report, AppImage `--version` = 0.4.7, Xvfb-Start bis Bibliothek; kein Tag/Release erzeugt |
+| v0.5.0-Releasepaket lokal (v0.5.0) | OK; Fedora-42-Container, tar.gz/AppImage/SHA256SUMS, Runtime-Report, AppImage `--version` = 0.5.0, Xvfb-Start bis Bibliothek; kein Tag/Release erzeugt |
 | AppImage/Archiv auf frischer Bazzite-KDE-Installation (v0.3.1) | **Nicht ausgeführt**; manuelle Checkliste in `docs/BAZZITE-RELEASE-TEST.md` |
 | Autostart-Installer mit `XDG_CURRENT_DESKTOP=ubuntu:GNOME` (v0.4.0) | OK; `OnlyShowIn=GNOME`, `NotShowIn=gamescope`, kein `X-KDE-autostart-after` |
 | Autostart-Installer mit `XDG_CURRENT_DESKTOP=gamescope:KDE` (v0.4.0) | OK; Installation/Autostart verweigert, kein Binary installiert |
@@ -156,8 +159,14 @@ Die UI wurde zusätzlich mit dem X11-Backend (Xwayland) gestartet, damit Fenster
 | Absichtlich ungültiger Token unter KDE/Wayland (v0.4.6) | OK; Token-Anwendung versucht, KWin-Fallback nach 800 ms, Fokus beobachtet |
 | KDE/Wayland Taskleisten-Minimierung, Nutzerbeobachtung vor finalem Timer-Fix | Fenster wurde erst nach Maus-Hover sichtbar; 0.4.6 ergänzt eine einmalige verzögerte KWin-Nachaktivierung und einen verzögerten Repaint |
 | KDE/Wayland interne Fullscreen-Minimierung → `--activate` (v0.4.7) | OK; KWin meldete danach `minimized=false`, `active=true`, `fullScreen=true`; IPC-Thread startete den KWin-Fallback ohne UI-Frame |
-| KDE/Wayland Taskleisten-Minimierung, IPC-Thread-Fix (v0.4.7) | Auf Manjaro/KDE 6.7.5 nachvollzogen; Bazzite-Retest offen |
+| KDE/Wayland Taskleisten-Minimierung, IPC-Thread-Fix (v0.4.7) | Auf Manjaro/KDE 6.7.5 nachvollzogen; von Bazzite/KDE/Wayland bestätigt |
 | KDE/Wayland mit `--windowed` (v0.4.7) | OK; Fenster bleibt windowed |
+| Bazzite/KDE/Wayland, 0.4.7 Taskleisten-/Fullscreen-Minimierung | Vom Betreiber als erfolgreich bestätigt; sichtbar/fokussiert ohne Hover |
+| Bazzite/KDE/Wayland, Steam-Flatpak-Spiel (Lego) und Minecraft | Startet; CouchDeck-Rückkehr über `--activate`/Home getestet |
+| `couchdeck --home` ohne Instanz (v0.5.0) | Startet die UI; keine zweite Instanz |
+| `couchdeck --home` bei laufender Instanz (v0.5.0) | IPC angenommen; Fenster kehrt zurück |
+| `--install-home-launcher` / `--remove-home-launcher` (v0.5.0) | XDG-Desktop-Datei angelegt bzw. entfernt; `Exec="..." --home`; keine globale Shortcut-Registrierung |
+| Steam Input Controller-Home (v0.5.0) | Anleitung vorhanden; echter Controller-/Steam-Input-Test auf Bazzite offen |
 | Wayland-Compositor-Fokus für `--activate` | Bazzite/GNOME nicht getestet; GNOME ohne Token Best-Effort, `Focus`/`Activation` kann verweigert werden |
 | GNOME/Wayland, XFCE/X11, SteamOS Desktop Mode (v0.4.0) | **Nicht ausgeführt**; Matrix in `docs/DESKTOP-TEST-MATRIX.md` |
 
@@ -165,19 +174,19 @@ Screenshots: [Zeitkontingent verbraucht](screenshots/time-budget.png), [Biblioth
 
 Die Screenshots verwenden fiktive Demo-Spiele und Demo-Cover aus der Testumgebung. Sie zeigen keinen Shop und keine echten Spieleplattform-Daten.
 
-## Release-Distribution (v0.4.7)
+## Release-Distribution (v0.5.0)
 
 - GitHub-Actions-Workflow `.github/workflows/release.yml` für Tags `v*` und Workflow-Dispatch.
 - Build und Tests laufen in einem frischen Fedora-42-Container; das Release-Binary wird ohne Rust-Toolchain weiterverpackt.
 - `scripts/fetch-release-tools.sh` lädt ein gepinntes linuxdeploy-Build-Werkzeug mit SHA256-Prüfung und stellt daraus `appimagetool` bereit.
 - Das AppImage enthält die unveränderte native Binary sowie Desktop-/Icon-Metadaten; glibc, GPU-Treiber, Wayland/X11 und `libudev` kommen von Bazzite. Dadurch keine gebündelten System-ABI-Konflikte.
 - `SHA256SUMS` wird nach dem Packaging aus den finalen Dateien erzeugt.
-- v0.4.5- und v0.4.6-Releases veröffentlicht; v0.4.7-Paketierung nach dem IPC-Thread-Fix im Fedora-42-Container gebaut und mit `sha256sum -c`, `--version` und Xvfb-Start geprüft. Kein Git-Tag/GitHub-Release ohne Freigabe erzeugt.
+- v0.4.5, v0.4.6 und v0.4.7 wurden veröffentlicht; v0.5.0-Paketierung wurde im Fedora-42-Container gebaut und mit `sha256sum -c`, `--version` und Xvfb-Start geprüft. Kein Git-Tag/GitHub-Release ohne Freigabe erzeugt.
 - Die AppImage-type2-Runtime wird im CI mit Wiederholungsversuchen geladen und beim Packaging explizit übergeben; ein vorhandener lokaler Runtime-Cache wird wiederverwendet.
 - AppImage und Archiv-Binary wurden mit `env -i PATH=/usr/bin:/bin` (ohne Cargo/Toolchain im Suchpfad) per `--version` gestartet.
-- Der echte Bazzite-KDE-Zielhardware-Test (Controller, GIO-Spielstart, Systemaktionen, AppImage/Archiv) ist noch offen und in `docs/BAZZITE-RELEASE-TEST.md` beschrieben.
+- Bazzite/KDE/Wayland ist für 0.4.7 vom Betreiber als erfolgreich bestätigt; einzelne 0.5.0-Home-/Steam-Input- und weitere Desktop-Fälle bleiben offen und stehen in `docs/BAZZITE-RELEASE-TEST.md`.
 
-## Fensteraktivierung (v0.4.7)
+## Controller Home / Fensteraktivierung (v0.5.0)
 
 - Neue CLI `--activate`, lokaler Unix-Socket und IPC-Server.
 - X11-Smoke-Tests bestätigen Wiederherstellung aus minimiertem und minimiertem
@@ -197,8 +206,10 @@ Die Screenshots verwenden fiktive Demo-Spiele und Demo-Cover aus der Testumgebun
   minimiert keine Frames erhält; Fullscreen-Restore wartet auf stabilisierten
   Fokus. Interne Fullscreen-Minimierung wurde auf Manjaro/KDE 6.7.5 praktisch
   geprüft (KWin: minimized=false, active=true, fullScreen=true).
-- Bazzite-, GNOME-/Wayland-, XFCE-/X11-, echter KDE-Shortcut- und
-  Steam-/Proton-/Launcher-Rückkehr bleiben offen.
+- 0.5.0: `--home` startet ohne Instanz die UI und aktiviert sonst die laufende
+  Instanz; optionaler Home-Launcher wird atomar angelegt/entfernt.
+- Bazzite/KDE/Wayland wurde für 0.4.7 vom Betreiber als erfolgreich bestätigt;
+  die neuen 0.5.0-Home-/Steam-Input-Fälle und GNOME/XFCE/SteamOS bleiben offen.
 - Ein Spielstart ruft niemals `request_activation` auf; Steam-/Proton-/Launcher-
   Fenster werden nicht unterdrückt.
 
@@ -228,7 +239,7 @@ CPU-Ticks über 5 Sekunden: 0
 
 Diese Punkte sind **nicht** als bestanden zu werten:
 
-1. **Bazzite-Installation und -Start**: Build/Test erfolgte auf Manjaro, nicht in einer Distrobox auf Bazzite.
+1. **Bazzite-Installation und -Start**: Build/Test erfolgte auf Manjaro und auf Bazzite.
 2. **Wayland-Fullscreen auf KDE Plasma**: Der Code setzt `with_fullscreen(true)` und rahmenlose Dekorationen; die App startete in einer Wayland-Session, aber Fullscreen-Verhalten, Fokus und Rückkehr wurden nicht auf der Zielhardware verifiziert.
 3. **Reale Controller-Hardware**: Ein 8BitDo Ultimate wurde unter Manjaro erkannt; USB-/Bluetooth-/XInput-Modus, D-Pad/Stick, LB/RB, Hotplug, Reconnect und mehrere Controller auf Bazzite bleiben offen.
 4. **Kinderprofil-/Zeitbudget-Hardwaretest**: TimeExpired-Screen und englische UI wurden per Xwayland-Screenshot geprüft. Echte Admin-PIN-Freigabe, Alarmton, Tageswechsel über Mitternacht, Minimize-/Close-Sperren und 4K/DPI sind auf Bazzite offen.

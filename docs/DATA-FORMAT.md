@@ -213,6 +213,15 @@ X-CouchDeck-Desktop=GNOME;
 - `$XDG_RUNTIME_DIR/couchdeck-activate.sock` (Fallback `$XDG_STATE_HOME/couchdeck/activate.sock`) ist der lokale Aktivierungs-Socket für `couchdeck --activate`. Modus `0600`; der Server prüft zusätzlich die Peer-UID. Das Protokoll überträgt optional einen hex-kodierten `XDG_ACTIVATION_TOKEN`; Token werden weder geloggt noch dauerhaft gespeichert. Der Socket enthält keine Spiel- oder Profildaten.
 - Der KDE/Wayland-Fallback schreibt kurzlebige KWin-Skripte nach `$XDG_RUNTIME_DIR` (Fallback State-Verzeichnis), lädt sie einmalig und entfernt sie anschließend. Es gibt keine permanente systemweite Konfiguration.
 
+## Optionaler Home-Launcher
+
+`couchdeck --install-home-launcher` schreibt ausschließlich
+`$XDG_DATA_HOME/applications/couchdeck-home.desktop` mit
+`Exec="<absoluter Pfad>" --home`. Der Eintrag ist mit
+`X-CouchDeck-Managed=true` markiert und wird vom Uninstaller entfernt. Die
+globale Tastenkombination/Steam-Input-Zuordnung wird nicht automatisch
+registriert.
+
 ## Cache und Logs
 
 - `$XDG_CACHE_HOME/couchdeck/thumbnails/`: abgeleitete PNG-Thumbnails, Schlüssel enthält Quellpfad, Änderungszeit, Größe und Zielformat. Kann jederzeit gelöscht werden.

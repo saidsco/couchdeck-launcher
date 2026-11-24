@@ -96,17 +96,30 @@ Maus-Hover über der Taskleiste sichtbar. Ursache: Die minimierte eframe-UI
 verarbeitete keine Frames, sodass der IPC-Auftrag liegen blieb. 0.4.7 startet
 den KWin-Fallback deshalb direkt aus dem IPC-Hintergrundthread.
 
-## 0.4.7 IPC-Thread-Fix – Bazzite Retest (offen)
+## 0.4.7 IPC-Thread-Fix – Bazzite Retest (bestanden)
 
 0.4.6 konnte bei minimierter UI hängen bleiben, weil eframe keine Frames mehr
 lieferte. 0.4.7 startet den KWin-Fallback direkt aus dem IPC-Hintergrundthread
 und stellt Fullscreen erst nach stabilisiertem Fokus wieder her.
 
-- [ ] Taskleisten-Minimierung aus Fullscreen → `--activate` → sofort sichtbar, ohne Maus-Hover
-- [ ] KWin meldet danach `minimized=false`, `active=true`, `fullScreen=true`
-- [ ] Taskleisten-Minimierung aus Windowed → `--activate` → bleibt Windowed, sofort sichtbar
-- [ ] Keine zweite Instanz, laufendes Spiel/Launcher bleibt unangetastet
-- [ ] Log enthält `KDE/Wayland: KWin-Fallback aus dem IPC-Thread wird geprüft.`
+- [X] Taskleisten-Minimierung aus Fullscreen → `--activate` → sofort sichtbar, ohne Maus-Hover
+- [X] KWin meldet danach `minimized=false`, `active=true`, `fullScreen=true`
+- [X] Taskleisten-Minimierung aus Windowed → `--activate` → bleibt Windowed, sofort sichtbar
+- [X] Keine zweite Instanz, laufendes Spiel/Launcher bleibt unangetastet
+- [X] Log enthält `KDE/Wayland: KWin-Fallback aus dem IPC-Thread wird geprüft.`
+
+## 0.5.0 Controller Home & Return – Bazzite Retest (offen)
+
+- [ ] `couchdeck --home` bei laufender Instanz → Rückkehr aus minimiertem/fullscreen Zustand
+- [ ] `couchdeck --home` ohne laufende Instanz → CouchDeck startet normal
+- [ ] Keine zweite Instanz, laufendes Steam-/Flatpak-Spiel bleibt aktiv
+- [ ] `couchdeck --install-home-launcher` → Menüeintrag „CouchDeck Home“ legt an; `--remove-home-launcher` entfernt ihn
+- [ ] Home-Menüeintrag enthält einen absoluten AppImage-/Binary-Pfad (kein temporäres Extraktionsverzeichnis)
+- [ ] Steam Input Controller-Kombination → Desktop-Shortcut → `couchdeck --home`
+- [ ] Kinderprofil/PIN/Zeitbudget werden durch `--home` nicht umgangen
+- [ ] Log prüfen: `CLI --home`, Aktivierung/Start und Fokus
+
+Die vollständige Steam-Input-Anleitung steht in [`STEAM-INPUT.md`](STEAM-INPUT.md).
 
 ## A. AppImage
 

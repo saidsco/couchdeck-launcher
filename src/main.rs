@@ -1,8 +1,9 @@
+use std::path::PathBuf;
 use std::process::ExitCode;
 
 use couchdeck::app::{AppOptions, CouchDeckApp};
 use couchdeck::paths::XdgPaths;
-use couchdeck::{activation, instance, logging, session, storage};
+use couchdeck::{activation, home, instance, logging, session, storage};
 
 const USAGE: &str = "\
 CouchDeck – familienfreundlicher, controller-first Spiele-Launcher
@@ -10,15 +11,19 @@ CouchDeck – familienfreundlicher, controller-first Spiele-Launcher
 VERWENDUNG:
     couchdeck [OPTIONEN]
     couchdeck --activate
+    couchdeck --home
 
 OPTIONEN:
-    --windowed         Fenster statt Vollbild (Entwicklung)
-    --no-controller    Gamepad-Thread deaktivieren (Diagnose)
-    --autostart        Wird vom XDG-Autostart-Eintrag verwendet
-    --activate         Laufende CouchDeck-Instanz um Fensteraktivierung bitten
-    --diagnose-window  Fokus-/Minimierungswechsel ausführlicher loggen
-    --version          Version anzeigen
-    -h, --help         Diese Hilfe anzeigen
+    --windowed              Fenster statt Vollbild (Entwicklung)
+    --no-controller         Gamepad-Thread deaktivieren (Diagnose)
+    --autostart             Wird vom XDG-Autostart-Eintrag verwendet
+    --activate              Laufende CouchDeck-Instanz um Fensteraktivierung bitten
+    --home                  CouchDeck aktivieren oder starten, falls nicht laufend
+    --install-home-launcher Optionalen „CouchDeck Home“-Menüeintrag anlegen
+    --remove-home-launcher  Optionalen Home-Menüeintrag entfernen
+    --diagnose-window       Fokus-/Minimierungswechsel ausführlicher loggen
+    --version               Version anzeigen
+    -h, --help              Diese Hilfe anzeigen
 
 Beim Start wird die Bibliothek des zuletzt aktiven Profils geöffnet.
 Spiele werden ausschließlich über `gio launch <absolute-datei.desktop>` gestartet.
@@ -40,6 +45,9 @@ fn run() -> Result<(), String> {
     let mut no_controller = false;
     let mut autostart_launch = false;
     let mut activate = false;
+    let mut home_mode = false;
+    let mut install_home_launcher = false;
+    let mut remove_home_launcher = false;
     let mut diagnose_window = false;
     for arg in std::env::args().skip(1) {
         match arg.as_str() {
@@ -47,6 +55,9 @@ fn run() -> Result<(), String> {
             "--no-controller" => no_controller = true,
             "--autostart" => autostart_launch = true,
             "--activate" => activate = true,
+            "--home" => home_mode = true,
+            "--install-home-launcher" => install_home_launcher = true,
+            "--remove-home-launcher" => remove_home_launcher = true,
             "--diagnose-window" => diagnose_window = true,
             "--version" | "-V" => {
                 println!("couchdeck {}", env!("CARGO_PKG_VERSION"));
@@ -58,6 +69,16 @@ fn run() -> Result<(), String> {
             }
             other => return Err(format!("Unbekannte Option '{other}'.\n\n{USAGE}")),
         }
+    }
+
+    let launcher_actions = install_home_launcher as u8 + remove_home_launcher as u8;
+    if (activate && home_mode)
+        || (launcher_actions > 0 && (activate || home_mode))
+        || launcher_actions > 1
+    {
+        return Err(format!(
+            "--activate, --home, --install-home-launcher und --remove-home-launcher können nicht kombiniert werden.\n\n{USAGE}"
+        ));
     }
 
     let paths = XdgPaths::discover().map_err(|err| err.to_string())?;
@@ -78,6 +99,49 @@ fn run() -> Result<(), String> {
             diagnose_window
         ),
     );
+    if install_home_launcher {
+        let executable = home_executable()?;
+        let launcher = home::install_launcher(&paths, &executable)?;
+        logging::log_info(
+            "home",
+            format!(
+                "Home-Launcher angelegt: {} (Exec={})",
+                launcher.display(),
+                executable.display()
+            ),
+        );
+        println!("Home-Launcher angelegt: {}", launcher.display());
+        return Ok(());
+    }
+    if remove_home_launcher {
+        let removed = home::remove_launcher(&paths)?;
+        if removed {
+            logging::log_info("home", "Home-Launcher entfernt.");
+            println!("Home-Launcher entfernt.");
+        } else {
+            logging::log_info("home", "Kein Home-Launcher vorhanden.");
+            println!("Kein Home-Launcher vorhanden.");
+        }
+        return Ok(());
+    }
+    if home_mode {
+        let result = activation::send_activation(&paths);
+        logging::log_info(
+            "activation",
+            format!("CLI --home: {:?} - {}", result, result.user_message()),
+        );
+        if result.is_success() {
+            println!("{}", result.user_message());
+            return Ok(());
+        }
+        if !result.is_not_running() {
+            return Err(result.user_message());
+        }
+        logging::log_info(
+            "activation",
+            "CLI --home: keine laufende Instanz; CouchDeck wird normal gestartet.",
+        );
+    }
     if activate {
         let result = activation::send_activation(&paths);
         logging::log_info(
@@ -150,4 +214,14 @@ fn run() -> Result<(), String> {
         }),
     );
     result.map_err(|err| format!("Fenster/Start fehlgeschlagen: {err}"))
+}
+
+fn home_executable() -> Result<PathBuf, String> {
+    // AppImage exposes its persistent outer path; current_exe() would point to
+    // the temporary extraction directory. Prefer APPIMAGE for desktop entries.
+    if let Some(appimage) = std::env::var_os("APPIMAGE").filter(|value| !value.is_empty()) {
+        return Ok(PathBuf::from(appimage));
+    }
+    let executable = std::env::current_exe().map_err(|err| format!("Eigener Binarypfad: {err}"))?;
+    Ok(executable.canonicalize().unwrap_or(executable))
 }

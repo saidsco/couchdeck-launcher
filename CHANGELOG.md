@@ -1,5 +1,25 @@
 # Changelog
 
+## 0.5.0 – 2026-11-24
+
+### Controller Home & Return
+
+- Neuer Befehl `couchdeck --home`: aktiviert eine laufende CouchDeck-Instanz oder startet CouchDeck, wenn keine läuft.
+- `--home` startet niemals eine zweite UI, beendet keine Spiele/Launcher und umgeht keine PIN-/Kinder-/Zeitbudget-Prüfung.
+- `--activate` bleibt der reine Aktivierungsbefehl und meldet bei fehlender Instanz einen Fehler.
+- Optionaler, ausschließlich benutzerseitig ausgelöster Menüeintrag „CouchDeck Home“ über `--install-home-launcher`; Entfernen mit `--remove-home-launcher`.
+- AppImage-Pfad wird über `APPIMAGE` erkannt, damit der Launcher nicht auf ein temporäres Extraktionsverzeichnis zeigt.
+- Keine automatische Registrierung globaler Tastenkombinationen, keine systemweiten Änderungen.
+- Steam-Input-Anleitung für Controller-Kombination → Desktop-Shortcut → `couchdeck --home`; kein eigener Input-Treiber, keine globale Controllerüberwachung.
+
+### Tests / Doku
+
+- Unit-Tests für Home-Entscheidung, Desktop-Entry-Quoting, atomisches Installieren/Entfernen des Launchers.
+- 85 Unit-Tests + 2 GIO-Integrationstests (87 gesamt).
+- README/README-de, Aktivierungsdokumentation, Steam-Input-Dokumentation, Test-/Abnahmematrix aktualisiert.
+- Kein Git-Tag/GitHub-Release/Push ohne Freigabe.
+
+
 ## 0.4.7 – 2026-11-08
 
 ### Bugfix: Taskleisten-/Fullscreen-Minimierung

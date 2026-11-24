@@ -1,4 +1,4 @@
-# Desktop-Testmatrix (Stand 0.4.7)
+# Desktop-Testmatrix (Stand 0.5.0)
 
 CouchDeck ist desktopunabhängig konzipiert. Die folgende Matrix trennt
 **automatisierte/Unit-geprüfte Logik** von tatsächlich durchgeführten
@@ -13,7 +13,7 @@ Sitzungstests. Nicht ausgeführte Kombinationen sind ausdrücklich offen.
 | SteamOS Desktop Mode | nicht ausgeführt | nicht ausgeführt | nicht ausgeführt | Session-Erkennung unterscheidet Gamescope; Desktop-Mode-Erkennung offen | nicht ausgeführt | IPC unit-getestet; Fokus offen | nicht ausgeführt | nicht ausgeführt | **offen** |
 | Steam Gaming Mode / Gamescope | bewusst nicht Ziel | – | – | ausgeschlossen | – | – | – | – | **nicht unterstützt** |
 
-## Fensteraktivierung (0.4.7)
+## Fensteraktivierung / Home (0.5.0)
 
 `couchdeck --activate` wurde unter X11/Xwayland und KDE 6.7.5/Wayland
 praktisch geprüft:
@@ -30,10 +30,13 @@ praktisch geprüft:
   Fullscreen ohne zusätzlichen Toggle
 - KDE/Wayland, ungültiger Token → KWin-Fallback nach 800 ms
 - KDE/Wayland, interne Fullscreen-Minimierung + IPC-Thread-Fallback → KWin `minimized=false`, `active=true`, `fullScreen=true`
+- Bazzite/KDE/Wayland: 0.4.7-Rückkehr vom Betreiber bestätigt
+- `--home` mit/ohne laufende Instanz: Logik/Unit-Tests; Bazzite-0.5.0-Test offen
+- Steam-Input-Kombination → Desktop-Shortcut → `--home`: Anleitung vorhanden, Hardwaretest offen
 
 Unter GNOME/XFCE/SteamOS entscheidet der Compositor; die IPC-Annahme ist keine
-Fokusbestätigung. Bazzite-Zielhardware, echter KDE-Shortcut und die weiteren
-Desktops bleiben offen.
+Fokusbestätigung. Bazzite/KDE/Wayland ist für die 0.4.7-Rückkehr bestätigt;
+GNOME/XFCE/SteamOS, echter KDE-Shortcut und Steam-Input bleiben offen.
 
 ## Autostart-Tests
 

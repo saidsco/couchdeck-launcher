@@ -8,6 +8,7 @@ pub mod app;
 pub mod artwork;
 pub mod controller;
 pub mod desktop;
+pub mod home;
 pub mod i18n;
 pub mod instance;
 pub mod kwin_activation;

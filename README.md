@@ -6,7 +6,7 @@ It opens directly into a personal game library – no store, no news, no cloud, 
 
 Primary desktop targets are **KDE Plasma, GNOME and XFCE** on Wayland or X11. Bazzite and SteamOS Desktop Mode are supported target platforms, but not technical requirements. Steam Gaming Mode/Gamescope is not a guaranteed target yet.
 
-**Current version:** 0.4.7 · **Language:** English · [Deutsch](README-de.md)
+**Current version:** 0.5.0 · **Language:** English · [Deutsch](README-de.md)
 
 The application UI is available in **German and English** via Fluent, with automatic locale detection and English as fallback. Some detailed documents under `docs/` are still in German.
 
@@ -16,6 +16,7 @@ Games are launched exclusively through existing `.desktop` files and `gio launch
 
 ## Features
 
+- **Controller Home & Return**: `couchdeck --home` activates a running instance or starts CouchDeck if none is running. It never starts a second UI, kills a game or bypasses PIN/child controls. On Wayland it forwards `XDG_ACTIVATION_TOKEN` when provided; KDE/Wayland additionally has a bounded KWin fallback, including recovery from taskbar/fullscreen minimization. `--activate` remains the explicit activation-only command.
 - **Manual window activation**: `couchdeck --activate` contacts the already-running instance through a per-user Unix socket, without starting a second UI. On Wayland it forwards `XDG_ACTIVATION_TOKEN` when the caller provides one; KDE/Wayland has a bounded KWin-scripting fallback for terminal/no-token invocations. It never steals focus during a game/Steam/launcher start. `--diagnose-window` logs focus, minimize and fullscreen transitions.
 - **Desktop-independent core**: no KDE-only runtime requirement. KDE Plasma, GNOME and XFCE on Wayland/X11 are the supported desktop targets; compositor-specific focus/minimize limitations are documented.
 - **Native release packages**: portable x86_64 tar.gz and executable AppImage via GitHub Releases, with SHA-256 checksums, `ldd`/glibc runtime report, no root and no Rust compiler at install time.
@@ -211,6 +212,8 @@ Development/debug:
 ~/.local/bin/couchdeck --windowed          # window instead of fullscreen
 ~/.local/bin/couchdeck --no-controller     # disable the gamepad thread
 ~/.local/bin/couchdeck --activate          # ask the running instance to return
+~/.local/bin/couchdeck --home              # return, or start if not running
+~/.local/bin/couchdeck --install-home-launcher  # optional Home menu entry
 ~/.local/bin/couchdeck --diagnose-window   # verbose focus/minimize/fullscreen logs
 ~/.local/bin/couchdeck --help
 ```
@@ -236,6 +239,16 @@ use:
 ```bash
 ~/.local/bin/couchdeck --activate
 ```
+
+For a controller/Home workflow use:
+
+```bash
+~/.local/bin/couchdeck --home
+```
+
+`--home` activates a running instance or starts CouchDeck if none is running.
+`--activate` remains the activation-only command and reports an error when no
+instance exists.
 
 The command contacts the running instance over a local Unix socket and exits.
 It does not start a second CouchDeck and does not indicate that the compositor
@@ -263,11 +276,13 @@ KIO/KProcessRunner and avoid the fallback.
   token state and a timeout without claiming success.
 
 Desktop shortcuts are deliberately **manual**: configure a global shortcut in
-KDE Plasma, GNOME or XFCE that runs the absolute path to `couchdeck --activate`.
+KDE Plasma, GNOME or XFCE that runs the absolute path to `couchdeck --home`.
 See [docs/WINDOW-ACTIVATION.md](docs/WINDOW-ACTIVATION.md) for exact steps and
-Wayland limitations. Steam Input can map a controller button to such a shortcut,
-but this is documented preparation only; 0.4.7 does not implement a global
-controller-home feature.
+Wayland limitations. The optional `couchdeck --install-home-launcher` command
+creates a user-level „CouchDeck Home“ menu entry; it does not register a global
+shortcut automatically. The Steam-Input recipe is in
+[`docs/STEAM-INPUT.md`](docs/STEAM-INPUT.md). 0.5 does not implement a global
+controller-input driver or automatic Steam configuration.
 
 Use `couchdeck --diagnose-window` for additional focus/minimize/fullscreen
 logging in `$XDG_STATE_HOME/couchdeck/couchdeck.log`.
@@ -282,7 +297,7 @@ logging in `$XDG_STATE_HOME/couchdeck/couchdeck.log`.
 | Menu | Start | M |
 | Switch profile | LB/RB (opens profile view; switch there) | PageUp/PageDown |
 | Minimize to desktop | Menu → Minimize to desktop | Menu |
-| Activate/return to CouchDeck | – | `couchdeck --activate` / desktop shortcut |
+| Activate/return to CouchDeck | – | `couchdeck --home` / desktop shortcut |
 | Toggle fullscreen | – | F11 |
 | Request more play time (child profile) | Start → Request more play time | Menu |
 | Reboot / shut down system | Menu → System … | Menu |
@@ -386,6 +401,7 @@ desktop.rs     desktop parsing, discovery, icon resolution, Steam/Prism diagnost
 activation.rs  local --activate socket, IPC server and activation protocol
 wayland_activation.rs  xdg-activation-v1 token application to existing surface
 kwin_activation.rs    bounded KDE/KWin activation fallback
+home.rs        optional user-level CouchDeck Home launcher
 instance.rs    per-user flock and stale-lock-safe single instance
 session.rs     desktop detection and XDG autostart
 launch.rs      GIO launch in a background thread, error diagnostics
@@ -402,13 +418,14 @@ Data flow: `UI → AppState → Library/Profiles → GIO (gio launch)`.
 
 ## Known limitations / still to be tested on target hardware
 
-- **Desktop target testing**: Development and automated tests ran on Manjaro/KDE/Wayland; the packages are built and smoke-tested in a clean Fedora 42 container. KDE/Wayland is only partially tested. GNOME/Wayland, XFCE/X11, SteamOS Desktop Mode, full Wayland/X11 fullscreen behavior, NVIDIA rendering and real controller hotplug remain open; see `docs/DESKTOP-TEST-MATRIX.md`. The clean Bazzite release checklist is in `docs/BAZZITE-RELEASE-TEST.md`.
+- **Desktop target testing**: Development and automated tests ran on Manjaro/KDE/Wayland; Bazzite/KDE/Wayland was confirmed by the maintainer for the 0.4.7 return path, and the packages are built and smoke-tested in a clean Fedora 42 container. GNOME/Wayland, XFCE/X11, SteamOS Desktop Mode, full Wayland/X11 fullscreen behavior, NVIDIA rendering and real controller hotplug remain open; see `docs/DESKTOP-TEST-MATRIX.md`. The clean Bazzite release checklist is in `docs/BAZZITE-RELEASE-TEST.md`.
 - **Controller hardware**: an 8BitDo Ultimate was detected and usable on Manjaro/KDE/Wayland (USB/Bluetooth mode details still to be recorded). Xbox/PlayStation controllers, GNOME/XFCE and Bazzite hotplug/reconnect remain to be verified. `--no-controller` and the “no controller found” case were tested.
 - **No game lifecycle tracking**: `gio launch` is only a start command. CouchDeck does not reliably know whether a game is running or when it ends. Steam/Prism may continue running in the background. Time budgets therefore measure **active profile time while CouchDeck is running**, not actual game process time; game detection is a later step.
 - **Time-budget edge cases**: usage is saved every 30 seconds, on warnings, on grants, on profile switches, and on exit. A hard kill/power loss can lose up to the last interval. If the launcher is not running, no time is counted. The child guard covers app-level minimize/quit/power/profile switching and best-effort WM close/minimize paths, but cannot prevent TTY switching, killing the process, or editing files in the same Linux account.
 - **Notifications/alarm best effort**: warnings are shown in the CouchDeck window. Under Wayland there is no guaranteed overlay above fullscreen games; the optional sound uses `canberra-gtk-play`/`paplay`/`pw-play`/`aplay` if available and is silently skipped otherwise.
-- **Focus after game start/exit**: The desktop/compositor is expected to bring the game window to the foreground; behavior differs on Wayland. CouchDeck never terminates games, never auto-steals focus after a launch, and offers explicit “Minimize to desktop” and `--activate` return paths.
-- **Manual activation is best effort**: `--activate` transmits a local IPC request and, when available, an activation token. X11 window managers usually honor focus requests. KDE/Wayland additionally uses a bounded KWin fallback; GNOME/Wayland may ignore token-less activation. No aggressive retries or process manipulation are used. Only KDE has the compositor-specific fallback; actual Bazzite/KDE and GNOME hardware tests remain open.
+- **Focus after game start/exit**: The desktop/compositor is expected to bring the game window to the foreground; behavior differs on Wayland. CouchDeck never terminates games, never auto-steals focus after a launch, and offers explicit “Minimize to desktop” and `--home`/`--activate` return paths.
+- **Manual activation is best effort**: `--home`/`--activate` transmit a local IPC request and, when available, an activation token. X11 window managers usually honor focus requests. KDE/Wayland additionally uses a bounded KWin fallback; GNOME/Wayland may ignore token-less activation. No aggressive retries or process manipulation are used. Only KDE has the compositor-specific fallback; actual Bazzite/KDE and GNOME hardware tests remain open.
+- **Controller Home is manual**: 0.5 does not monitor controller input globally. Steam Input/desktop shortcuts are user-configured; see `docs/STEAM-INPUT.md`.
 - **SVG desktop icons** are not rasterized (no SVG decoder is bundled). PNG/WebP/JPEG icons and custom covers work; otherwise the neutral tile is used.
 - **No cover scraping, no Steam API, no store integration**, no automatic search.
 - **Favorites**: the data field exists, but a favorites UI is not implemented in the MVP.
@@ -418,12 +435,12 @@ Data flow: `UI → AppState → Library/Profiles → GIO (gio launch)`.
 - **Fullscreen minimize**: the “leave fullscreen → minimize” flow is implemented. KDE/Wayland was tested on the development host; GNOME, XFCE and Bazzite remain open.
 - **System power**: shutdown/reboot uses `systemctl` and requires a suitable Polkit permission. The actual action was not executed in the development environment to avoid shutting down the system; command construction, confirmation dialog, and error handling were tested.
 - **Multiple instances**: a per-user `flock` lock prevents a second independent UI. The lock is released automatically on process exit/crash; a stale lock file does not block startup.
-- **No Flatpak for CouchDeck itself** in v0.4.0, as specified. Release packaging consists of a portable tar.gz and a native AppImage, not RPM/Flatpak.
+- **No Flatpak for CouchDeck itself** in v0.5.0, as specified. Release packaging consists of a portable tar.gz and a native AppImage, not RPM/Flatpak.
 - **Supported desktop sessions** are KDE Plasma, GNOME and XFCE under Wayland or X11; Steam Gaming Mode/Gamescope is not a guaranteed target. Gamescope/Steam Input conflicts have not been tested.
 
 ## Tests and acceptance
 
-- Unit/integration tests: **83 tests passing** (`cargo test`: 81 unit tests including timekeeping, i18n, activation protocol, parent-PIN/switch/start guards, plus 2 GIO integration tests).
+- Unit/integration tests: **87 tests passing** (`cargo test`: 85 unit tests including timekeeping, i18n, activation protocol/home launcher, parent-PIN/switch/start guards, plus 2 GIO integration tests).
 - `cargo clippy --all-targets -- -D warnings`: clean.
 - `cargo fmt --check`: clean.
 - Release build: `cargo build --release --locked`.
@@ -432,6 +449,7 @@ Data flow: `UI → AppState → Library/Profiles → GIO (gio launch)`.
 
 ## Changelog
 
+- **v0.5.0**: added `--home` (activate or start), optional user-level CouchDeck Home launcher, Steam-Input documentation and regression tests; no global controller-input monitoring.
 - **v0.4.7**: fixed taskbar-minimized and fullscreen-minimized recovery by starting the bounded KWin fallback from the IPC background thread when the eframe UI is not receiving frames, and by deferring fullscreen restore until focus/mapping has stabilized.
 - **v0.4.6**: fixed Wayland/KDE activation by forwarding xdg-activation tokens to the existing surface and adding a bounded KDE/KWin fallback for terminal/no-token invocations; improved focus diagnostics.
 - **v0.4.5**: added local `--activate` IPC, window/focus diagnostics, fullscreen-aware return, documented desktop shortcuts; launch focus is never stolen automatically.
