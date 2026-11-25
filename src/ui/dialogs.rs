@@ -9,7 +9,7 @@ use std::path::PathBuf;
 
 use crate::app::{
     ConfirmAction, ConfirmDialog, CouchDeckApp, FilePickerState, ImportState, MenuAction,
-    MenuState, MessageDialog, MessageSeverity, Overlay, PinPad, PinPurpose,
+    MenuState, MessageDialog, MessageSeverity, Overlay, PermissionPromptDialog, PinPad, PinPurpose,
 };
 use crate::desktop::{self, Severity};
 use crate::ui::{
@@ -28,6 +28,8 @@ enum OverlayAction {
     PickerUseDirectory,
     Pin(usize),
     Confirm(ConfirmAction),
+    PermissionSetup,
+    PermissionSkip,
     Close,
 }
 
@@ -49,6 +51,7 @@ pub fn draw_overlay(app: &mut CouchDeckApp, ctx: &egui::Context) {
         Overlay::Pin(pad) => draw_pin(ctx, app, pad),
         Overlay::Confirm(dialog) => draw_confirm(ctx, app, dialog),
         Overlay::Message(dialog) => draw_message(ctx, app, dialog),
+        Overlay::PermissionPrompt(dialog) => draw_permission_prompt(ctx, app, dialog),
         Overlay::TimeExpired(state) => match crate::ui::time::draw_time_expired(ctx, app, state) {
             Some(overlay) => Outcome::Keep(overlay),
             None => Outcome::Consume(None),
@@ -84,6 +87,8 @@ fn apply_action(app: &mut CouchDeckApp, ctx: &egui::Context, action: OverlayActi
         }
         OverlayAction::Pin(index) => app.pin_press(ctx, index),
         OverlayAction::Confirm(action) => app.apply_confirm(action),
+        OverlayAction::PermissionSetup => app.start_input_permission_setup(ctx),
+        OverlayAction::PermissionSkip => app.skip_input_permission_prompt(),
         OverlayAction::Close => {}
     }
 }
@@ -772,6 +777,75 @@ fn draw_confirm(ctx: &egui::Context, app: &mut CouchDeckApp, dialog: ConfirmDial
     match action {
         Some(action) => Outcome::Consume(Some(action)),
         None => Outcome::Keep(Overlay::Confirm(dialog)),
+    }
+}
+
+fn draw_permission_prompt(
+    ctx: &egui::Context,
+    app: &CouchDeckApp,
+    dialog: PermissionPromptDialog,
+) -> Outcome {
+    let scale = ui::ui_scale(ctx);
+    let mut action = None;
+    show_modal(ctx, "permission-modal", scale, |ui| {
+        ui.set_min_width(680.0 * scale);
+        ui.label(
+            RichText::new(app.t("permission-title"))
+                .size(12.5 * scale)
+                .strong()
+                .color(WARNING),
+        );
+        ui.label(
+            RichText::new(app.t("permission-heading"))
+                .size(24.0 * scale)
+                .strong()
+                .color(TEXT),
+        );
+        ui.add_space(6.0 * scale);
+        ui.add(
+            egui::Label::new(
+                RichText::new(app.t("permission-message"))
+                    .size(14.0 * scale)
+                    .color(TEXT),
+            )
+            .wrap(),
+        );
+        if dialog.waiting {
+            ui.add_space(12.0 * scale);
+            ui.horizontal(|ui| {
+                ui.spinner();
+                ui.label(RichText::new(app.t("permission-waiting")).color(MUTED));
+            });
+        } else if let Some(error) = &dialog.error {
+            ui.add_space(8.0 * scale);
+            ui.label(RichText::new(error).size(12.5 * scale).color(DANGER));
+        }
+        ui.add_space(12.0 * scale);
+        if !dialog.waiting {
+            ui.horizontal(|ui| {
+                let mut setup = primary_button(app.t("permission-setup"))
+                    .min_size(Vec2::new(250.0 * scale, 46.0 * scale));
+                if dialog.focus == 0 {
+                    setup = setup.fill(ACCENT).stroke(Stroke::NONE);
+                }
+                if ui.add(setup).clicked() {
+                    action = Some(OverlayAction::PermissionSetup);
+                }
+                let mut later = secondary_button(app.t("permission-later"))
+                    .min_size(Vec2::new(180.0 * scale, 46.0 * scale));
+                if dialog.focus == 1 {
+                    later = later.fill(Color32::from_rgb(50, 60, 76));
+                }
+                if ui.add(later).clicked() {
+                    action = Some(OverlayAction::PermissionSkip);
+                }
+            });
+        }
+    });
+    if action.is_some() {
+        Outcome::Consume(action)
+    } else {
+        Outcome::Keep(Overlay::PermissionPrompt(dialog))
     }
 }
 

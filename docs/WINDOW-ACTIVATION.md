@@ -1,4 +1,4 @@
-# Fensteraktivierung, Controller-Home und Rückkehr (0.5.1)
+# Fensteraktivierung, Controller-Home und Rückkehr (0.5.2)
 
 CouchDeck fordert den Fokus **nicht** automatisch zurück, wenn ein Spiel, Steam,
 ein vorgeschalteter Launcher (z. B. Larian), Heroic, Lutris, Wine, Prism oder ein
@@ -182,12 +182,15 @@ Wichtig:
 Der Zugriff erfolgt auf `/dev/input/event*` (typisch `root:input`, Modus 0660).
 CouchDeck kann die Rechte nicht umgehen.
 
-- Das Installationsskript fragt nach der Installation, ob der Benutzer zur
-  Gruppe `input` hinzugefügt werden soll.
-- AppImage-Nutzer können ausführen:
+- Beim Start prüft CouchDeck den Zugriff und bietet einen Dialog an:
+  „Jetzt einrichten“ startet die Admin-Einrichtung über Polkit; „Später“
+  unterdrückt den Hinweis für weitere Starts.
+- Das Installationsskript fragt ebenfalls nach der Installation, ob der Benutzer
+  zur Gruppe `input` hinzugefügt werden soll.
+- Der CLI-Fallback bleibt verfügbar:
 
   ```bash
-  ./CouchDeck-0.5.1-x86_64.AppImage --setup-input-permissions
+  ./CouchDeck-0.5.2-x86_64.AppImage --setup-input-permissions
   ```
 
 - Die Einrichtung nutzt `pkexec` (Polkit) oder, bei einem Terminal, `sudo`.
@@ -232,7 +235,7 @@ Befehl: /home/USER/.local/bin/couchdeck --home
 Für AppImage-Nutzer zeigt der Pfad auf die AppImage-Datei:
 
 ```text
-/home/USER/Applications/CouchDeck-0.5.1-x86_64.AppImage --home
+/home/USER/Applications/CouchDeck-0.5.2-x86_64.AppImage --home
 ```
 
 ## Steam Input

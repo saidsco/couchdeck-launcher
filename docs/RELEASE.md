@@ -138,9 +138,11 @@ Aktivierungs-Socket und den nativen Controller-Home-Chord. Standard ist
 Start + Select für 2 Sekunden; Alternativen sind in den Einstellungen wählbar.
 `--home` aktiviert eine laufende Instanz oder startet die UI; optional kann mit
 `--install-home-launcher` ein benutzerspezifischer Menüeintrag angelegt werden.
-Für den Chord wird Lesezugriff auf `/dev/input` benötigt; `--setup-input-permissions`
-oder der Installer fragen nach einer input-Gruppen-Mitgliedschaft. Globale
-Shortcuts/Steam-Input werden nicht automatisch registriert. Es sind keine zusätzlichen Systemdienste, Root-Rechte oder
+Für den Chord wird Lesezugriff auf `/dev/input` benötigt. Beim Start prüft
+CouchDeck die Berechtigung und bietet eine ausdrückliche Polkit-Einrichtung an;
+`--setup-input-permissions` bleibt als Fallback verfügbar, der Installer fragt
+zusätzlich nach der input-Gruppe. Globale Shortcuts/Steam-Input werden nicht
+automatisch registriert. Es sind keine zusätzlichen Systemdienste, Root-Rechte oder
 Desktop-spezifischen Installationen nötig. Wayland-Compositor-Fokus bleibt
 Best-Effort. Desktop-Shortcuts werden ausschließlich vom Benutzer eingerichtet;
 Details: [`WINDOW-ACTIVATION.md`](WINDOW-ACTIVATION.md).

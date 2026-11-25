@@ -6,7 +6,7 @@ It opens directly into a personal game library – no store, no news, no cloud, 
 
 Primary desktop targets are **KDE Plasma, GNOME and XFCE** on Wayland or X11. Bazzite and SteamOS Desktop Mode are supported target platforms, but not technical requirements. Steam Gaming Mode/Gamescope is not a guaranteed target yet.
 
-**Current version:** 0.5.1 · **Language:** English · [Deutsch](README-de.md)
+**Current version:** 0.5.2 · **Language:** English · [Deutsch](README-de.md)
 
 The application UI is available in **German and English** via Fluent, with automatic locale detection and English as fallback. Some detailed documents under `docs/` are still in German.
 
@@ -254,10 +254,10 @@ instance exists.
 
 When CouchDeck is running, the default controller chord is **Start + Select held for two seconds**. It is shown in the library footer and in Admin → Settings. The chord works in the background; no Steam client or Steam Input configuration is required. Alternatives are Start + left stick click and Start + right stick click.
 
-For the chord to work, the Linux user must be able to read gamepad event devices (`/dev/input/event*`). If the setup is missing, CouchDeck shows the status in Admin → Settings. Installer users are asked once whether to join the `input` group; AppImage users can run:
+For the chord to work, the Linux user must be able to read gamepad event devices (`/dev/input/event*`). If the setup is missing, CouchDeck checks at startup and offers a dialog: „Jetzt einrichten“ starts the same explicit admin setup via Polkit; „Später“ suppresses the prompt for future starts. Installer users are also asked once whether to join the `input` group. The CLI remains available as a fallback:
 
 ```bash
-./CouchDeck-0.5.1-x86_64.AppImage --setup-input-permissions
+./CouchDeck-0.5.2-x86_64.AppImage --setup-input-permissions
 ```
 
 This is an explicit admin action and requires a re-login to activate the new group membership. The `input` group can read other input devices too; a joystick-only udev `uaccess` rule is the more restrictive alternative. No CouchDeck daemon or exclusive input grab is installed.
@@ -463,6 +463,7 @@ Data flow: `UI → AppState → Library/Profiles → GIO (gio launch)`.
 
 ## Changelog
 
+- **v0.5.2**: automatic permission check/prompt on startup for AppImage and tar.gz, with explicit Polkit admin confirmation, “Later” suppression and status in Settings; the native controller-home chord remains default-enabled.
 - **v0.5.1**: default global controller-home chord (Start + Select, 2 s), alternative chords, UI information, permission setup for AppImage and installer; read-only evdev, no Steam dependency, no exclusive input grab.
 - **v0.5.0**: added `--home` (activate or start), optional user-level CouchDeck Home launcher, Steam-Input documentation and regression tests; no global controller-input monitoring.
 - **v0.4.7**: fixed taskbar-minimized and fullscreen-minimized recovery by starting the bounded KWin fallback from the IPC background thread when the eframe UI is not receiving frames, and by deferring fullscreen restore until focus/mapping has stabilized.

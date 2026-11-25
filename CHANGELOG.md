@@ -1,5 +1,25 @@
 # Changelog
 
+## 0.5.2 – 2026-11-25
+
+### Automatische Controller-Home-Berechtigung
+
+- Beim Start erkennt CouchDeck, ob Lesezugriff auf Gamepad-Geräte vorhanden ist.
+- Fehlt der Zugriff, erscheint ein Dialog „Jetzt einrichten / Später“.
+- „Jetzt einrichten“ startet `pkexec usermod -aG input <benutzer>` mit ausdrücklicher Polkit-Bestätigung; keine stille Root-Aktion.
+- „Später“ wird gespeichert und verhindert wiederholte Start-Prompts.
+- Status und Einrichtungshinweis bleiben unter Admin → Einstellungen sichtbar.
+- Gilt für AppImage und tar.gz; der Installer-Prompt bleibt zusätzlich bestehen.
+- Nach erfolgreicher Einrichtung ist eine Neuanmeldung erforderlich.
+- Der native Controller-Home-Chord (Start+Select 2 s) bleibt standardmäßig aktiv.
+
+### Tests / Doku
+
+- 88 Unit-Tests + 2 GIO-Integrationstests (90 gesamt).
+- Doku und Bazzite-Testmatrix aktualisiert.
+- Kein Git-Tag/GitHub-Release/Push ohne Freigabe.
+
+
 ## 0.5.1 – 2026-11-25
 
 ### Controller Home

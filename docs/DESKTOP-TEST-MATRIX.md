@@ -1,4 +1,4 @@
-# Desktop-Testmatrix (Stand 0.5.1)
+# Desktop-Testmatrix (Stand 0.5.2)
 
 CouchDeck ist desktopunabhängig konzipiert. Die folgende Matrix trennt
 **automatisierte/Unit-geprüfte Logik** von tatsächlich durchgeführten
@@ -13,7 +13,7 @@ Sitzungstests. Nicht ausgeführte Kombinationen sind ausdrücklich offen.
 | SteamOS Desktop Mode | nicht ausgeführt | nicht ausgeführt | nicht ausgeführt | Session-Erkennung unterscheidet Gamescope; Desktop-Mode-Erkennung offen | nicht ausgeführt | IPC unit-getestet; Fokus offen | nicht ausgeführt | nicht ausgeführt | **offen** |
 | Steam Gaming Mode / Gamescope | bewusst nicht Ziel | – | – | ausgeschlossen | – | – | – | – | **nicht unterstützt** |
 
-## Fensteraktivierung / Home (0.5.1)
+## Fensteraktivierung / Home (0.5.2)
 
 `couchdeck --activate` wurde unter X11/Xwayland und KDE 6.7.5/Wayland
 praktisch geprüft:
@@ -33,7 +33,7 @@ praktisch geprüft:
 - Bazzite/KDE/Wayland: 0.4.7-Rückkehr vom Betreiber bestätigt
 - `--home` mit/ohne laufende Instanz: Logik/Unit-Tests; Bazzite-0.5.1-Test offen
 - Nativer Controller-Chord Start+Select 2 s: Unit-Tests; realer Controller-/Steam-Parallelbetrieb offen
-- input-Gruppen-Berechtigung: Status/CLI geprüft; Installer-/Bazzite-Prompt offen
+- input-Gruppen-Berechtigung: Status/CLI geprüft; automatischer Start-Dialog implementiert; Bazzite-Prompt offen
 - Steam-Input-Kombination → Desktop-Shortcut → `--home`: Anleitung vorhanden, Hardwaretest offen
 
 Unter GNOME/XFCE/SteamOS entscheidet der Compositor; die IPC-Annahme ist keine

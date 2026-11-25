@@ -113,6 +113,7 @@ language = "auto"
 alarm_sound = true
 controller_home_enabled = true
 controller_home_chord = "start_select"
+controller_home_permission_prompted = false
 additional_desktop_dirs = [
   "/home/USER/Meine Spiele-Launcher",
 ]
@@ -129,6 +130,7 @@ additional_desktop_dirs = [
 | `alarm_sound` | Best-Effort-Warnton bei 5-/1-Minuten-Warnungen und bei erschöpftem Budget. |
 | `controller_home_enabled` | Globaler Controller-Home-Chord aktiv; Standard `true`. |
 | `controller_home_chord` | `start_select` (Standard), `start_left_stick` oder `start_right_stick`; 2 Sekunden halten. |
+| `controller_home_permission_prompted` | Interner Marker: Benutzer hat den Berechtigungsdialog mit „Später“ geschlossen. |
 | `additional_desktop_dirs` | Zusätzliche `.desktop`-Suchverzeichnisse; absolute Pfade werden bevorzugt. Leer/fehlend = keine zusätzlichen Quellen. |
 
 Ungültige `settings.toml` führt zu Standardwerten im Speicher und einer Sicherungskopie; die Datei wird erst bei einer expliziten Einstellungsänderung neu geschrieben.

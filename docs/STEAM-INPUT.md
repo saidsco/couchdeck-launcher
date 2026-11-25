@@ -33,7 +33,7 @@ keine Spiele und umgeht keine PIN-/Kinderprüfung.
 Bei einer AppImage-Installation den absoluten AppImage-Pfad verwenden:
 
 ```text
-/home/USER/Applications/CouchDeck-0.5.1-x86_64.AppImage --home
+/home/USER/Applications/CouchDeck-0.5.2-x86_64.AppImage --home
 ```
 
 Optional kann vorher ein Menüeintrag erzeugt werden:

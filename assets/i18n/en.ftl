@@ -647,3 +647,10 @@ admin-autostart-session = Detected desktop session: { $desktop }
 admin-autostart-file-inactive = present, inactive for this session
 
 admin-autostart-remove = Remove autostart file
+
+permission-title = Controller Home
+permission-heading = Grant read access to gamepad devices
+permission-message = The global Home chord needs read access to /dev/input. The user can be added to the “input” group. This requires a one-time admin confirmation and a re-login afterwards. No daemon is installed and the controller is not grabbed exclusively.
+permission-setup = Set up now  (A)
+permission-later = Later  (B)
+permission-waiting = Setting up permission ...

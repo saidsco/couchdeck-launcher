@@ -645,3 +645,10 @@ admin-autostart-session = Erkannte Desktop-Sitzung: { $desktop }
 admin-autostart-file-inactive = vorhanden, für diese Sitzung inaktiv
 
 admin-autostart-remove = Autostart-Datei entfernen
+
+permission-title = Controller-Home
+permission-heading = Lesezugriff auf Gamepad-Geräte einrichten
+permission-message = Für die globale Home-Kombination benötigt CouchDeck Lesezugriff auf /dev/input. Der Benutzer kann dafür zur Gruppe „input“ hinzugefügt werden. Das erfordert eine einmalige Admin-Bestätigung und danach eine Neuanmeldung. Es wird kein Daemon installiert und der Controller nicht exklusiv belegt.
+permission-setup = Jetzt einrichten  (A)
+permission-later = Später  (B)
+permission-waiting = Berechtigung wird eingerichtet ...

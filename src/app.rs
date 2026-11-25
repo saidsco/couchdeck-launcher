@@ -171,6 +171,13 @@ pub struct MessageDialog {
     pub close_label: String,
 }
 
+pub struct PermissionPromptDialog {
+    /// 0 = set up now, 1 = later.
+    pub focus: usize,
+    pub waiting: bool,
+    pub error: Option<String>,
+}
+
 pub struct ImportState {
     pub entries: Vec<DiscoveredEntry>,
     pub selected: usize,
@@ -295,6 +302,7 @@ pub enum Overlay {
     Pin(PinPad),
     Confirm(ConfirmDialog),
     Message(MessageDialog),
+    PermissionPrompt(PermissionPromptDialog),
     TimeExpired(TimeExpiredState),
     ExtraTime(ExtraTimeDialog),
 }
@@ -378,6 +386,7 @@ pub struct CouchDeckApp {
     pub secrets: AdminSecrets,
     pub controller: ControllerHandle,
     pub input_group_status: permissions::InputGroupStatus,
+    pub permission_setup_rx: Option<Receiver<Result<permissions::SetupOutcome, String>>>,
     pub controllers: Vec<String>,
     pub controller_error: Option<String>,
     pub controller_ready: bool,
@@ -529,21 +538,6 @@ impl CouchDeckApp {
         };
 
         let input_group_status = permissions::input_group_status();
-        if settings.controller_home_enabled
-            && !options.no_controller
-            && !input_group_status.is_active()
-        {
-            notices.push(match input_group_status {
-                permissions::InputGroupStatus::ConfiguredNeedsRelogin =>
-                    "Controller-Home: Die Gruppe input ist zugewiesen, aber noch nicht in dieser Sitzung aktiv. Bitte einmal ab- und wieder anmelden.".to_owned(),
-                permissions::InputGroupStatus::GroupMissing =>
-                    "Controller-Home: Die Gruppe input existiert nicht; /dev/input-Zugriff kann nicht eingerichtet werden.".to_owned(),
-                permissions::InputGroupStatus::Unknown =>
-                    "Controller-Home: Der /dev/input-Berechtigungsstatus konnte nicht gelesen werden.".to_owned(),
-                permissions::InputGroupStatus::Missing | permissions::InputGroupStatus::Active =>
-                    "Controller-Home benötigt Lesezugriff auf Gamepad-Geräte (/dev/input).\nEinmalig einrichten: couchdeck --setup-input-permissions\nDanach ist eine Neuanmeldung nötig.".to_owned(),
-            });
-        }
 
         let activation_focus_state = Arc::new(AtomicBool::new(false));
         let controller = controller::spawn(
@@ -570,6 +564,7 @@ impl CouchDeckApp {
             secrets,
             controller,
             input_group_status,
+            permission_setup_rx: None,
             controllers: Vec::new(),
             controller_error: None,
             controller_ready: false,
@@ -653,6 +648,42 @@ impl CouchDeckApp {
             ),
         );
         app.start_discovery();
+        if app.settings.controller_home_enabled
+            && !options.no_controller
+            && !app.input_group_status.is_active()
+            && app.fatal.is_none()
+            && matches!(app.overlay, Overlay::None)
+        {
+            match app.input_group_status {
+                permissions::InputGroupStatus::Missing
+                    if !app.settings.controller_home_permission_prompted =>
+                {
+                    app.overlay = Overlay::PermissionPrompt(PermissionPromptDialog {
+                        focus: 0,
+                        waiting: false,
+                        error: None,
+                    });
+                }
+                permissions::InputGroupStatus::ConfiguredNeedsRelogin => {
+                    app.overlay = Overlay::Message(MessageDialog {
+                        title: app.t("app-startup-notice-title"),
+                        message: "Controller-Home: Die Gruppe input ist zugewiesen, aber noch nicht in dieser Sitzung aktiv. Bitte einmal ab- und wieder anmelden.".to_owned(),
+                        severity: MessageSeverity::Warning,
+                        close_label: app.t("common-continue"),
+                    });
+                }
+                permissions::InputGroupStatus::GroupMissing
+                | permissions::InputGroupStatus::Unknown => {
+                    app.overlay = Overlay::Message(MessageDialog {
+                        title: app.t("app-startup-notice-title"),
+                        message: "Controller-Home: Der /dev/input-Berechtigungsstatus konnte nicht eingerichtet werden. Details stehen in den Einstellungen.".to_owned(),
+                        severity: MessageSeverity::Warning,
+                        close_label: app.t("common-continue"),
+                    });
+                }
+                permissions::InputGroupStatus::Missing | permissions::InputGroupStatus::Active => {}
+            }
+        }
         log_info(
             "activation",
             format!(
@@ -703,6 +734,81 @@ impl CouchDeckApp {
         self.settings.language = preference;
         self.i18n.set_preference(preference);
         self.save_settings();
+    }
+
+    pub fn start_input_permission_setup(&mut self, ctx: &egui::Context) {
+        if self.permission_setup_rx.is_some() {
+            return;
+        }
+        let (tx, rx) = std::sync::mpsc::channel();
+        self.permission_setup_rx = Some(rx);
+        if let Overlay::PermissionPrompt(dialog) = &mut self.overlay {
+            dialog.waiting = true;
+            dialog.error = None;
+        }
+        let repaint = ctx.clone();
+        std::thread::spawn(move || {
+            let result = permissions::setup_input_group();
+            let _ = tx.send(result);
+            repaint.request_repaint();
+        });
+        ctx.request_repaint();
+    }
+
+    pub fn skip_input_permission_prompt(&mut self) {
+        self.settings.controller_home_permission_prompted = true;
+        self.save_settings();
+        self.overlay = Overlay::None;
+    }
+
+    fn poll_permission_setup(&mut self, ctx: &egui::Context) {
+        let Some(rx) = &self.permission_setup_rx else {
+            return;
+        };
+        let result = match rx.try_recv() {
+            Ok(result) => result,
+            Err(std::sync::mpsc::TryRecvError::Empty) => return,
+            Err(std::sync::mpsc::TryRecvError::Disconnected) => {
+                self.permission_setup_rx = None;
+                return;
+            }
+        };
+        self.permission_setup_rx = None;
+        self.input_group_status = permissions::input_group_status();
+        match result {
+            Ok(outcome) => {
+                self.settings.controller_home_permission_prompted = true;
+                self.save_settings();
+                let message = match outcome {
+                    permissions::SetupOutcome::AlreadyActive =>
+                        "Controller-Home: Der /dev/input-Zugriff ist bereits aktiv.".to_owned(),
+                    permissions::SetupOutcome::AddedNeedsRelogin =>
+                        "Controller-Home: Der Benutzer wurde zur Gruppe input hinzugefügt. Bitte einmal ab- und wieder anmelden, damit die Berechtigung aktiv wird.".to_owned(),
+                };
+                log_info("permissions", &message);
+                self.overlay = Overlay::Message(MessageDialog {
+                    title: self.t("app-startup-notice-title"),
+                    message,
+                    severity: MessageSeverity::Info,
+                    close_label: self.t("common-continue"),
+                });
+            }
+            Err(err) => {
+                log_warn("permissions", &err);
+                if let Overlay::PermissionPrompt(dialog) = &mut self.overlay {
+                    dialog.waiting = false;
+                    dialog.error = Some(err);
+                } else {
+                    self.overlay = Overlay::Message(MessageDialog {
+                        title: self.t("app-startup-notice-title"),
+                        message: err,
+                        severity: MessageSeverity::Warning,
+                        close_label: self.t("common-continue"),
+                    });
+                }
+            }
+        }
+        ctx.request_repaint();
     }
 
     pub fn controller_home_chord_label(&self) -> String {
@@ -3429,6 +3535,27 @@ impl CouchDeckApp {
                 NavAction::Menu => self.overlay = Overlay::None,
                 _ => self.overlay = Overlay::ExtraTime(dialog),
             },
+            Overlay::PermissionPrompt(mut dialog) => {
+                if dialog.waiting {
+                    self.overlay = Overlay::PermissionPrompt(dialog);
+                    return;
+                }
+                match action {
+                    NavAction::Left | NavAction::Right | NavAction::Up | NavAction::Down => {
+                        dialog.focus = 1 - dialog.focus;
+                        self.overlay = Overlay::PermissionPrompt(dialog);
+                    }
+                    NavAction::Confirm => {
+                        if dialog.focus == 0 {
+                            self.start_input_permission_setup(ctx);
+                        } else {
+                            self.skip_input_permission_prompt();
+                        }
+                    }
+                    NavAction::Back | NavAction::Menu => self.skip_input_permission_prompt(),
+                    _ => self.overlay = Overlay::PermissionPrompt(dialog),
+                }
+            }
             Overlay::Message(_) => {
                 if matches!(
                     action,
@@ -3810,6 +3937,7 @@ impl eframe::App for CouchDeckApp {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         self.frame_count += 1;
         self.update_window_focus(ctx);
+        self.poll_permission_setup(ctx);
         self.log_window_diagnostics(ctx);
         self.handle_child_window_controls(ctx);
         self.maybe_restore_fullscreen_from_minimize(ctx);

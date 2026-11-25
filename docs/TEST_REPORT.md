@@ -1,6 +1,6 @@
 # Test- und Messbericht
 
-**Stand:** 25. November 2026 · **Version:** CouchDeck 0.5.1
+**Stand:** 25. November 2026 · **Version:** CouchDeck 0.5.2
 
 **Getestete Umgebung:** Manjaro Linux (KDE Plasma, Wayland-Session), Kernel `6.18.55-1-MANJARO`, NVIDIA RTX 4070 Ti SUPER; zusätzlich Bazzite/KDE/Wayland durch den Betreiber bestätigt.
 **Release-Buildumgebung:** Fedora 42 Container, glibc 2.41, Rust 1.89.0, x86_64
@@ -143,6 +143,7 @@ Die UI wurde zusätzlich mit dem X11-Backend (Xwayland) gestartet, damit Fenster
 | v0.4.7-Releasepaket lokal (v0.4.7) | OK; Fedora-42-Container, tar.gz/AppImage/SHA256SUMS, Runtime-Report, AppImage `--version` = 0.4.7, Xvfb-Start bis Bibliothek; kein Tag/Release erzeugt |
 | v0.5.0-Releasepaket lokal (v0.5.0) | OK; Fedora-42-Container, tar.gz/AppImage/SHA256SUMS, Runtime-Report, AppImage `--version` = 0.5.0, Xvfb-Start bis Bibliothek; kein Tag/Release erzeugt |
 | v0.5.1-Releasepaket lokal (v0.5.1) | OK; Fedora-42-Container, tar.gz/AppImage/SHA256SUMS, Runtime-Report, AppImage `--version` = 0.5.1, Xvfb-Start bis Bibliothek; kein Tag/Release erzeugt |
+| v0.5.2-Releasepaket lokal (v0.5.2) | OK; Fedora-42-Container, tar.gz/AppImage/SHA256SUMS, Runtime-Report, AppImage `--version` = 0.5.2, Xvfb-Start bis Bibliothek; kein Tag/Release erzeugt |
 | AppImage/Archiv auf frischer Bazzite-KDE-Installation (v0.3.1) | **Nicht ausgeführt**; manuelle Checkliste in `docs/BAZZITE-RELEASE-TEST.md` |
 | Autostart-Installer mit `XDG_CURRENT_DESKTOP=ubuntu:GNOME` (v0.4.0) | OK; `OnlyShowIn=GNOME`, `NotShowIn=gamescope`, kein `X-KDE-autostart-after` |
 | Autostart-Installer mit `XDG_CURRENT_DESKTOP=gamescope:KDE` (v0.4.0) | OK; Installation/Autostart verweigert, kein Binary installiert |
@@ -169,6 +170,8 @@ Die UI wurde zusätzlich mit dem X11-Backend (Xwayland) gestartet, damit Fenster
 | `couchdeck --home` ohne Instanz (v0.5.0) | Startet die UI; keine zweite Instanz |
 | `couchdeck --home` bei laufender Instanz (v0.5.0) | IPC angenommen; Fenster kehrt zurück |
 | `--install-home-launcher` / `--remove-home-launcher` (v0.5.0) | XDG-Desktop-Datei angelegt bzw. entfernt; `Exec="..." --home`; keine globale Shortcut-Registrierung |
+| Automatischer Berechtigungsdialog bei fehlender input-Gruppe (v0.5.2) | UI/Thread implementiert; echter fehlender-Berechtigung-Test auf Bazzite offen |
+| „Später“ im Berechtigungsdialog (v0.5.2) | Wird in settings.toml gespeichert; wiederholter Start-Prompt unterdrückt |
 | `--setup-input-permissions` mit aktiver input-Gruppe (v0.5.1) | OK; Status „aktiv“, keine Systemänderung |
 | Controller-Home-Chord-Erkennung (v0.5.1) | Unit-Tests für 2-s-Hold und Alternativen; realer Controller-Chord-Test auf Bazzite offen |
 | Bibliotheks-/Einstellungs-Hinweis für Controller-Home (v0.5.1) | UI/Code vorhanden; Sichtprüfung auf Bazzite offen |
@@ -180,19 +183,19 @@ Screenshots: [Zeitkontingent verbraucht](screenshots/time-budget.png), [Biblioth
 
 Die Screenshots verwenden fiktive Demo-Spiele und Demo-Cover aus der Testumgebung. Sie zeigen keinen Shop und keine echten Spieleplattform-Daten.
 
-## Release-Distribution (v0.5.1)
+## Release-Distribution (v0.5.2)
 
 - GitHub-Actions-Workflow `.github/workflows/release.yml` für Tags `v*` und Workflow-Dispatch.
 - Build und Tests laufen in einem frischen Fedora-42-Container; das Release-Binary wird ohne Rust-Toolchain weiterverpackt.
 - `scripts/fetch-release-tools.sh` lädt ein gepinntes linuxdeploy-Build-Werkzeug mit SHA256-Prüfung und stellt daraus `appimagetool` bereit.
 - Das AppImage enthält die unveränderte native Binary sowie Desktop-/Icon-Metadaten; glibc, GPU-Treiber, Wayland/X11 und `libudev` kommen von Bazzite. Dadurch keine gebündelten System-ABI-Konflikte.
 - `SHA256SUMS` wird nach dem Packaging aus den finalen Dateien erzeugt.
-- v0.4.5, v0.4.6, v0.4.7 und v0.5.0 wurden veröffentlicht; v0.5.1-Paketierung wurde im Fedora-42-Container gebaut und mit `sha256sum -c`, `--version` und Xvfb-Start geprüft. Kein Git-Tag/GitHub-Release ohne Freigabe erzeugt.
+- v0.4.5, v0.4.6, v0.4.7 und v0.5.0 wurden veröffentlicht; v0.5.1 wurde gebaut/veröffentlicht; v0.5.2-Paketierung wurde im Fedora-42-Container gebaut und mit `sha256sum -c`, `--version` und Xvfb-Start geprüft. Kein Git-Tag/GitHub-Release ohne Freigabe erzeugt.
 - Die AppImage-type2-Runtime wird im CI mit Wiederholungsversuchen geladen und beim Packaging explizit übergeben; ein vorhandener lokaler Runtime-Cache wird wiederverwendet.
 - AppImage und Archiv-Binary wurden mit `env -i PATH=/usr/bin:/bin` (ohne Cargo/Toolchain im Suchpfad) per `--version` gestartet.
-- Bazzite/KDE/Wayland ist für 0.4.7 vom Betreiber als erfolgreich bestätigt; einzelne 0.5.0-Home-/Steam-Input- und weitere Desktop-Fälle bleiben offen und stehen in `docs/BAZZITE-RELEASE-TEST.md`.
+- Bazzite/KDE/Wayland ist für 0.4.7 vom Betreiber als erfolgreich bestätigt; einzelne 0.5.x-Home-/Steam-Input- und weitere Desktop-Fälle bleiben offen und stehen in `docs/BAZZITE-RELEASE-TEST.md`.
 
-## Controller Home / Fensteraktivierung (v0.5.1)
+## Controller Home / Fensteraktivierung (v0.5.2)
 
 - Neue CLI `--activate`, lokaler Unix-Socket und IPC-Server.
 - X11-Smoke-Tests bestätigen Wiederherstellung aus minimiertem und minimiertem

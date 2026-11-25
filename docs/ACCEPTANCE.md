@@ -156,7 +156,7 @@ Legende:
 - [x] X11-Smoke-Tests für fokussiert, minimiert, Fullscreen-minimiert, mehrfache Aufrufe und No-Instance.
 - [~] Wayland-/Bazzite-/GNOME-/XFCE-Fokusverhalten und echte Steam-/Proton-/Launcher-Tests offen.
 
-## Controller Home & Return (v0.5.1)
+## Controller Home & Return (v0.5.2)
 
 - [x] `couchdeck --home` aktiviert eine laufende Instanz oder startet CouchDeck, wenn keine läuft.
 - [x] Keine zweite UI; `Accepted`/`Unavailable` starten keinen zweiten Prozess.
@@ -173,9 +173,11 @@ Legende:
 - [x] Installer fragt nach input-Gruppe; `--setup-input-permissions` für AppImage; `pkexec`/`sudo` ohne Shell; Neuanmeldung dokumentiert.
 - [x] Berechtigungsstatus in Admin → Einstellungen.
 - [x] 2-s-Hold, Alternativen und Berechtigungsstatus unit-getestet.
-- [~] Realer Controller-Chord auf Bazzite, GNOME/XFCE, SteamOS und Steam-Input-Parallelbetrieb bleiben offen.
+- [x] Automatischer Start-Dialog prüft `/dev/input`; „Jetzt einrichten“ startet die Admin-Einrichtung über Polkit, „Später“ wird gespeichert.
+- [x] Keine stille Root-Aktion; Status und Fallback-Befehl bleiben in den Einstellungen sichtbar.
+- [~] Realer Controller-Chord und fehlender-Berechtigung-Dialog auf Bazzite, GNOME/XFCE, SteamOS und Steam-Input-Parallelbetrieb bleiben offen.
 
-## Release-Distribution (v0.5.1-Vorbereitung)
+## Release-Distribution (v0.5.2-Vorbereitung)
 
 - [x] GitHub-Actions-Workflow für Tags `v*` und manuellen Dispatch.
 - [x] Portables x86_64-`.tar.gz` mit Binary, Installer, Doku und Runtime-Report.
@@ -188,8 +190,8 @@ Legende:
 - [x] AppImage/Archiv im Fedora-42-Container gebaut, per `--version` und Xvfb-Start geprüft.
 - [x] GitHub Release `v0.3.1` mit allen Assets veröffentlicht; Download und SHA256-Prüfung erneut verifiziert.
 - [~] AppImage und Archiv auf einer frischen Bazzite-KDE-Installation inkl. Controller, GIO-Spielstart und Systemaktionen getestet — manuelle Checkliste offen.
-- [x] Release-Metadaten, Installer, AppImage-Skripte und Workflow auf 0.5.1-Kompatibilität geprüft; lokales 0.5.1-Paket im Fedora-42-Container gebaut und mit SHA256SUMS, `--version` und Xvfb-Start geprüft.
-- [~] Kein v0.5.1-Tag/Release/Push ohne ausdrückliche Freigabe erzeugt.
+- [x] Release-Metadaten, Installer, AppImage-Skripte und Workflow auf 0.5.2-Kompatibilität geprüft; lokales 0.5.2-Paket im Fedora-42-Container gebaut und mit SHA256SUMS, `--version` und Xvfb-Start geprüft.
+- [~] Kein v0.5.2-Tag/Release/Push ohne ausdrückliche Freigabe erzeugt.
 
 ## Nicht Teil des MVP
 

@@ -6,7 +6,7 @@ Die App startet direkt in eine persönliche Spielebibliothek – kein Shop, kein
 
 Primäre Desktop-Ziele sind **KDE Plasma, GNOME und XFCE** unter Wayland oder X11. Bazzite und SteamOS im Desktop Mode sind unterstützte Zielplattformen, aber keine technischen Voraussetzungen. Steam Gaming Mode/Gamescope ist derzeit kein zugesichertes Ziel.
 
-**Aktuelle Version:** 0.5.1 · **Sprache:** Deutsch · [English](README.md)
+**Aktuelle Version:** 0.5.2 · **Sprache:** Deutsch · [English](README.md)
 
 Die Anwendungsoberfläche ist über Fluent **auf Deutsch und Englisch** verfügbar, mit automatischer Spracherkennung und Englisch als Fallback. Einzelne Detaildokumente unter `docs/` sind weiterhin auf Deutsch.
 
@@ -253,10 +253,10 @@ keine Instanz existiert.
 
 Wenn CouchDeck läuft, ist die Standard-Kombination **Start + Select, 2 Sekunden halten**. Sie wird im Bibliotheks-Footer und unter Admin → Einstellungen angezeigt und funktioniert auch im Hintergrund; Steam oder Steam Input sind dafür nicht erforderlich. Alternativen sind Start + linker Stickklick und Start + rechter Stickklick.
 
-Voraussetzung ist Lesezugriff auf die Gamepad-Geräte (`/dev/input/event*`). Fehlt die Berechtigung, zeigt CouchDeck den Status unter Admin → Einstellungen. Installationen fragen einmal, ob der Benutzer zur Gruppe `input` hinzugefügt werden soll; AppImage-Nutzer können ausführen:
+Voraussetzung ist Lesezugriff auf die Gamepad-Geräte (`/dev/input/event*`). Fehlt die Berechtigung, prüft CouchDeck das beim Start und bietet einen Dialog an: „Jetzt einrichten“ startet dieselbe ausdrückliche Admin-Einrichtung über Polkit; „Später“ unterdrückt den Hinweis für weitere Starts. Installationen fragen ebenfalls einmal nach der Gruppe `input`. Der CLI-Befehl bleibt als Fallback verfügbar:
 
 ```bash
-./CouchDeck-0.5.1-x86_64.AppImage --setup-input-permissions
+./CouchDeck-0.5.2-x86_64.AppImage --setup-input-permissions
 ```
 
 Das ist eine ausdrückliche Admin-Aktion und erfordert nach dem Hinzufügen eine Neuanmeldung. Die Gruppe `input` kann auch andere Eingabegeräte lesen; restriktiver ist eine udev-`uaccess`-Regel nur für Gamepads. CouchDeck installiert keinen Daemon und greift nicht exklusiv auf den Controller zu.
@@ -466,6 +466,7 @@ Datenfluss: `UI → AppState → Library/Profiles → GIO (gio launch)`.
 
 ## Changelog
 
+- **v0.5.2**: automatische Berechtigungsprüfung/-dialog beim Start für AppImage und tar.gz, ausdrückliche Polkit-Admin-Bestätigung, „Später“-Unterdrückung und Status in den Einstellungen; der native Controller-Home-Chord bleibt standardmäßig aktiv.
 - **v0.5.1**: Standard-Controller-Home-Chord (Start + Select, 2 s), alternative Kombinationen, UI-Information, Berechtigungseinrichtung für AppImage und Installer; read-only evdev, keine Steam-Abhängigkeit, kein exklusiver Input-Grab.
 - **v0.5.0**: `--home` (aktivieren oder starten), optionaler Home-Menüeintrag, Steam-Input-Dokumentation und Regressionstests; keine globale Controller-Input-Überwachung.
 - **v0.4.7**: Taskleisten- und Fullscreen-Minimierung korrigiert: Der begrenzte KWin-Fallback startet jetzt aus dem IPC-Hintergrundthread, wenn die eframe-UI keine Frames mehr erhält; Fullscreen wird erst nach stabilisiertem Fokus/Mapping wiederhergestellt.

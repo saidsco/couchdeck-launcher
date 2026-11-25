@@ -134,6 +134,15 @@ Die vollständige Steam-Input-Anleitung steht in [`STEAM-INPUT.md`](STEAM-INPUT.
 - [ ] Controller-Hotplug/Reconnect mit aktivem Chord
 - [ ] Log prüfen: `Controller-Home-Chord erkannt`, Aktivierung/Fokus
 
+## 0.5.2 Automatischer Berechtigungsdialog – Bazzite Retest (offen)
+
+- [ ] Start ohne input-Gruppe zeigt den Dialog „Jetzt einrichten / Später“
+- [ ] „Jetzt einrichten“ öffnet die Polkit-Bestätigung und fügt den Benutzer zur Gruppe input hinzu
+- [ ] Nach Erfolg erscheint der Hinweis auf Neuanmeldung
+- [ ] „Später“ unterdrückt den Prompt beim nächsten Start
+- [ ] Status bleibt unter Admin → Einstellungen sichtbar
+- [ ] AppImage und tar.gz verhalten sich gleich
+
 ## A. AppImage
 
 ```bash

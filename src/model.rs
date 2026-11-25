@@ -382,6 +382,9 @@ pub struct Settings {
     pub controller_home_enabled: bool,
     #[serde(default)]
     pub controller_home_chord: ControllerHomeChord,
+    /// Internal one-time marker: the user chose "later" in the permission dialog.
+    #[serde(default)]
+    pub controller_home_permission_prompted: bool,
     /// Extra administrator-configured `.desktop` roots. Absolute paths are
     /// preferred; relative paths are resolved by the caller.
     #[serde(default)]
@@ -401,6 +404,7 @@ impl Default for Settings {
             alarm_sound: true,
             controller_home_enabled: true,
             controller_home_chord: ControllerHomeChord::StartSelect,
+            controller_home_permission_prompted: false,
             additional_desktop_dirs: Vec::new(),
         }
     }
