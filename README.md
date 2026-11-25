@@ -6,7 +6,7 @@ It opens directly into a personal game library – no store, no news, no cloud, 
 
 Primary desktop targets are **KDE Plasma, GNOME and XFCE** on Wayland or X11. Bazzite and SteamOS Desktop Mode are supported target platforms, but not technical requirements. Steam Gaming Mode/Gamescope is not a guaranteed target yet.
 
-**Current version:** 0.5.0 · **Language:** English · [Deutsch](README-de.md)
+**Current version:** 0.5.1 · **Language:** English · [Deutsch](README-de.md)
 
 The application UI is available in **German and English** via Fluent, with automatic locale detection and English as fallback. Some detailed documents under `docs/` are still in German.
 
@@ -16,7 +16,8 @@ Games are launched exclusively through existing `.desktop` files and `gio launch
 
 ## Features
 
-- **Controller Home & Return**: `couchdeck --home` activates a running instance or starts CouchDeck if none is running. It never starts a second UI, kills a game or bypasses PIN/child controls. On Wayland it forwards `XDG_ACTIVATION_TOKEN` when provided; KDE/Wayland additionally has a bounded KWin fallback, including recovery from taskbar/fullscreen minimization. `--activate` remains the explicit activation-only command.
+- **Controller Home & Return**: While CouchDeck runs, a global controller chord (**Start + Select held for 2 s** by default) brings it back, including from taskbar/fullscreen minimization and while it is running in the background. Alternative chords can be selected in Admin → Settings. `couchdeck --home` offers the same action from a desktop shortcut or terminal and starts CouchDeck if no instance is running. `--activate` remains activation-only.
+- **Input permissions**: Controller-Home needs read access to gamepad `/dev/input` devices. The installer offers to add the user to the `input` group (explicit confirmation, login required); `couchdeck --setup-input-permissions` provides the same setup for AppImage users. No root daemon is installed.
 - **Manual window activation**: `couchdeck --activate` contacts the already-running instance through a per-user Unix socket, without starting a second UI. On Wayland it forwards `XDG_ACTIVATION_TOKEN` when the caller provides one; KDE/Wayland has a bounded KWin-scripting fallback for terminal/no-token invocations. It never steals focus during a game/Steam/launcher start. `--diagnose-window` logs focus, minimize and fullscreen transitions.
 - **Desktop-independent core**: no KDE-only runtime requirement. KDE Plasma, GNOME and XFCE on Wayland/X11 are the supported desktop targets; compositor-specific focus/minimize limitations are documented.
 - **Native release packages**: portable x86_64 tar.gz and executable AppImage via GitHub Releases, with SHA-256 checksums, `ldd`/glibc runtime report, no root and no Rust compiler at install time.
@@ -213,6 +214,7 @@ Development/debug:
 ~/.local/bin/couchdeck --no-controller     # disable the gamepad thread
 ~/.local/bin/couchdeck --activate          # ask the running instance to return
 ~/.local/bin/couchdeck --home              # return, or start if not running
+~/.local/bin/couchdeck --setup-input-permissions  # optional: enable controller chord
 ~/.local/bin/couchdeck --install-home-launcher  # optional Home menu entry
 ~/.local/bin/couchdeck --diagnose-window   # verbose focus/minimize/fullscreen logs
 ~/.local/bin/couchdeck --help
@@ -250,6 +252,16 @@ For a controller/Home workflow use:
 `--activate` remains the activation-only command and reports an error when no
 instance exists.
 
+When CouchDeck is running, the default controller chord is **Start + Select held for two seconds**. It is shown in the library footer and in Admin → Settings. The chord works in the background; no Steam client or Steam Input configuration is required. Alternatives are Start + left stick click and Start + right stick click.
+
+For the chord to work, the Linux user must be able to read gamepad event devices (`/dev/input/event*`). If the setup is missing, CouchDeck shows the status in Admin → Settings. Installer users are asked once whether to join the `input` group; AppImage users can run:
+
+```bash
+./CouchDeck-0.5.1-x86_64.AppImage --setup-input-permissions
+```
+
+This is an explicit admin action and requires a re-login to activate the new group membership. The `input` group can read other input devices too; a joystick-only udev `uaccess` rule is the more restrictive alternative. No CouchDeck daemon or exclusive input grab is installed.
+
 The command contacts the running instance over a local Unix socket and exits.
 It does not start a second CouchDeck and does not indicate that the compositor
 actually granted focus. The CLI message distinguishes “activation token
@@ -280,9 +292,10 @@ KDE Plasma, GNOME or XFCE that runs the absolute path to `couchdeck --home`.
 See [docs/WINDOW-ACTIVATION.md](docs/WINDOW-ACTIVATION.md) for exact steps and
 Wayland limitations. The optional `couchdeck --install-home-launcher` command
 creates a user-level „CouchDeck Home“ menu entry; it does not register a global
-shortcut automatically. The Steam-Input recipe is in
-[`docs/STEAM-INPUT.md`](docs/STEAM-INPUT.md). 0.5 does not implement a global
-controller-input driver or automatic Steam configuration.
+shortcut automatically. The native controller chord is available while
+CouchDeck runs and does not require Steam. The optional Steam-Input recipe is in
+[`docs/STEAM-INPUT.md`](docs/STEAM-INPUT.md). CouchDeck uses read-only evdev
+access and does not grab the controller or install an input driver.
 
 Use `couchdeck --diagnose-window` for additional focus/minimize/fullscreen
 logging in `$XDG_STATE_HOME/couchdeck/couchdeck.log`.
@@ -297,7 +310,7 @@ logging in `$XDG_STATE_HOME/couchdeck/couchdeck.log`.
 | Menu | Start | M |
 | Switch profile | LB/RB (opens profile view; switch there) | PageUp/PageDown |
 | Minimize to desktop | Menu → Minimize to desktop | Menu |
-| Activate/return to CouchDeck | – | `couchdeck --home` / desktop shortcut |
+| Activate/return to CouchDeck | Start + Select (2 s) | `couchdeck --home` / desktop shortcut |
 | Toggle fullscreen | – | F11 |
 | Request more play time (child profile) | Start → Request more play time | Menu |
 | Reboot / shut down system | Menu → System … | Menu |
@@ -402,6 +415,7 @@ activation.rs  local --activate socket, IPC server and activation protocol
 wayland_activation.rs  xdg-activation-v1 token application to existing surface
 kwin_activation.rs    bounded KDE/KWin activation fallback
 home.rs        optional user-level CouchDeck Home launcher
+permissions.rs input-group/device-access checks and explicit setup
 instance.rs    per-user flock and stale-lock-safe single instance
 session.rs     desktop detection and XDG autostart
 launch.rs      GIO launch in a background thread, error diagnostics
@@ -425,7 +439,7 @@ Data flow: `UI → AppState → Library/Profiles → GIO (gio launch)`.
 - **Notifications/alarm best effort**: warnings are shown in the CouchDeck window. Under Wayland there is no guaranteed overlay above fullscreen games; the optional sound uses `canberra-gtk-play`/`paplay`/`pw-play`/`aplay` if available and is silently skipped otherwise.
 - **Focus after game start/exit**: The desktop/compositor is expected to bring the game window to the foreground; behavior differs on Wayland. CouchDeck never terminates games, never auto-steals focus after a launch, and offers explicit “Minimize to desktop” and `--home`/`--activate` return paths.
 - **Manual activation is best effort**: `--home`/`--activate` transmit a local IPC request and, when available, an activation token. X11 window managers usually honor focus requests. KDE/Wayland additionally uses a bounded KWin fallback; GNOME/Wayland may ignore token-less activation. No aggressive retries or process manipulation are used. Only KDE has the compositor-specific fallback; actual Bazzite/KDE and GNOME hardware tests remain open.
-- **Controller Home is manual**: 0.5 does not monitor controller input globally. Steam Input/desktop shortcuts are user-configured; see `docs/STEAM-INPUT.md`.
+- **Controller Home permissions**: the native chord needs read access to gamepad `/dev/input` devices and a re-login after adding the `input` group. CouchDeck does not grab the controller; Steam Input may still claim devices in some configurations. GNOME/XFCE and SteamOS remain untested for the native chord.
 - **SVG desktop icons** are not rasterized (no SVG decoder is bundled). PNG/WebP/JPEG icons and custom covers work; otherwise the neutral tile is used.
 - **No cover scraping, no Steam API, no store integration**, no automatic search.
 - **Favorites**: the data field exists, but a favorites UI is not implemented in the MVP.
@@ -435,12 +449,12 @@ Data flow: `UI → AppState → Library/Profiles → GIO (gio launch)`.
 - **Fullscreen minimize**: the “leave fullscreen → minimize” flow is implemented. KDE/Wayland was tested on the development host; GNOME, XFCE and Bazzite remain open.
 - **System power**: shutdown/reboot uses `systemctl` and requires a suitable Polkit permission. The actual action was not executed in the development environment to avoid shutting down the system; command construction, confirmation dialog, and error handling were tested.
 - **Multiple instances**: a per-user `flock` lock prevents a second independent UI. The lock is released automatically on process exit/crash; a stale lock file does not block startup.
-- **No Flatpak for CouchDeck itself** in v0.5.0, as specified. Release packaging consists of a portable tar.gz and a native AppImage, not RPM/Flatpak.
+- **No Flatpak for CouchDeck itself** in v0.5.1, as specified. Release packaging consists of a portable tar.gz and a native AppImage, not RPM/Flatpak.
 - **Supported desktop sessions** are KDE Plasma, GNOME and XFCE under Wayland or X11; Steam Gaming Mode/Gamescope is not a guaranteed target. Gamescope/Steam Input conflicts have not been tested.
 
 ## Tests and acceptance
 
-- Unit/integration tests: **87 tests passing** (`cargo test`: 85 unit tests including timekeeping, i18n, activation protocol/home launcher, parent-PIN/switch/start guards, plus 2 GIO integration tests).
+- Unit/integration tests: **90 tests passing** (`cargo test`: 88 unit tests including timekeeping, i18n, activation protocol/home launcher, controller chord, parent-PIN/switch/start guards, plus 2 GIO integration tests).
 - `cargo clippy --all-targets -- -D warnings`: clean.
 - `cargo fmt --check`: clean.
 - Release build: `cargo build --release --locked`.
@@ -449,6 +463,7 @@ Data flow: `UI → AppState → Library/Profiles → GIO (gio launch)`.
 
 ## Changelog
 
+- **v0.5.1**: default global controller-home chord (Start + Select, 2 s), alternative chords, UI information, permission setup for AppImage and installer; read-only evdev, no Steam dependency, no exclusive input grab.
 - **v0.5.0**: added `--home` (activate or start), optional user-level CouchDeck Home launcher, Steam-Input documentation and regression tests; no global controller-input monitoring.
 - **v0.4.7**: fixed taskbar-minimized and fullscreen-minimized recovery by starting the bounded KWin fallback from the IPC background thread when the eframe UI is not receiving frames, and by deferring fullscreen restore until focus/mapping has stabilized.
 - **v0.4.6**: fixed Wayland/KDE activation by forwarding xdg-activation tokens to the existing surface and adding a bounded KDE/KWin fallback for terminal/no-token invocations; improved focus diagnostics.

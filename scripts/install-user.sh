@@ -17,6 +17,10 @@ Verwendung: $0 [--autostart]
 
   --autostart   desktopbezogenen XDG-Autostart anlegen
                 (nur KDE Plasma, GNOME oder XFCE; nicht im Steam Gaming Mode)
+
+Für Controller-Home wird zusätzlich Lesezugriff auf /dev/input benötigt.
+Das Skript fragt nach der Installation, ob der Benutzer zur Gruppe input
+hinzugefügt werden soll (einmalige Admin-/Polkit-Bestätigung, danach Neuanmeldung).
 EOF
       exit 0
       ;;
@@ -196,6 +200,33 @@ if command -v kbuildsycoca6 >/dev/null 2>&1; then
   kbuildsycoca6 --noincremental >/dev/null 2>&1 || true
 elif command -v kbuildsycoca5 >/dev/null 2>&1; then
   kbuildsycoca5 --noincremental >/dev/null 2>&1 || true
+fi
+
+INPUT_USER="$(id -un)"
+if ! id -nG "$INPUT_USER" 2>/dev/null | tr ' ' '\n' | grep -qx input; then
+  echo
+  echo "Controller-Home benötigt Lesezugriff auf Gamepad-Geräte (/dev/input)."
+  echo "Der Benutzer '$INPUT_USER' ist noch nicht in der Gruppe 'input'."
+  if [[ -t 0 ]]; then
+    read -r -p "Jetzt zur Gruppe input hinzufügen? [y/N] " INPUT_ANSWER
+    case "${INPUT_ANSWER,,}" in
+      y|yes|j|ja)
+        if "$BIN_DIR/couchdeck" --setup-input-permissions --yes; then
+          echo "Bitte einmal ab- und wieder anmelden, damit die Gruppe aktiv wird."
+        else
+          echo "Die Berechtigung konnte nicht eingerichtet werden." >&2
+          echo "Später manuell möglich: $BIN_DIR/couchdeck --setup-input-permissions" >&2
+        fi
+        ;;
+      *)
+        echo "Übersprungen. Später möglich: $BIN_DIR/couchdeck --setup-input-permissions"
+        ;;
+    esac
+  else
+    echo "Später manuell möglich: $BIN_DIR/couchdeck --setup-input-permissions"
+  fi
+else
+  echo "Controller-Home: Gruppe input ist bereits zugewiesen (ggf. Neuanmeldung nötig)."
 fi
 
 cat <<EOF

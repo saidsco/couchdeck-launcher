@@ -1,8 +1,12 @@
 # Steam Input: Controller-Home / Rückkehr zu CouchDeck
 
-CouchDeck 0.5 implementiert **keine globale Controller-Eingabeüberwachung** und
-keinen eigenen Input-Treiber. Der unterstützte Weg für eine Controller-Home-
-Taste ist:
+Ab CouchDeck 0.5.1 gibt es den **nativen Controller-Home-Chord** (standardmäßig
+Start + Select, 2 Sekunden halten). Steam Input ist dafür **nicht** nötig.
+
+Diese Anleitung beschreibt Steam Input nur als optionalen alternativen Weg für
+Benutzer, die eine eigene Steam-Input-Kombination bevorzugen. CouchDeck
+implementiert keinen eigenen Input-Treiber und keinen exklusiven Geräte-Grab.
+Der optionale Steam-Input-Weg ist:
 
 ```text
 Steam Input / Controller-Kombination
@@ -29,7 +33,7 @@ keine Spiele und umgeht keine PIN-/Kinderprüfung.
 Bei einer AppImage-Installation den absoluten AppImage-Pfad verwenden:
 
 ```text
-/home/USER/Applications/CouchDeck-0.5.0-x86_64.AppImage --home
+/home/USER/Applications/CouchDeck-0.5.1-x86_64.AppImage --home
 ```
 
 Optional kann vorher ein Menüeintrag erzeugt werden:
@@ -53,6 +57,8 @@ Befehl gelegt. Genaue Pfade und Beispiele stehen in
 - Die Tastenkombination muss von KDE als globaler Kurzbefehl erkannt werden.
 - CouchDeck nutzt bei KDE/Wayland den begrenzten KWin-Fallback, wenn kein
   xdg-activation-Token vorhanden ist.
+- Der native CouchDeck-Chord funktioniert unabhängig von Steam, solange
+  CouchDeck läuft und die `/dev/input`-Berechtigung vorhanden ist.
 - Ein laufendes Spiel bleibt im Hintergrund aktiv; CouchDeck beendet es nicht.
 
 ## Grenzen
@@ -64,7 +70,8 @@ Befehl gelegt. Genaue Pfade und Beispiele stehen in
   bestimmtes Steam-Layout.
 - CouchDeck schreibt keine Steam-Input-Konfiguration und registriert keinen
   systemweiten Hotkey automatisch.
-- Ein globaler Controller-Home-Dienst ist **nicht** Teil von 0.5.
+- Der native Controller-Home-Chord ist Teil von 0.5.1; ein separater
+  Hintergrunddienst ist **nicht** Teil von 0.5.1.
 
 ## Manueller Test
 

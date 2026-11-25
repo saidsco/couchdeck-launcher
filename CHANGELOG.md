@@ -1,5 +1,31 @@
 # Changelog
 
+## 0.5.1 – 2026-11-25
+
+### Controller Home
+
+- Standardmäßig aktiver globaler Controller-Home-Chord: **Start + Select 2 Sekunden halten**.
+- Funktioniert, solange CouchDeck läuft, auch minimiert im Hintergrund; keine Steam-/Steam-Input-Abhängigkeit.
+- Alternative Kombinationen in Admin → Einstellungen: Start + linker Stickklick, Start + rechter Stickklick.
+- Chord-Erkennung im bestehenden gilrs-Thread, read-only und ohne exklusiven Geräte-Grab; normale Bibliotheksnavigation bleibt auf fokussiertes CouchDeck beschränkt.
+- Home-Hinweis in Bibliotheks-Footer und Einstellungen.
+- Vorbereitung für weitere Home-Aktionen (z. B. spätere Gamesession-Beendigung), ohne jetzt einen GameSessionManager einzuführen.
+
+### Geräteberechtigungen
+
+- Installer fragt nach der Installation, ob der Benutzer zur Gruppe `input` hinzugefügt werden soll; danach Neuanmeldung.
+- `couchdeck --setup-input-permissions` für AppImage und direkte Installationen; nutzt `pkexec` oder – bei Terminal – `sudo`, nie eine Shell.
+- Admin → Einstellungen zeigt den `/dev/input`-Berechtigungsstatus.
+- Kein Root-Daemon, kein `uinput`, kein exklusiver Input-Grab.
+
+### Tests / Doku
+
+- Unit-Tests für 2-Sekunden-Chord, Alternativkombinationen und Berechtigungsstatus.
+- 88 Unit-Tests + 2 GIO-Integrationstests (90 gesamt).
+- Controller-/Steam-Input-Dokumentation und Bazzite-Testmatrix aktualisiert.
+- Kein Git-Tag/GitHub-Release/Push ohne Freigabe.
+
+
 ## 0.5.0 – 2026-11-24
 
 ### Controller Home & Return

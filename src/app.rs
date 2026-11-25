@@ -11,13 +11,14 @@ use eframe::egui::{Key, Modifiers, ViewportCommand};
 
 use crate::activation::{ActivationRequest, ActivationServer};
 use crate::artwork::{self, ArtworkCache, ArtworkKind};
-use crate::controller::{self, ControllerEvent, ControllerHandle, NavAction};
+use crate::controller::{self, ControllerEvent, ControllerHandle, HomeAction, NavAction};
 use crate::desktop::{self, DiscoveredEntry, DiscoveryResult, DiscoverySource, IconResolver};
 use crate::i18n::{ArgValue, I18n, LanguagePreference};
 use crate::launch::{self, LaunchOutcome};
 use crate::logging::{log_error, log_info, log_warn};
 use crate::model::{new_id, resolve_data_path, AdminSecrets, GameEntry, Library, Settings};
 use crate::paths::XdgPaths;
+use crate::permissions;
 use crate::session::{self, DesktopEnvironment};
 use crate::storage::{self, LibraryLoad, SecretsLoad, SettingsLoad};
 use crate::system::{SystemAction, SystemController};
@@ -376,6 +377,7 @@ pub struct CouchDeckApp {
     pub i18n: I18n,
     pub secrets: AdminSecrets,
     pub controller: ControllerHandle,
+    pub input_group_status: permissions::InputGroupStatus,
     pub controllers: Vec<String>,
     pub controller_error: Option<String>,
     pub controller_ready: bool,
@@ -526,7 +528,34 @@ impl CouchDeckApp {
             }
         };
 
-        let controller = controller::spawn(cc.egui_ctx.clone(), !options.no_controller);
+        let input_group_status = permissions::input_group_status();
+        if settings.controller_home_enabled
+            && !options.no_controller
+            && !input_group_status.is_active()
+        {
+            notices.push(match input_group_status {
+                permissions::InputGroupStatus::ConfiguredNeedsRelogin =>
+                    "Controller-Home: Die Gruppe input ist zugewiesen, aber noch nicht in dieser Sitzung aktiv. Bitte einmal ab- und wieder anmelden.".to_owned(),
+                permissions::InputGroupStatus::GroupMissing =>
+                    "Controller-Home: Die Gruppe input existiert nicht; /dev/input-Zugriff kann nicht eingerichtet werden.".to_owned(),
+                permissions::InputGroupStatus::Unknown =>
+                    "Controller-Home: Der /dev/input-Berechtigungsstatus konnte nicht gelesen werden.".to_owned(),
+                permissions::InputGroupStatus::Missing | permissions::InputGroupStatus::Active =>
+                    "Controller-Home benötigt Lesezugriff auf Gamepad-Geräte (/dev/input).\nEinmalig einrichten: couchdeck --setup-input-permissions\nDanach ist eine Neuanmeldung nötig.".to_owned(),
+            });
+        }
+
+        let activation_focus_state = Arc::new(AtomicBool::new(false));
+        let controller = controller::spawn(
+            cc.egui_ctx.clone(),
+            !options.no_controller,
+            controller::HomeConfig {
+                enabled: settings.controller_home_enabled,
+                chord: settings.controller_home_chord,
+            },
+            paths.clone(),
+            activation_focus_state.clone(),
+        );
         let icons = IconResolver::new(&paths);
         let active_index = library
             .active_profile()
@@ -540,6 +569,7 @@ impl CouchDeckApp {
             i18n,
             secrets,
             controller,
+            input_group_status,
             controllers: Vec::new(),
             controller_error: None,
             controller_ready: false,
@@ -571,7 +601,7 @@ impl CouchDeckApp {
             activation_token_present: false,
             activation_token_applied: false,
             activation_kwin_attempted: false,
-            activation_focus_state: Arc::new(AtomicBool::new(false)),
+            activation_focus_state,
             diagnose_window: options.diagnose_window,
             last_diag_minimized: None,
             last_diag_focused: None,
@@ -673,6 +703,10 @@ impl CouchDeckApp {
         self.settings.language = preference;
         self.i18n.set_preference(preference);
         self.save_settings();
+    }
+
+    pub fn controller_home_chord_label(&self) -> String {
+        self.t(self.settings.controller_home_chord.label_key())
     }
 
     pub fn request_activation(&mut self, ctx: &egui::Context, request: ActivationRequest) {
@@ -2943,6 +2977,15 @@ impl CouchDeckApp {
                         self.notify_warning(message);
                     }
                 }
+                ControllerEvent::HomeAction(action) => match action {
+                    HomeAction::ActivateCouchDeck => {
+                        log_info(
+                            "controller",
+                            "Controller-Home-Chord empfangen; Aktivierung wird angefordert.",
+                        );
+                        self.request_activation(ctx, ActivationRequest { token: None });
+                    }
+                },
                 ControllerEvent::Error(err) => {
                     log_warn("controller", &err);
                     self.controller_error = Some(err.clone());

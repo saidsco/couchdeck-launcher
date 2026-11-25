@@ -121,6 +121,19 @@ und stellt Fullscreen erst nach stabilisiertem Fokus wieder her.
 
 Die vollständige Steam-Input-Anleitung steht in [`STEAM-INPUT.md`](STEAM-INPUT.md).
 
+## 0.5.1 Nativer Controller-Home-Chord – Bazzite Retest (offen)
+
+- [ ] Start + Select 2 s halten → CouchDeck kommt aus minimiertem/fullscreen Zustand zurück
+- [ ] Chord funktioniert bei laufendem Steam-/Flatpak-Spiel; Spiel bleibt aktiv
+- [ ] Chord funktioniert ohne Steam/Steam Input
+- [ ] Alternativen Start + linker/rechter Stickklick in den Einstellungen testen
+- [ ] Bibliotheks-Footer und Admin → Einstellungen zeigen die gewählte Kombination
+- [ ] Installer fragt nach input-Gruppe; `--setup-input-permissions` funktioniert auch aus dem AppImage
+- [ ] Nach Gruppenänderung: Neuanmeldung und erneuter Test
+- [ ] Keine Doppel-Eingaben/Navigation, wenn CouchDeck unfokussiert ist
+- [ ] Controller-Hotplug/Reconnect mit aktivem Chord
+- [ ] Log prüfen: `Controller-Home-Chord erkannt`, Aktivierung/Fokus
+
 ## A. AppImage
 
 ```bash

@@ -329,6 +329,31 @@ impl Library {
     }
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum ControllerHomeChord {
+    #[default]
+    StartSelect,
+    StartLeftStick,
+    StartRightStick,
+}
+
+impl ControllerHomeChord {
+    pub const ALL: [Self; 3] = [
+        Self::StartSelect,
+        Self::StartLeftStick,
+        Self::StartRightStick,
+    ];
+
+    pub const fn label_key(self) -> &'static str {
+        match self {
+            Self::StartSelect => "controller-chord-start-select",
+            Self::StartLeftStick => "controller-chord-start-left-stick",
+            Self::StartRightStick => "controller-chord-start-right-stick",
+        }
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Settings {
     #[serde(default = "settings_v1")]
@@ -351,6 +376,12 @@ pub struct Settings {
     /// Play a best-effort alert sound at time-budget warnings.
     #[serde(default = "default_true")]
     pub alarm_sound: bool,
+    /// Global controller-home chord; active while CouchDeck runs, including
+    /// while the window is minimized.
+    #[serde(default = "default_true")]
+    pub controller_home_enabled: bool,
+    #[serde(default)]
+    pub controller_home_chord: ControllerHomeChord,
     /// Extra administrator-configured `.desktop` roots. Absolute paths are
     /// preferred; relative paths are resolved by the caller.
     #[serde(default)]
@@ -368,6 +399,8 @@ impl Default for Settings {
             show_backgrounds: true,
             language: LanguagePreference::Auto,
             alarm_sound: true,
+            controller_home_enabled: true,
+            controller_home_chord: ControllerHomeChord::StartSelect,
             additional_desktop_dirs: Vec::new(),
         }
     }
@@ -493,6 +526,11 @@ mod tests {
             serde_json::from_str(r#"{"schema_version":1,"animations":true}"#).unwrap();
         assert_eq!(settings.language, LanguagePreference::Auto);
         assert!(settings.alarm_sound);
+        assert!(settings.controller_home_enabled);
+        assert_eq!(
+            settings.controller_home_chord,
+            ControllerHomeChord::StartSelect
+        );
     }
 
     #[test]

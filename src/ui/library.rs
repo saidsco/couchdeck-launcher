@@ -438,6 +438,17 @@ fn draw_footer(
                             } else {
                                 String::new()
                             };
+                            if app.settings.show_controller_hints
+                                && app.settings.controller_home_enabled
+                            {
+                                if !hint.is_empty() {
+                                    hint.push_str("   ·   ");
+                                }
+                                hint.push_str(&app.tf(
+                                    "library-controller-home",
+                                    &[("chord", app.controller_home_chord_label().into())],
+                                ));
+                            }
                             if !game.desktop_exists() {
                                 hint = app.t("library-missing-launch");
                             } else if page_count > 1 {

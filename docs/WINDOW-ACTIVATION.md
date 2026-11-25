@@ -1,4 +1,4 @@
-# Fensteraktivierung und Rückkehr (0.5.0)
+# Fensteraktivierung, Controller-Home und Rückkehr (0.5.1)
 
 CouchDeck fordert den Fokus **nicht** automatisch zurück, wenn ein Spiel, Steam,
 ein vorgeschalteter Launcher (z. B. Larian), Heroic, Lutris, Wine, Prism oder ein
@@ -156,6 +156,45 @@ Der Eintrag landete in `$XDG_DATA_HOME/applications/couchdeck-home.desktop` und
 startet `couchdeck --home`. Eine globale Tastenkombination wird dabei **nicht**
 registriert.
 
+## Nativer Controller-Home-Chord (0.5.1)
+
+Während CouchDeck läuft, erkennt der bestehende gilrs-Thread global eine
+Controller-Kombination – auch bei minimiertem Fenster:
+
+- Standard: **Start + Select 2 Sekunden halten**
+- Alternative: Start + linker Stickklick
+- Alternative: Start + rechter Stickklick
+
+Der Chord ist standardmäßig aktiv und wird im Bibliotheks-Footer sowie unter
+Admin → Einstellungen angezeigt. Er löst dieselbe Aktivierung aus wie
+`couchdeck --home`; auf KDE/Wayland wird der bestehende KWin-Fallback genutzt.
+
+Wichtig:
+
+- CouchDeck liest Gamepad-Events nur read-only und greift nicht exklusiv zu.
+- Kein `uinput`, kein eigener Input-Treiber, kein Root-Daemon.
+- CouchDeck muss laufen; wenn es beendet ist, gibt es keinen Chord-Listener.
+- Der Chord wird nur für die Home-Aktion ausgewertet; normale Bibliotheks-
+  navigation bleibt auf das fokussierte Fenster beschränkt.
+
+### Berechtigung
+
+Der Zugriff erfolgt auf `/dev/input/event*` (typisch `root:input`, Modus 0660).
+CouchDeck kann die Rechte nicht umgehen.
+
+- Das Installationsskript fragt nach der Installation, ob der Benutzer zur
+  Gruppe `input` hinzugefügt werden soll.
+- AppImage-Nutzer können ausführen:
+
+  ```bash
+  ./CouchDeck-0.5.1-x86_64.AppImage --setup-input-permissions
+  ```
+
+- Die Einrichtung nutzt `pkexec` (Polkit) oder, bei einem Terminal, `sudo`.
+- Nach dem Hinzufügen zur Gruppe ist eine **Neuanmeldung** erforderlich.
+- Admin → Einstellungen zeigt den aktuellen Status.
+- Die Gruppe `input` kann auch Tastatur-/Mausereignisse lesen; wer das vermeiden will, nutzt stattdessen eine restriktive udev-`uaccess`-Regel nur für `ID_INPUT_JOYSTICK`. CouchDeck installiert keine solche Regel automatisch.
+
 ## Desktop-Shortcuts
 
 Der Shortcut ist eine **manuelle Benutzerentscheidung**. CouchDeck registriert
@@ -193,7 +232,7 @@ Befehl: /home/USER/.local/bin/couchdeck --home
 Für AppImage-Nutzer zeigt der Pfad auf die AppImage-Datei:
 
 ```text
-/home/USER/Applications/CouchDeck-0.5.0-x86_64.AppImage --home
+/home/USER/Applications/CouchDeck-0.5.1-x86_64.AppImage --home
 ```
 
 ## Steam Input
@@ -210,6 +249,7 @@ Hotkey automatisch.
 couchdeck --diagnose-window
 couchdeck --home
 couchdeck --activate
+couchdeck --setup-input-permissions
 ```
 
 Relevante Logzeilen:

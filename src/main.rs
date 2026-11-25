@@ -3,7 +3,7 @@ use std::process::ExitCode;
 
 use couchdeck::app::{AppOptions, CouchDeckApp};
 use couchdeck::paths::XdgPaths;
-use couchdeck::{activation, home, instance, logging, session, storage};
+use couchdeck::{activation, home, instance, logging, permissions, session, storage};
 
 const USAGE: &str = "\
 CouchDeck – familienfreundlicher, controller-first Spiele-Launcher
@@ -21,6 +21,8 @@ OPTIONEN:
     --home                  CouchDeck aktivieren oder starten, falls nicht laufend
     --install-home-launcher Optionalen „CouchDeck Home“-Menüeintrag anlegen
     --remove-home-launcher  Optionalen Home-Menüeintrag entfernen
+    --setup-input-permissions  Benutzer zur Gruppe input hinzufügen (Controller-Home)
+    --yes                   Bestätigung für --setup-input-permissions überspringen
     --diagnose-window       Fokus-/Minimierungswechsel ausführlicher loggen
     --version               Version anzeigen
     -h, --help              Diese Hilfe anzeigen
@@ -48,6 +50,8 @@ fn run() -> Result<(), String> {
     let mut home_mode = false;
     let mut install_home_launcher = false;
     let mut remove_home_launcher = false;
+    let mut setup_input_permissions = false;
+    let mut assume_yes = false;
     let mut diagnose_window = false;
     for arg in std::env::args().skip(1) {
         match arg.as_str() {
@@ -58,6 +62,8 @@ fn run() -> Result<(), String> {
             "--home" => home_mode = true,
             "--install-home-launcher" => install_home_launcher = true,
             "--remove-home-launcher" => remove_home_launcher = true,
+            "--setup-input-permissions" => setup_input_permissions = true,
+            "--yes" => assume_yes = true,
             "--diagnose-window" => diagnose_window = true,
             "--version" | "-V" => {
                 println!("couchdeck {}", env!("CARGO_PKG_VERSION"));
@@ -73,8 +79,10 @@ fn run() -> Result<(), String> {
 
     let launcher_actions = install_home_launcher as u8 + remove_home_launcher as u8;
     if (activate && home_mode)
-        || (launcher_actions > 0 && (activate || home_mode))
+        || (launcher_actions > 0 && (activate || home_mode || setup_input_permissions))
         || launcher_actions > 1
+        || (setup_input_permissions && (activate || home_mode || launcher_actions > 0))
+        || (assume_yes && !setup_input_permissions)
     {
         return Err(format!(
             "--activate, --home, --install-home-launcher und --remove-home-launcher können nicht kombiniert werden.\n\n{USAGE}"
@@ -99,6 +107,9 @@ fn run() -> Result<(), String> {
             diagnose_window
         ),
     );
+    if setup_input_permissions {
+        return setup_input_permissions_cli(assume_yes);
+    }
     if install_home_launcher {
         let executable = home_executable()?;
         let launcher = home::install_launcher(&paths, &executable)?;
@@ -214,6 +225,72 @@ fn run() -> Result<(), String> {
         }),
     );
     result.map_err(|err| format!("Fenster/Start fehlgeschlagen: {err}"))
+}
+
+fn setup_input_permissions_cli(assume_yes: bool) -> Result<(), String> {
+    use std::io::IsTerminal;
+
+    let status = permissions::input_group_status();
+    println!(
+        "Controller-Home / /dev/input: {}",
+        match status {
+            permissions::InputGroupStatus::Active => "Gruppe input ist aktiv.",
+            permissions::InputGroupStatus::ConfiguredNeedsRelogin =>
+                "Gruppe input ist zugewiesen; bitte ab- und wieder anmelden.",
+            permissions::InputGroupStatus::Missing => "Gruppe input fehlt für diesen Benutzer.",
+            permissions::InputGroupStatus::GroupMissing => "Die Gruppe input existiert nicht.",
+            permissions::InputGroupStatus::Unknown => "Status unbekannt.",
+        }
+    );
+
+    match status {
+        permissions::InputGroupStatus::Active => return Ok(()),
+        permissions::InputGroupStatus::ConfiguredNeedsRelogin => {
+            println!(
+                "Bitte einmal abmelden und neu anmelden; danach ist Controller-Home verfügbar."
+            );
+            return Ok(());
+        }
+        permissions::InputGroupStatus::GroupMissing | permissions::InputGroupStatus::Unknown => {
+            return Err(
+                "Die input-Gruppe kann auf diesem System nicht eingerichtet werden.".to_owned(),
+            )
+        }
+        permissions::InputGroupStatus::Missing => {}
+    }
+
+    if !assume_yes {
+        if !std::io::stdin().is_terminal() {
+            return Err(
+                "Kein Terminal für die Bestätigung. Aufruf mit --setup-input-permissions --yes oder manuell als Admin: sudo usermod -aG input <benutzer>".to_owned(),
+            );
+        }
+        println!(
+            "CouchDeck benötigt Lesezugriff auf Gamepad-Geräte. Dafür wird der Benutzer zur Gruppe 'input' hinzugefügt.\nDies ist eine einmalige Systemänderung und erfordert Admin-Rechte. Danach ist eine Neuanmeldung nötig."
+        );
+        println!("Jetzt hinzufügen? [y/N] ");
+        let mut answer = String::new();
+        std::io::stdin()
+            .read_line(&mut answer)
+            .map_err(|err| format!("Bestätigung konnte nicht gelesen werden: {err}"))?;
+        if !matches!(
+            answer.trim().to_ascii_lowercase().as_str(),
+            "y" | "yes" | "j" | "ja"
+        ) {
+            println!("Abgebrochen; keine Systemänderung vorgenommen.");
+            return Ok(());
+        }
+    }
+
+    match permissions::setup_input_group()? {
+        permissions::SetupOutcome::AlreadyActive => {
+            println!("Gruppe input ist bereits aktiv.");
+        }
+        permissions::SetupOutcome::AddedNeedsRelogin => {
+            println!("Benutzer wurde zur Gruppe input hinzugefügt. Bitte ab- und wieder anmelden.");
+        }
+    }
+    Ok(())
 }
 
 fn home_executable() -> Result<PathBuf, String> {

@@ -14,7 +14,7 @@ use crate::app::{AdminView, CouchDeckApp, Overlay, PickerPurpose};
 use crate::artwork::ArtworkKind;
 use crate::desktop::{self, Severity};
 use crate::i18n::LanguagePreference;
-use crate::model::{GameEntry, ProfileRole};
+use crate::model::{ControllerHomeChord, GameEntry, ProfileRole};
 use crate::session;
 use crate::ui::{
     self, danger_button, paint_texture, primary_button, secondary_button, truncate, ACCENT, CARD,
@@ -1778,6 +1778,61 @@ fn draw_settings(ui: &mut egui::Ui, app: &mut CouchDeckApp, rect: Rect, scale: f
                         app.settings.alarm_sound = alarm_sound;
                         app.save_settings();
                     }
+
+                    ui.add_space(12.0 * scale);
+                    ui.separator();
+                    let mut home_enabled = app.settings.controller_home_enabled;
+                    let response = ui.checkbox(&mut home_enabled, app.t("admin-controller-home"));
+                    note_focus(&response, &mut focus);
+                    if response.changed() {
+                        app.settings.controller_home_enabled = home_enabled;
+                        app.controller
+                            .set_home_config(home_enabled, app.settings.controller_home_chord);
+                        app.save_settings();
+                    }
+                    ui.label(
+                        RichText::new(app.t("admin-controller-home-hint"))
+                            .size(11.5 * scale)
+                            .color(MUTED),
+                    );
+                    let permission = app.input_group_status;
+                    ui.label(
+                        RichText::new(app.tf(
+                            "admin-controller-home-permission",
+                            &[("status", app.t(permission.label_key()).into())],
+                        ))
+                        .size(11.5 * scale)
+                        .color(if permission.is_active() {
+                            OK
+                        } else {
+                            WARNING
+                        }),
+                    );
+                    ui.label(
+                        RichText::new(app.t("admin-controller-home-chord"))
+                            .size(13.0 * scale)
+                            .color(TEXT),
+                    );
+                    ui.horizontal_wrapped(|ui| {
+                        for chord in ControllerHomeChord::ALL {
+                            let selected = app.settings.controller_home_chord == chord;
+                            let response = ui.add_sized(
+                                Vec2::new(245.0 * scale, 40.0 * scale),
+                                if selected {
+                                    primary_button(app.t(chord.label_key()))
+                                } else {
+                                    secondary_button(app.t(chord.label_key()))
+                                },
+                            );
+                            note_focus(&response, &mut focus);
+                            if response.clicked() {
+                                app.settings.controller_home_chord = chord;
+                                app.controller
+                                    .set_home_config(app.settings.controller_home_enabled, chord);
+                                app.save_settings();
+                            }
+                        }
+                    });
 
                     ui.add_space(12.0 * scale);
                     ui.separator();

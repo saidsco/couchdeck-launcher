@@ -111,6 +111,8 @@ show_controller_hints = true
 show_backgrounds = true
 language = "auto"
 alarm_sound = true
+controller_home_enabled = true
+controller_home_chord = "start_select"
 additional_desktop_dirs = [
   "/home/USER/Meine Spiele-Launcher",
 ]
@@ -125,6 +127,8 @@ additional_desktop_dirs = [
 | `show_backgrounds` | Hintergrundbilder an/aus. |
 | `language` | `auto`, `de` oder `en`. `auto` nutzt `LANGUAGE`/`LC_ALL`/`LC_MESSAGES`/`LANG`; Fallback ist Englisch. Live umschaltbar. |
 | `alarm_sound` | Best-Effort-Warnton bei 5-/1-Minuten-Warnungen und bei erschöpftem Budget. |
+| `controller_home_enabled` | Globaler Controller-Home-Chord aktiv; Standard `true`. |
+| `controller_home_chord` | `start_select` (Standard), `start_left_stick` oder `start_right_stick`; 2 Sekunden halten. |
 | `additional_desktop_dirs` | Zusätzliche `.desktop`-Suchverzeichnisse; absolute Pfade werden bevorzugt. Leer/fehlend = keine zusätzlichen Quellen. |
 
 Ungültige `settings.toml` führt zu Standardwerten im Speicher und einer Sicherungskopie; die Datei wird erst bei einer expliziten Einstellungsänderung neu geschrieben.

@@ -16,6 +16,7 @@ pub mod launch;
 pub mod logging;
 pub mod model;
 pub mod paths;
+pub mod permissions;
 pub mod security;
 pub mod session;
 pub mod sound;
