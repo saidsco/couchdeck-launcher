@@ -1,6 +1,6 @@
 # Flatpak-Steam-Spike – Ergebnisse
 
-Stand: 26. November 2026  
+Stand: 26. November 2026
 Getestet auf Manjaro/KDE Plasma/Wayland.
 
 Getestetes Spiel: **LEGO Bricktales**, App-ID `1898290`.
@@ -125,3 +125,23 @@ nativem Steam:
 
 Flatpak-Steam bleibt daher ein eigener Kompatibilitäts-/Teilbackend und sollte
 nicht dieselben Capabilities wie nativer Steam erhalten.
+
+## Phase-II-Status (26. November 2026)
+
+Flatpak-Steam wurde in Phase II **bewusst zurückgestellt**. Bazzite verwendet
+standardmäßig natives Steam; fehlende vollständige Flatpak-Steam-Unterstützung
+ist kein Release-Blocker.
+
+Die Phase-I-Ergebnisse bleiben gültig und dokumentiert. Sie werden erst wieder
+priorisiert, wenn ein Zielsystem Flatpak-Steam tatsächlich als primären
+Steam-Client einsetzt. Ein späterer Spike muss insbesondere prüfen:
+
+- Test ohne parallel laufendes natives Steam.
+- Zuordnung bei mehreren Flatpak-Steam-Instanzen.
+- Ob eine spielspezifische Flatpak-Scope oder ein anderer eindeutiger
+  Prozessanker existiert.
+- Notfall-Stop ohne Beenden fremder Spiele.
+- GNOME/XFCE-Fensterschließung.
+
+Bis dahin gilt Flatpak-Steam als **experimentell/zurückgestellt**, nicht als
+produktiv unterstützt.

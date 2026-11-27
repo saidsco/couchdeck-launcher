@@ -6,3 +6,7 @@
 
 /dist/
 /dist-*/
+
+# Local manual test launchers, not part of the release tree
+/Minecraft.desktop
+/org.wesnoth.Wesnoth.desktop
