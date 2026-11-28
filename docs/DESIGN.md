@@ -32,11 +32,11 @@ Profile sind **virtuelle Profile im selben Linux-Benutzerkonto**. Keine Abschott
 
 ## Profil-Hintergründe (v0.3)
 - Cover, Spielhintergrund, globales Hintergrundbild und Profil-Hintergrund sind getrennte Asset-Typen.
-- Profil-Hintergrund wird nicht in die `.desktop`-Datei geschrieben; relative Pfade liegen unter `$XDG_DATA_HOME/couchdeck/assets/backgrounds/`.
+- Profil-Hintergrund wird nicht in die `.desktop`-Datei geschrieben; relative Pfade liegen unter `$XDG_DATA_HOME/capydeck/assets/backgrounds/`.
 - Fallback: Profil → globales Hintergrundbild. In der Bibliothek hat ein fokussiertes Spiel Vorrang vor dem Profil-Hintergrund.
 
 ## Kinderprofile und Zeitbudget (v0.3)
-- Zeitmessung ist an das laufende CouchDeck-Profil gebunden, nicht an einen erkannten Spielprozess.
+- Zeitmessung ist an das laufende CapyDeck-Profil gebunden, nicht an einen erkannten Spielprozess.
 - `timekeeping.json` speichert pro Profil Datum, genutzte Sekunden, Zusatzminuten und Warnflags; Tageswechsel setzt die Tageswerte zurück.
 - Zentrale Startprüfung `check_start_allowed` blockiert neue Starts; laufende Spiele werden nie zwangsweise beendet.
 - ParentAuth prüft jede Admin-PIN eines Nicht-Kind-Admin-Profils einmalig und entsperrt den Admin-Bereich nicht dauerhaft.
@@ -56,9 +56,9 @@ Profile sind **virtuelle Profile im selben Linux-Benutzerkonto**. Keine Abschott
 - Neue Einträge werden nie automatisch importiert; bei Kinderprofilen ist die Standard-Sichtbarkeit auf Nicht-Kinderprofile beschränkt.
 
 ## Spielemodell (v0.4)
-- Stabile CouchDeck-ID bleibt erhalten; `desktop_id`, `source` und `launch_method` ergänzen Herkunft und Startweg ohne bestehende Daten zu brechen.
+- Stabile CapyDeck-ID bleibt erhalten; `desktop_id`, `source` und `launch_method` ergänzen Herkunft und Startweg ohne bestehende Daten zu brechen.
 - `library.json`-Schema bleibt abwärtskompatibel; fehlende neue Felder werden per Serde-Default geladen.
 
 ## Single Instance (v0.4)
-- `flock` auf `$XDG_RUNTIME_DIR/couchdeck.lock` (Fallback State-Verzeichnis) schützt Bibliothek und Zeitbudget vor parallelen UIs.
+- `flock` auf `$XDG_RUNTIME_DIR/capydeck.lock` (Fallback State-Verzeichnis) schützt Bibliothek und Zeitbudget vor parallelen UIs.
 - Kernel gibt den Lock bei Abstürzen frei; eine alte Lock-Datei blockiert nicht.

@@ -1,12 +1,12 @@
-# CouchDeck
+# CapyDeck
 
-> **CouchDeck is a family-friendly, controller-first game launcher for Linux living-room PCs, independent of a specific distribution or desktop environment.**
+> **CapyDeck is a family-friendly, controller-first game launcher for Linux living-room PCs, independent of a specific distribution or desktop environment.**
 
 It opens directly into a personal game library – no store, no news, no cloud, no overlay, and no game-platform accounts.
 
 Primary desktop targets are **KDE Plasma, GNOME and XFCE** on Wayland or X11. Bazzite and SteamOS Desktop Mode are supported target platforms, but not technical requirements. Steam Gaming Mode/Gamescope is not a guaranteed target yet.
 
-**Current version:** 0.5.2 · **Language:** English · [Deutsch](README-de.md)
+**Current version:** 0.6.0 · **Language:** English · [Deutsch](README-de.md)
 
 The application UI is available in **German and English** via Fluent, with automatic locale detection and English as fallback. Some detailed documents under `docs/` are still in German.
 
@@ -16,34 +16,34 @@ Games are launched exclusively through existing `.desktop` files and `gio launch
 
 ## Features
 
-- **Controller Home & Return**: While CouchDeck runs, a global controller chord (**Start + Select held for 2 s** by default) brings it back, including from taskbar/fullscreen minimization and while it is running in the background. Alternative chords can be selected in Admin → Settings. `couchdeck --home` offers the same action from a desktop shortcut or terminal and starts CouchDeck if no instance is running. `--activate` remains activation-only.
-- **Input permissions**: Controller-Home needs read access to gamepad `/dev/input` devices. The installer offers to add the user to the `input` group (explicit confirmation, login required); `couchdeck --setup-input-permissions` provides the same setup for AppImage users. No root daemon is installed.
-- **Manual window activation**: `couchdeck --activate` contacts the already-running instance through a per-user Unix socket, without starting a second UI. On Wayland it forwards `XDG_ACTIVATION_TOKEN` when the caller provides one; KDE/Wayland has a bounded KWin-scripting fallback for terminal/no-token invocations. It never steals focus during a game/Steam/launcher start. `--diagnose-window` logs focus, minimize and fullscreen transitions.
+- **Controller Home & Return**: While CapyDeck runs, a global controller chord (**Start + Select held for 2 s** by default) brings it back, including from taskbar/fullscreen minimization and while it is running in the background. Alternative chords can be selected in Admin → Settings. `capydeck --home` offers the same action from a desktop shortcut or terminal and starts CapyDeck if no instance is running. `--activate` remains activation-only.
+- **Input permissions**: Controller-Home needs read access to gamepad `/dev/input` devices. The installer offers to add the user to the `input` group (explicit confirmation, login required); `capydeck --setup-input-permissions` provides the same setup for AppImage users. No root daemon is installed.
+- **Manual window activation**: `capydeck --activate` contacts the already-running instance through a per-user Unix socket, without starting a second UI. On Wayland it forwards `XDG_ACTIVATION_TOKEN` when the caller provides one; KDE/Wayland has a bounded KWin-scripting fallback for terminal/no-token invocations. It never steals focus during a game/Steam/launcher start. `--diagnose-window` logs focus, minimize and fullscreen transitions.
 - **Desktop-independent core**: no KDE-only runtime requirement. KDE Plasma, GNOME and XFCE on Wayland/X11 are the supported desktop targets; compositor-specific focus/minimize limitations are documented.
 - **Native release packages**: portable x86_64 tar.gz and executable AppImage via GitHub Releases, with SHA-256 checksums, `ldd`/glibc runtime report, no root and no Rust compiler at install time.
 - **Bilingual UI (de/en)** via Fluent: automatic detection from `LANGUAGE`/`LC_ALL`/`LC_MESSAGES`/`LANG`, English fallback, switchable live under Admin → Settings.
 - **Fullscreen library** with a cover grid, 3:4 center crop, focus animation, and fallback order: custom cover → desktop icon → neutral tile.
-- **Gamepad navigation** via `gilrs`: D-pad and left stick with deadzone, hold-repeat, debouncing, and hotplug. South = confirm/start, East = back, Start = menu. LB/RB (shoulder buttons) open the profile overview; profile switching happens there. Navigation is only processed while CouchDeck has window focus; connect/disconnect events are still handled, and stale input is discarded on focus changes.
+- **Gamepad navigation** via `gilrs`: D-pad and left stick with deadzone, hold-repeat, debouncing, and hotplug. South = confirm/start, East = back, Start = menu. LB/RB (shoulder buttons) open the profile overview; profile switching happens there. Navigation is only processed while CapyDeck has window focus; connect/disconnect events are still handled, and stale input is discarded on focus changes.
 - **Keyboard and mouse in parallel**: arrow keys, Enter/Space, Escape, M, F11, mouse click, and double-click.
-- **Extended desktop discovery**: user XDG applications, all `XDG_DATA_DIRS`, Flatpak user/system exports, the real XDG desktop directory from `user-dirs.dirs`, CouchDeck-managed files and administrator-configured extra directories. XDG overlay priority, desktop IDs, symlinks, localized names and filenames with spaces are handled.
+- **Extended desktop discovery**: user XDG applications, all `XDG_DATA_DIRS`, Flatpak user/system exports, the real XDG desktop directory from `user-dirs.dirs`, CapyDeck-managed files and administrator-configured extra directories. XDG overlay priority, desktop IDs, symlinks, localized names and filenames with spaces are handled.
 - **Desktop files**: arbitrary file import, preview of name, source, path, desktop ID and raw `Exec` content; support for `NoDisplay`, `Hidden`, `TryExec`, `Path`, `DBusActivatable`, `OnlyShowIn`, `NotShowIn`, categories, and localized names. `NoDisplay` entries can still be imported deliberately by an admin.
 - **Search-path management**: Admin → Search paths shows automatic sources, lets admins add/remove extra directories with a controller-friendly folder picker, rescans in the background and shows missing/unreadable paths.
 - **Launch via GIO**: only `gio launch /absolute/path.desktop`. `Exec=` is not interpreted for launching; the raw content is only shown and checked for diagnostics.
-- **Custom artwork management**: cover, per-game background, global background, avatar, and **per-profile background** via a file picker. Profile backgrounds fall back to the global background; game backgrounds and existing data are preserved. Imports go to `$XDG_DATA_HOME/couchdeck/assets/`, thumbnail cache to `$XDG_CACHE_HOME/couchdeck/`.
+- **Custom artwork management**: cover, per-game background, global background, avatar, and **per-profile background** via a file picker. Profile backgrounds fall back to the global background; game backgrounds and existing data are preserved. Imports go to `$XDG_DATA_HOME/capydeck/assets/`, thumbnail cache to `$XDG_CACHE_HOME/capydeck/`.
 - **Local profiles**: display name, role (admin/player), avatar, optional child-profile flag, daily time budget, per-profile background, and per-profile game visibility. No Linux accounts, no cloud. New imports are never automatically visible to child profiles.
 - **Future-ready game model**: stable game ID plus origin (`desktop_entry`, `managed_desktop`, `steam`, `prism`, `manual`) and launch method (`gio_desktop`). Existing 0.3.1 libraries load with defaults.
-- **Child profiles and time budgets**: accumulate active profile time while CouchDeck is running, show remaining time, warning toasts at 5/1 minutes, optional best-effort alert sound, and centrally block new game starts when the budget is exhausted. Running games are not force-closed. Profile switching, minimize, quit, and power actions require the admin PIN for child profiles.
+- **Child profiles and time budgets**: accumulate active profile time while CapyDeck is running, show remaining time, warning toasts at 5/1 minutes, optional best-effort alert sound, and centrally block new game starts when the budget is exhausted. Running games are not force-closed. Profile switching, minimize, quit, and power actions require the admin PIN for child profiles.
 - **Parent extra time**: “Request more play time” from the Start menu or the “Time budget exhausted” screen, admin PIN, then +5/+15/+30 or custom minutes. Extra time is stored per local calendar day, adds up, never changes the regular budget, and is resettable by an admin.
 - **Admin area**: import/hide/remove/sort games, edit titles and artwork, manage profiles, per-profile visibility, settings, and PIN management.
 - **Admin PIN**: Argon2id hash in a separate file with mode `0600`; input via keyboard and an on-screen numpad with a controller. Profile switching itself is not authentication; admin actions are unlocked separately when a PIN is set.
 - **Steam Flatpak repair**: detects `Exec=steam steam://rungameid/ID`, never changes anything automatically, and after explicit confirmation creates a **separate managed** file using `flatpak run com.valvesoftware.Steam …`.
-- **Prism Launcher**: import existing instance desktop files; CouchDeck can also generate a managed file using `flatpak run org.prismlauncher.PrismLauncher --launch INSTANCE_ID`. `INSTANCE_ID` is the instance folder, not the visible name.
+- **Prism Launcher**: import existing instance desktop files; CapyDeck can also generate a managed file using `flatpak run org.prismlauncher.PrismLauncher --launch INSTANCE_ID`. `INSTANCE_ID` is the instance folder, not the visible name.
 - **Autostart (opt-in, desktop-aware)**: XDG autostart for the detected KDE, GNOME or XFCE session. It uses `OnlyShowIn=<detected desktop>` and `NotShowIn=gamescope`; unknown sessions and Steam Gaming Mode/Gamescope are never guessed. The entry can be managed via Admin → Settings or `install-user.sh --autostart`.
-- **Minimize to desktop**: exits fullscreen first and then minimizes the window so the panel/taskbar remains reliably reachable on KDE, GNOME, XFCE and other desktops. When restored from the taskbar, CouchDeck returns to fullscreen if it was fullscreen before minimizing.
-- **Power menu**: quit CouchDeck, reboot the system, or shut down the system – with a confirmation dialog and fixed `systemctl` calls (no shell).
-- **Robust persistence**: atomic writes, backups for damaged files, no silent overwrites, logs under `$XDG_STATE_HOME/couchdeck/`. A per-user instance lock prevents autostart and manual start from running two UIs against the same library/time budget.
+- **Minimize to desktop**: exits fullscreen first and then minimizes the window so the panel/taskbar remains reliably reachable on KDE, GNOME, XFCE and other desktops. When restored from the taskbar, CapyDeck returns to fullscreen if it was fullscreen before minimizing.
+- **Power menu**: quit CapyDeck, reboot the system, or shut down the system – with a confirmation dialog and fixed `systemctl` calls (no shell).
+- **Robust persistence**: atomic writes, backups for damaged files, no silent overwrites, logs under `$XDG_STATE_HOME/capydeck/`. A per-user instance lock prevents autostart and manual start from running two UIs against the same library/time budget.
 
-More screenshots: [Time budget exhausted](docs/screenshots/time-budget.png), [Profiles](docs/screenshots/profiles.png), [Library as a player profile](docs/screenshots/library-profile-mia.png), [Admin](docs/screenshots/admin.png), [Game editor](docs/screenshots/game-editor.png), [Import](docs/screenshots/import.png), [PIN pad](docs/screenshots/pinpad.png), [Launch overlay](docs/screenshots/launch.png), [Power menu](docs/screenshots/menu.png), [Autostart settings](docs/screenshots/autostart-settings.png), [Damaged data](docs/screenshots/corrupt-data.png).
+More screenshots: [Time budget exhausted](docs/screenshots/time-budget.png), [Profiles](docs/screenshots/profiles.png), [Library as a player profile](docs/screenshots/library-profile-mia.png), [Admin](docs/screenshots/admin.png), [Game editor](docs/screenshots/game-editor.png), [Import](docs/screenshots/import.png), [PIN pad](docs/screenshots/pinpad.png), [Launch overlay](docs/screenshots/launch.png), [Power menu](docs/screenshots/menu.png), [Autostart settings](docs/screenshots/autostart-settings.png), [Damaged data](docs/screenshots/corrupt-data.png). The screenshots still show the 0.5.2 UI; the 0.6.0 rebrand changes the title/logo but not the layout.
 
 ## Requirements
 
@@ -52,21 +52,21 @@ More screenshots: [Time budget exhausted](docs/screenshots/time-budget.png), [Pr
 - systemd/logind with `systemctl` for reboot/shutdown on distributions that provide it; Polkit must allow the action for the active session. Other init systems are not supported for power actions.
 - Rust stable **≥ 1.85** for building from source. Tested with Rust 1.89.
 - For prebuilt releases: Linux x86_64 with glibc at least the version documented in the release `runtime-info.txt` (built on Fedora 42 / glibc 2.41), plus the normal KDE/GNOME/XFCE Wayland/X11 desktop libraries. No Rust toolchain is required.
-- No root, no `rpm-ostree` layer, no Flatpak for CouchDeck itself.
+- No root, no `rpm-ostree` layer, no Flatpak for CapyDeck itself.
 - The respective Flatpaks must be installed on the host for Steam/Prism integration.
 
 ## Install from GitHub Releases (Linux desktop, no Rust required)
 
 Prebuilt Linux x86_64 packages are published at
-[github.com/saidsco/couchdeck-launcher/releases](https://github.com/saidsco/couchdeck-launcher/releases).
+[github.com/saidsco/capydeck/releases](https://github.com/saidsco/capydeck/releases).
 They are native applications: **no Flatpak sandbox, no root, no Rust compiler**.
 
 Download these files from the latest release:
 
-- `couchdeck-<version>-linux-x86_64.tar.gz`
-- `CouchDeck-<version>-x86_64.AppImage`
+- `capydeck-<version>-linux-x86_64.tar.gz`
+- `CapyDeck-<version>-x86_64.AppImage`
 - `SHA256SUMS`
-- optional: `couchdeck-<version>-runtime-info.txt`
+- optional: `capydeck-<version>-runtime-info.txt`
 
 Verify the download (only downloaded files are checked):
 
@@ -77,27 +77,27 @@ sha256sum -c SHA256SUMS --ignore-missing
 ### Portable archive → user installation
 
 ```bash
-tar -xzf couchdeck-<version>-linux-x86_64.tar.gz
-./couchdeck-<version>-linux-x86_64/scripts/install-user.sh
+tar -xzf capydeck-<version>-linux-x86_64.tar.gz
+./capydeck-<version>-linux-x86_64/scripts/install-user.sh
 # optional desktop-aware XDG autostart:
-./couchdeck-<version>-linux-x86_64/scripts/install-user.sh --autostart
+./capydeck-<version>-linux-x86_64/scripts/install-user.sh --autostart
 ```
 
-This installs the binary to `~/.local/bin/couchdeck`, plus the desktop menu entry,
+This installs the binary to `~/.local/bin/capydeck`, plus the desktop menu entry,
 icon and optional desktop-aware autostart entry. It **does not touch** the library, profiles,
 PIN hash, artwork or settings under the XDG directories.
 
 ### AppImage
 
 ```bash
-chmod +x CouchDeck-<version>-x86_64.AppImage
-./CouchDeck-<version>-x86_64.AppImage
+chmod +x CapyDeck-<version>-x86_64.AppImage
+./CapyDeck-<version>-x86_64.AppImage
 ```
 
 If FUSE is unavailable:
 
 ```bash
-APPIMAGE_EXTRACT_AND_RUN=1 ./CouchDeck-<version>-x86_64.AppImage
+APPIMAGE_EXTRACT_AND_RUN=1 ./CapyDeck-<version>-x86_64.AppImage
 ```
 
 The AppImage uses the same XDG data directories and does not install anything
@@ -115,14 +115,14 @@ unchanged.
 Keep the release archive, or download it again, then run:
 
 ```bash
-./couchdeck-<version>-linux-x86_64/scripts/uninstall-user.sh
+./capydeck-<version>-linux-x86_64/scripts/uninstall-user.sh
 ```
 
 This removes binary, menu entry, icon and autostart only. To delete user data
 as well:
 
 ```bash
-./couchdeck-<version>-linux-x86_64/scripts/uninstall-user.sh --purge
+./capydeck-<version>-linux-x86_64/scripts/uninstall-user.sh --purge
 ```
 
 The purge asks for explicit confirmation.
@@ -152,13 +152,13 @@ grep -E '^(NAME|VERSION_ID)=' /etc/os-release
 
 # Example: host is Fedora 42
 distrobox create \
-  --name couchdeck-build \
+  --name capydeck-build \
   --image registry.fedoraproject.org/fedora-toolbox:42
 
 # If the toolbox tag for your release is unavailable:
 #   --image registry.fedoraproject.org/fedora:42
 
-distrobox enter couchdeck-build
+distrobox enter capydeck-build
 ```
 
 Inside the container:
@@ -169,7 +169,7 @@ sudo dnf install -y \
   systemd-devel libxkbcommon-devel wayland-devel mesa-libGL-devel \
   libX11-devel libXcursor-devel libXrandr-devel libXi-devel
 
-cd /path/to/couchdeck
+cd /path/to/capydeck
 cargo build --release
 cargo test
 cargo clippy --all-targets -- -D warnings
@@ -197,27 +197,28 @@ After the release build on the **host** (not in the container), run this from th
 
 This installs:
 
-- `~/.local/bin/couchdeck`
-- `~/.local/share/applications/couchdeck.desktop`
-- `~/.local/share/icons/hicolor/scalable/apps/couchdeck.svg`
+- `~/.local/bin/capydeck`
+- `~/.local/share/applications/capydeck.desktop`
+- `~/.local/share/icons/hicolor/256x256/apps/capydeck.png`
+- `~/.local/share/icons/hicolor/512x512/apps/capydeck.png`
 
 Start it from the desktop application menu or with:
 
 ```bash
-~/.local/bin/couchdeck
+~/.local/bin/capydeck
 ```
 
 Development/debug:
 
 ```bash
-~/.local/bin/couchdeck --windowed          # window instead of fullscreen
-~/.local/bin/couchdeck --no-controller     # disable the gamepad thread
-~/.local/bin/couchdeck --activate          # ask the running instance to return
-~/.local/bin/couchdeck --home              # return, or start if not running
-~/.local/bin/couchdeck --setup-input-permissions  # optional: enable controller chord
-~/.local/bin/couchdeck --install-home-launcher  # optional Home menu entry
-~/.local/bin/couchdeck --diagnose-window   # verbose focus/minimize/fullscreen logs
-~/.local/bin/couchdeck --help
+~/.local/bin/capydeck --windowed          # window instead of fullscreen
+~/.local/bin/capydeck --no-controller     # disable the gamepad thread
+~/.local/bin/capydeck --activate          # ask the running instance to return
+~/.local/bin/capydeck --home              # return, or start if not running
+~/.local/bin/capydeck --setup-input-permissions  # optional: enable controller chord
+~/.local/bin/capydeck --install-home-launcher  # optional Home menu entry
+~/.local/bin/capydeck --diagnose-window   # verbose focus/minimize/fullscreen logs
+~/.local/bin/capydeck --help
 ```
 
 Uninstall without losing data:
@@ -234,36 +235,36 @@ Complete removal of library, profiles, PIN hash, artwork, cache, and logs only a
 
 ## Window activation and return
 
-CouchDeck never requests focus automatically while a game, Steam, Proton, a
+CapyDeck never requests focus automatically while a game, Steam, Proton, a
 third-party launcher or an emulator is opening. Once you deliberately return,
 use:
 
 ```bash
-~/.local/bin/couchdeck --activate
+~/.local/bin/capydeck --activate
 ```
 
 For a controller/Home workflow use:
 
 ```bash
-~/.local/bin/couchdeck --home
+~/.local/bin/capydeck --home
 ```
 
-`--home` activates a running instance or starts CouchDeck if none is running.
+`--home` activates a running instance or starts CapyDeck if none is running.
 `--activate` remains the activation-only command and reports an error when no
 instance exists.
 
-When CouchDeck is running, the default controller chord is **Start + Select held for two seconds**. It is shown in the library footer and in Admin → Settings. The chord works in the background; no Steam client or Steam Input configuration is required. Alternatives are Start + left stick click and Start + right stick click.
+When CapyDeck is running, the default controller chord is **Start + Select held for two seconds**. It is shown in the library footer and in Admin → Settings. The chord works in the background; no Steam client or Steam Input configuration is required. Alternatives are Start + left stick click and Start + right stick click.
 
-For the chord to work, the Linux user must be able to read gamepad event devices (`/dev/input/event*`). If the setup is missing, CouchDeck checks at startup and offers a dialog: „Jetzt einrichten“ starts the same explicit admin setup via Polkit; „Später“ suppresses the prompt for future starts. Installer users are also asked once whether to join the `input` group. The CLI remains available as a fallback:
+For the chord to work, the Linux user must be able to read gamepad event devices (`/dev/input/event*`). If the setup is missing, CapyDeck checks at startup and offers a dialog: „Jetzt einrichten“ starts the same explicit admin setup via Polkit; „Später“ suppresses the prompt for future starts. Installer users are also asked once whether to join the `input` group. The CLI remains available as a fallback:
 
 ```bash
-./CouchDeck-0.5.2-x86_64.AppImage --setup-input-permissions
+./CapyDeck-0.6.0-x86_64.AppImage --setup-input-permissions
 ```
 
-This is an explicit admin action and requires a re-login to activate the new group membership. The `input` group can read other input devices too; a joystick-only udev `uaccess` rule is the more restrictive alternative. No CouchDeck daemon or exclusive input grab is installed.
+This is an explicit admin action and requires a re-login to activate the new group membership. The `input` group can read other input devices too; a joystick-only udev `uaccess` rule is the more restrictive alternative. No CapyDeck daemon or exclusive input grab is installed.
 
 The command contacts the running instance over a local Unix socket and exits.
-It does not start a second CouchDeck and does not indicate that the compositor
+It does not start a second CapyDeck and does not indicate that the compositor
 actually granted focus. The CLI message distinguishes “activation token
 forwarded” from “no activation token available”; in both cases focus remains
 unconfirmed until the app logs an observed focus event.
@@ -271,12 +272,12 @@ unconfirmed until the app logs an observed focus event.
 On Wayland the CLI forwards a caller-provided `XDG_ACTIVATION_TOKEN` to the
 running instance. The instance applies it to its existing surface through
 `xdg-activation-v1`. On KDE/Wayland, a terminal command usually has no token, so
-CouchDeck additionally uses a one-shot KWin-scripting fallback that activates
-only the CouchDeck window. It requires `qdbus6`/`qdbus` from the KDE tools. A
+CapyDeck additionally uses a one-shot KWin-scripting fallback that activates
+only the CapyDeck window. It requires `qdbus6`/`qdbus` from the KDE tools. A
 user-created KDE shortcut or a KDE-launched command may provide a token through
 KIO/KProcessRunner and avoid the fallback.
 
-- If CouchDeck was minimized, it asks for restore; Wayland/Winit itself cannot
+- If CapyDeck was minimized, it asks for restore; Wayland/Winit itself cannot
   unminimize, so the compositor activation path is required.
 - If it was fullscreen before minimizing, fullscreen is restored; an externally
   minimized fullscreen window is not toggled unnecessarily.
@@ -288,17 +289,17 @@ KIO/KProcessRunner and avoid the fallback.
   token state and a timeout without claiming success.
 
 Desktop shortcuts are deliberately **manual**: configure a global shortcut in
-KDE Plasma, GNOME or XFCE that runs the absolute path to `couchdeck --home`.
+KDE Plasma, GNOME or XFCE that runs the absolute path to `capydeck --home`.
 See [docs/WINDOW-ACTIVATION.md](docs/WINDOW-ACTIVATION.md) for exact steps and
-Wayland limitations. The optional `couchdeck --install-home-launcher` command
-creates a user-level „CouchDeck Home“ menu entry; it does not register a global
+Wayland limitations. The optional `capydeck --install-home-launcher` command
+creates a user-level „CapyDeck Home“ menu entry; it does not register a global
 shortcut automatically. The native controller chord is available while
-CouchDeck runs and does not require Steam. The optional Steam-Input recipe is in
-[`docs/STEAM-INPUT.md`](docs/STEAM-INPUT.md). CouchDeck uses read-only evdev
+CapyDeck runs and does not require Steam. The optional Steam-Input recipe is in
+[`docs/STEAM-INPUT.md`](docs/STEAM-INPUT.md). CapyDeck uses read-only evdev
 access and does not grab the controller or install an input driver.
 
-Use `couchdeck --diagnose-window` for additional focus/minimize/fullscreen
-logging in `$XDG_STATE_HOME/couchdeck/couchdeck.log`.
+Use `capydeck --diagnose-window` for additional focus/minimize/fullscreen
+logging in `$XDG_STATE_HOME/capydeck/capydeck.log`.
 
 ## Controls
 
@@ -310,30 +311,30 @@ logging in `$XDG_STATE_HOME/couchdeck/couchdeck.log`.
 | Menu | Start | M |
 | Switch profile | LB/RB (opens profile view; switch there) | PageUp/PageDown |
 | Minimize to desktop | Menu → Minimize to desktop | Menu |
-| Activate/return to CouchDeck | Start + Select (2 s) | `couchdeck --home` / desktop shortcut |
+| Activate/return to CapyDeck | Start + Select (2 s) | `capydeck --home` / desktop shortcut |
 | Toggle fullscreen | – | F11 |
 | Request more play time (child profile) | Start → Request more play time | Menu |
 | Reboot / shut down system | Menu → System … | Menu |
-| Quit CouchDeck | Menu → Quit CouchDeck | Ctrl+Q |
+| Quit CapyDeck | Menu → Quit CapyDeck | Ctrl+Q |
 
 The library shows only covers, titles, and a reduced action bar on focus. LB/RB open the profile overview from the library; switching happens there.
 
 ## Autostart, kiosk mode, and system actions
 
-CouchDeck is a normal desktop application, not a replacement desktop session. Autostart is XDG-based and opt-in. The generated entry is bound to the detected session:
+CapyDeck is a normal desktop application, not a replacement desktop session. Autostart is XDG-based and opt-in. The generated entry is bound to the detected session:
 
 - `OnlyShowIn=KDE;`, `OnlyShowIn=GNOME;` or `OnlyShowIn=XFCE;`
 - `NotShowIn=gamescope;`
-- `X-CouchDeck-Desktop=<detected desktop>`
+- `X-CapyDeck-Desktop=<detected desktop>`
 
 Unknown desktop strings and Steam Gaming Mode/Gamescope produce no autostart entry. If a stale entry exists for another desktop, Admin → Settings reports it as inactive and offers removal. The installer only writes autostart when invoked with `--autostart` and a supported desktop session is detected.
 
 - **Enable autostart**: Admin → Settings → “Start automatically on login (KDE, GNOME or XFCE)”. Alternatively `./scripts/install-user.sh --autostart` from a supported desktop session.
-- **Autostart file**: `$XDG_CONFIG_HOME/autostart/couchdeck.desktop` (normally `~/.config/autostart/couchdeck.desktop`).
+- **Autostart file**: `$XDG_CONFIG_HOME/autostart/capydeck.desktop` (normally `~/.config/autostart/capydeck.desktop`).
 - **Fullscreen overlay**: On startup, the window opens borderless in fullscreen. The desktop remains active in the background.
-- **To desktop**: The “Minimize to desktop” menu item exits fullscreen first and then minimizes the window. CouchDeck can be restored from the taskbar. If a Wayland compositor ignores the minimize request, the window is already in windowed mode and remains reachable via taskbar/Alt+Tab.
-- **Quit**: “Quit CouchDeck” in the Start menu only exits the launcher, not already running games.
-- **Reboot / shut down**: CouchDeck asks for confirmation and then calls `systemctl --no-block --no-wall reboot` or `systemctl --no-block --no-wall poweroff`. Authorization is handled by systemd/logind via Polkit; a Polkit prompt may appear.
+- **To desktop**: The “Minimize to desktop” menu item exits fullscreen first and then minimizes the window. CapyDeck can be restored from the taskbar. If a Wayland compositor ignores the minimize request, the window is already in windowed mode and remains reachable via taskbar/Alt+Tab.
+- **Quit**: “Quit CapyDeck” in the Start menu only exits the launcher, not already running games.
+- **Reboot / shut down**: CapyDeck asks for confirmation and then calls `systemctl --no-block --no-wall reboot` or `systemctl --no-block --no-wall poweroff`. Authorization is handled by systemd/logind via Polkit; a Polkit prompt may appear.
 
 Autostart is a deliberate opt-in feature and is removed by `scripts/uninstall-user.sh`. The library, profiles, and artwork remain intact.
 
@@ -343,13 +344,13 @@ Autostart is a deliberate opt-in feature and is removed by `scripts/uninstall-us
 2. **Import a game**: Admin → Games → *Import desktop file*. Name, path, and raw `Exec` content are shown before approval. Alternatively, choose any file via the file browser.
 3. **Set a cover**: Select a game → *Choose cover*. The image is copied and stored as a custom override; `Icon=` in the `.desktop` file remains unchanged.
 4. **Set an admin PIN** (recommended): Admin → PIN & Security → *Set PIN*. The PIN is a local UI lock, not an operating-system security boundary.
-5. **Start**: Press A/Enter in the library. CouchDeck hands the file to GIO and deliberately does not show a “game is running” status.
+5. **Start**: Press A/Enter in the library. CapyDeck hands the file to GIO and deliberately does not show a “game is running” status.
 
 ## Steam and Prism
 
 ### Steam as Flatpak
 
-An existing shortcut with `Exec=steam steam://rungameid/12345` is detected in the game editor and under Admin → Steam/Prism. CouchDeck does not modify the original file. After confirmation, a separate file is created under `$XDG_DATA_HOME/couchdeck/managed-desktop/`:
+An existing shortcut with `Exec=steam steam://rungameid/12345` is detected in the game editor and under Admin → Steam/Prism. CapyDeck does not modify the original file. After confirmation, a separate file is created under `$XDG_DATA_HOME/capydeck/managed-desktop/`:
 
 ```ini
 Exec=flatpak run com.valvesoftware.Steam steam://rungameid/12345
@@ -365,7 +366,7 @@ Existing `.desktop` files with:
 Exec=flatpak run org.prismlauncher.PrismLauncher --launch INSTANCE_ID
 ```
 
-can be imported directly. During import, CouchDeck verifies that the instance folder exists:
+can be imported directly. During import, CapyDeck verifies that the instance folder exists:
 
 - `~/.var/app/org.prismlauncher.PrismLauncher/data/PrismLauncher/instances/<ID>`
 - `~/.local/share/PrismLauncher/instances/<ID>`
@@ -379,23 +380,23 @@ Example files are in `examples/`: `prism-minecraft.desktop`, `steam-game-flatpak
 
 | Purpose | Path |
 |---|---|
-| Settings (incl. extra search dirs) | `$XDG_CONFIG_HOME/couchdeck/settings.toml` |
-| XDG autostart | `$XDG_CONFIG_HOME/autostart/couchdeck.desktop` |
-| Instance lock | `$XDG_RUNTIME_DIR/couchdeck.lock` (fallback `$XDG_STATE_HOME/couchdeck/instance.lock`) |
-| Library/profiles/games | `$XDG_DATA_HOME/couchdeck/library.json` |
-| Daily usage/extra time | `$XDG_DATA_HOME/couchdeck/timekeeping.json` |
-| PIN hashes | `$XDG_DATA_HOME/couchdeck/secrets.json` (mode `0600`) |
-| Imported images | `$XDG_DATA_HOME/couchdeck/assets/{covers,backgrounds,avatars}/` |
-| Managed desktop files | `$XDG_DATA_HOME/couchdeck/managed-desktop/` |
-| Thumbnail cache | `$XDG_CACHE_HOME/couchdeck/thumbnails/` |
-| Logs | `$XDG_STATE_HOME/couchdeck/couchdeck.log` |
+| Settings (incl. extra search dirs) | `$XDG_CONFIG_HOME/capydeck/settings.toml` |
+| XDG autostart | `$XDG_CONFIG_HOME/autostart/capydeck.desktop` |
+| Instance lock | `$XDG_RUNTIME_DIR/capydeck.lock` (fallback `$XDG_STATE_HOME/capydeck/instance.lock`) |
+| Library/profiles/games | `$XDG_DATA_HOME/capydeck/library.json` |
+| Daily usage/extra time | `$XDG_DATA_HOME/capydeck/timekeeping.json` |
+| PIN hashes | `$XDG_DATA_HOME/capydeck/secrets.json` (mode `0600`) |
+| Imported images | `$XDG_DATA_HOME/capydeck/assets/{covers,backgrounds,avatars}/` |
+| Managed desktop files | `$XDG_DATA_HOME/capydeck/managed-desktop/` |
+| Thumbnail cache | `$XDG_CACHE_HOME/capydeck/thumbnails/` |
+| Logs | `$XDG_STATE_HOME/capydeck/capydeck.log` |
 
 Details: [docs/DATA-FORMAT.md](docs/DATA-FORMAT.md), [desktop/discovery architecture](docs/DESKTOP-DISCOVERY.md) and [desktop test matrix](docs/DESKTOP-TEST-MATRIX.md) (currently in German).
 
 ## Security model
 
-- CouchDeck **only** launches files that an admin has explicitly imported. During import, name, path, and `Exec` are shown.
-- `Exec=` is never executed by CouchDeck or split into arguments for launching. The file is passed unchanged to `gio launch`; the raw content is only displayed and checked for diagnostic hints.
+- CapyDeck **only** launches files that an admin has explicitly imported. During import, name, path, and `Exec` are shown.
+- `Exec=` is never executed by CapyDeck or split into arguments for launching. The file is passed unchanged to `gio launch`; the raw content is only displayed and checked for diagnostic hints.
 - The admin area and all modification actions are only visible to admin profiles; child profiles never get admin UI access.
 - The PIN protects against accidental UI changes. It is **not a real OS security boundary**: anyone with access to the same Linux user account can modify the JSON files directly. Use separate Linux accounts for real isolation.
 - Power actions are only triggered after a confirmation dialog. Fixed, argument-separated `systemctl` calls are used; no shell, no arbitrary command chaining.
@@ -414,7 +415,7 @@ desktop.rs     desktop parsing, discovery, icon resolution, Steam/Prism diagnost
 activation.rs  local --activate socket, IPC server and activation protocol
 wayland_activation.rs  xdg-activation-v1 token application to existing surface
 kwin_activation.rs    bounded KDE/KWin activation fallback
-home.rs        optional user-level CouchDeck Home launcher
+home.rs        optional user-level CapyDeck Home launcher
 permissions.rs input-group/device-access checks and explicit setup
 instance.rs    per-user flock and stale-lock-safe single instance
 session.rs     desktop detection and XDG autostart
@@ -434,12 +435,12 @@ Data flow: `UI → AppState → Library/Profiles → GIO (gio launch)`.
 
 - **Desktop target testing**: Development and automated tests ran on Manjaro/KDE/Wayland; Bazzite/KDE/Wayland was confirmed by the maintainer for the 0.4.7 return path, and the packages are built and smoke-tested in a clean Fedora 42 container. GNOME/Wayland, XFCE/X11, SteamOS Desktop Mode, full Wayland/X11 fullscreen behavior, NVIDIA rendering and real controller hotplug remain open; see `docs/DESKTOP-TEST-MATRIX.md`. The clean Bazzite release checklist is in `docs/BAZZITE-RELEASE-TEST.md`.
 - **Controller hardware**: an 8BitDo Ultimate was detected and usable on Manjaro/KDE/Wayland (USB/Bluetooth mode details still to be recorded). Xbox/PlayStation controllers, GNOME/XFCE and Bazzite hotplug/reconnect remain to be verified. `--no-controller` and the “no controller found” case were tested.
-- **No game lifecycle tracking**: `gio launch` is only a start command. CouchDeck does not reliably know whether a game is running or when it ends. Steam/Prism may continue running in the background. Time budgets therefore measure **active profile time while CouchDeck is running**, not actual game process time; game detection is a later step.
+- **No game lifecycle tracking**: `gio launch` is only a start command. CapyDeck does not reliably know whether a game is running or when it ends. Steam/Prism may continue running in the background. Time budgets therefore measure **active profile time while CapyDeck is running**, not actual game process time; game detection is a later step.
 - **Time-budget edge cases**: usage is saved every 30 seconds, on warnings, on grants, on profile switches, and on exit. A hard kill/power loss can lose up to the last interval. If the launcher is not running, no time is counted. The child guard covers app-level minimize/quit/power/profile switching and best-effort WM close/minimize paths, but cannot prevent TTY switching, killing the process, or editing files in the same Linux account.
-- **Notifications/alarm best effort**: warnings are shown in the CouchDeck window. Under Wayland there is no guaranteed overlay above fullscreen games; the optional sound uses `canberra-gtk-play`/`paplay`/`pw-play`/`aplay` if available and is silently skipped otherwise.
-- **Focus after game start/exit**: The desktop/compositor is expected to bring the game window to the foreground; behavior differs on Wayland. CouchDeck never terminates games, never auto-steals focus after a launch, and offers explicit “Minimize to desktop” and `--home`/`--activate` return paths.
+- **Notifications/alarm best effort**: warnings are shown in the CapyDeck window. Under Wayland there is no guaranteed overlay above fullscreen games; the optional sound uses `canberra-gtk-play`/`paplay`/`pw-play`/`aplay` if available and is silently skipped otherwise.
+- **Focus after game start/exit**: The desktop/compositor is expected to bring the game window to the foreground; behavior differs on Wayland. CapyDeck never terminates games, never auto-steals focus after a launch, and offers explicit “Minimize to desktop” and `--home`/`--activate` return paths.
 - **Manual activation is best effort**: `--home`/`--activate` transmit a local IPC request and, when available, an activation token. X11 window managers usually honor focus requests. KDE/Wayland additionally uses a bounded KWin fallback; GNOME/Wayland may ignore token-less activation. No aggressive retries or process manipulation are used. Only KDE has the compositor-specific fallback; actual Bazzite/KDE and GNOME hardware tests remain open.
-- **Controller Home permissions**: the native chord needs read access to gamepad `/dev/input` devices and a re-login after adding the `input` group. CouchDeck does not grab the controller; Steam Input may still claim devices in some configurations. GNOME/XFCE and SteamOS remain untested for the native chord.
+- **Controller Home permissions**: the native chord needs read access to gamepad `/dev/input` devices and a re-login after adding the `input` group. CapyDeck does not grab the controller; Steam Input may still claim devices in some configurations. GNOME/XFCE and SteamOS remain untested for the native chord.
 - **SVG desktop icons** are not rasterized (no SVG decoder is bundled). PNG/WebP/JPEG icons and custom covers work; otherwise the neutral tile is used.
 - **No cover scraping, no Steam API, no store integration**, no automatic search.
 - **Favorites**: the data field exists, but a favorites UI is not implemented in the MVP.
@@ -463,6 +464,7 @@ Data flow: `UI → AppState → Library/Profiles → GIO (gio launch)`.
 
 ## Changelog
 
+- **v0.6.0**: rebrand to **CapyDeck**; new binary, app ID, XDG paths, desktop/home/autostart files, lock/socket/log names, PNG icons and release asset names. No data migration or legacy aliases.
 - **v0.5.2**: automatic permission check/prompt on startup for AppImage and tar.gz, with explicit Polkit admin confirmation, “Later” suppression and status in Settings; the native controller-home chord remains default-enabled.
 - **v0.5.1**: default global controller-home chord (Start + Select, 2 s), alternative chords, UI information, permission setup for AppImage and installer; read-only evdev, no Steam dependency, no exclusive input grab.
 - **v0.5.0**: added `--home` (activate or start), optional user-level CouchDeck Home launcher, Steam-Input documentation and regression tests; no global controller-input monitoring.

@@ -73,8 +73,8 @@ menu-fullscreen-exit = Leave fullscreen
 menu-minimize = Minimize to desktop
 menu-reboot = Reboot system
 menu-poweroff = Shut down system
-menu-about = About CouchDeck
-menu-quit = Quit CouchDeck
+menu-about = About CapyDeck
+menu-quit = Quit CapyDeck
 
 admin-locked = Admin area locked
 admin-footer-hint = B back   ·   D-pad/Enter navigate   ·   M menu   ·   Mouse/keyboard in parallel
@@ -98,7 +98,7 @@ admin-games-empty = No entries imported yet.
 admin-hidden = [hidden]
 admin-file-missing = [file missing]
 admin-select-game = Select an entry on the left or import a desktop file.
-admin-managed-file = CouchDeck-managed desktop file
+admin-managed-file = CapyDeck-managed desktop file
 admin-original-file = Original desktop file (unchanged)
 admin-file-missing-start = File missing – cannot start
 admin-title-override = Title override
@@ -147,7 +147,7 @@ admin-pin-active-hint = The PIN is managed for the active admin profile.
 admin-profile-background = Profile background
 admin-profile-remove = Remove profile
 admin-remove-active-profile-hint = The active profile can be removed; another profile will become active.
-admin-integrations-hint = GIO only launches files – CouchDeck does not interpret Exec.
+admin-integrations-hint = GIO only launches files – CapyDeck does not interpret Exec.
 admin-environment = Environment
 admin-status-gio = GIO
 admin-status-flatpak = Flatpak
@@ -165,7 +165,7 @@ admin-steam-create = Create managed Steam Flatpak variant ...
 admin-steam-not-installed = com.valvesoftware.Steam is not installed.
 admin-prism-title = Prism Launcher instances
 admin-prism-none = No Prism instances found. Checked folders:
-admin-prism-entry-title = Title for the CouchDeck entry
+admin-prism-entry-title = Title for the CapyDeck entry
 admin-prism-create = Create Prism entry
 admin-prism-failed = Prism entry failed
 admin-prism-not-installed = org.prismlauncher.PrismLauncher is not installed as a Flatpak.
@@ -178,10 +178,10 @@ admin-animations = Subtle focus animations
 admin-show-backgrounds = Show background images
 admin-controller-hints = Controller hints in the library
 admin-controller-home = Controller Home enabled
-admin-controller-home-hint = Global while CouchDeck runs; hold for 2 seconds. Requires read access to gamepad devices (/dev/input).
+admin-controller-home-hint = Global while CapyDeck runs; hold for 2 seconds. Requires read access to gamepad devices (/dev/input).
 admin-controller-home-chord = Home chord
 admin-controller-home-permission = /dev/input access: { $status }
-admin-controller-home-permission-hint = One-time setup: couchdeck --setup-input-permissions (then re-login).
+admin-controller-home-permission-hint = One-time setup: capydeck --setup-input-permissions (then re-login).
 permission-input-active = active
 permission-input-configured = assigned; re-login required
 permission-input-missing = missing
@@ -244,14 +244,14 @@ dialog-pin-store-hint = The PIN is stored only as an Argon2id hash.
 dialog-confirm-cancel = Cancel  (B)
 dialog-message-close = { $label }  (A)
 dialog-power-success = System command submitted
-dialog-power-quit = CouchDeck will quit; the system takes over.
+dialog-power-quit = CapyDeck will quit; the system takes over.
 dialog-power-hint = The command is passed to systemd via `systemctl`. A Polkit prompt may appear if necessary.
 dialog-power-wait = systemctl is still responding. Please wait …
 dialog-launch-starting = Starting { $title }
-dialog-launch-gio-hint = GIO is being called. This may take a moment. CouchDeck does not block.
+dialog-launch-gio-hint = GIO is being called. This may take a moment. CapyDeck does not block.
 dialog-launch-wait = gio launch is still responding. The launcher remains usable.
 dialog-launch-sent = Launch command sent
-dialog-launch-no-status = CouchDeck deliberately shows no 'running' status: Steam/Prism may keep running and game exit cannot be detected reliably.
+dialog-launch-no-status = CapyDeck deliberately shows no 'running' status: Steam/Prism may keep running and game exit cannot be detected reliably.
 dialog-launch-continue = Continue  (A/B)
 dialog-launch-minimize = Minimize launcher
 dialog-fatal-title = Library data unreadable
@@ -284,7 +284,7 @@ profile-role-player = Player
 profile-role-child = Child
 profile-active = Active
 
-menu-about-text = Family-friendly, controller-first fullscreen game library for Linux living-room PCs (KDE Plasma, GNOME, XFCE; Wayland or X11). Data: { $data } · Settings: { $settings } · Cache: { $cache } · Log: { $log } · { $gio }. Launching always goes through `gio launch`. CouchDeck cannot know whether a game is still running. The admin PIN is a local UI lock, not an operating-system security boundary.
+menu-about-text = Family-friendly, controller-first fullscreen game library for Linux living-room PCs (KDE Plasma, GNOME, XFCE; Wayland or X11). Data: { $data } · Settings: { $settings } · Cache: { $cache } · Log: { $log } · { $gio }. Launching always goes through `gio launch`. CapyDeck cannot know whether a game is still running. The admin PIN is a local UI lock, not an operating-system security boundary.
 menu-gio-ok = GIO: available
 menu-gio-problem = GIO: problem – { $error }
 
@@ -300,7 +300,7 @@ picker-profile-background = Choose profile background
 
 picker-desktop = Choose desktop file
 
-confirm-power-message = All running applications and games will be closed. CouchDeck submits the command to systemd.
+confirm-power-message = All running applications and games will be closed. CapyDeck submits the command to systemd.
 
 confirm-reboot-title = Reboot system?
 
@@ -310,7 +310,7 @@ confirm-poweroff-title = Shut down system?
 
 confirm-poweroff-label = Shut down
 
-confirm-quit-title = Quit CouchDeck?
+confirm-quit-title = Quit CapyDeck?
 
 confirm-quit-message = An already running game is not closed.
 
@@ -420,7 +420,7 @@ app-last-admin-remove-blocked = The last admin profile cannot be removed.
 
 app-profile-removed = Profile removed.
 
-app-entry-removed = Entry removed from the CouchDeck library. The desktop file is unchanged.
+app-entry-removed = Entry removed from the CapyDeck library. The desktop file is unchanged.
 
 app-entry-hidden = Entry hidden.
 
@@ -488,7 +488,7 @@ app-launch-thread-ended-title = Launch thread ended
 
 app-launch-thread-ended-message = The launch process ended unexpectedly. Please check the log.
 
-app-launch-note = Launch command for { $title } sent. CouchDeck does not detect game exit automatically.
+app-launch-note = Launch command for { $title } sent. CapyDeck does not detect game exit automatically.
 
 app-controller-connected = Controller connected: { $name }
 
@@ -520,13 +520,13 @@ app-pin-removed = Admin PIN removed.
 
 app-remove-entry-title = Remove entry?
 
-app-remove-entry-message = “{ $title }” will only be removed from the CouchDeck library. The desktop file and the game remain unchanged.
+app-remove-entry-message = “{ $title }” will only be removed from the CapyDeck library. The desktop file and the game remain unchanged.
 
 app-remove-entry-label = Remove from library
 
 app-remove-profile-title = Remove profile?
 
-app-remove-profile-message = “{ $name }” and its PIN will be removed from the local CouchDeck file. Linux accounts and games remain unchanged.
+app-remove-profile-message = “{ $name }” and its PIN will be removed from the local CapyDeck file. Linux accounts and games remain unchanged.
 
 app-remove-profile-label = Remove profile
 
@@ -594,7 +594,7 @@ admin-discovery-count = { $count } discovered desktop entries
 
 admin-discovery-auto = Automatically detected sources
 
-admin-discovery-auto-hint = XDG applications, Flatpak exports, the XDG desktop folder and CouchDeck-managed files.
+admin-discovery-auto-hint = XDG applications, Flatpak exports, the XDG desktop folder and CapyDeck-managed files.
 
 admin-discovery-custom = Additional search directories
 
@@ -620,7 +620,7 @@ discovery-source-flatpak-system = Flatpak (system)
 
 discovery-source-desktop-folder = XDG desktop folder
 
-discovery-source-managed = CouchDeck-managed
+discovery-source-managed = CapyDeck-managed
 
 discovery-source-custom = Custom
 

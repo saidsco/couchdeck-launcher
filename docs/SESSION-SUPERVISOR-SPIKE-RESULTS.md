@@ -362,7 +362,7 @@ Eine Dummy-UI startete die Unit und wurde danach `SIGKILL`t:
 - `systemctl stop` beendete das Spiel.
 
 Die UI ist nicht der Parent der Unit; ihr Tod beeinflusst die Sitzung nicht.
-Der **echte** CouchDeck-Prozess mit `sessions.json`-Recovery wurde in dieser
+Der **echte** CapyDeck-Prozess mit `sessions.json`-Recovery wurde in dieser
 Phase nicht gestartet; das bleibt ein offener Integrationstest.
 
 ### C6: Bewertung Variante C
@@ -487,7 +487,7 @@ unveränderte Struktur geprüft:
 
 Wichtig für den Start: Ohne bereits laufende Prism-UI blockierte
 `flatpak run org.prismlauncher.PrismLauncher --launch <id>` im Vordergrund bis
-zum Spielende. Der Launch-Client ist langlebig; CouchDeck darf ihn nicht
+zum Spielende. Der Launch-Client ist langlebig; CapyDeck darf ihn nicht
 synchron im UI-Thread ausführen. Mit geöffneter UI wurde der Auftrag dagegen
 sofort weitergereicht (Phase II).
 
@@ -609,7 +609,7 @@ Für das Shadow-Timekeeping:
 ## 12. Offene Forschungsfragen
 
 - Bazzite KDE/Wayland-Abnahme für alle Varianten.
-- Echter CouchDeck-Absturz und Recovery über `sessions.json` (bisher nur
+- Echter CapyDeck-Absturz und Recovery über `sessions.json` (bisher nur
   Dummy-UI).
 - Vollständiger interaktiver Spielverlauf mit Controller, Home-Rückkehr,
   Speichern und erneutem Laden.

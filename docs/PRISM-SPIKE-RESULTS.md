@@ -48,7 +48,7 @@ gestartet. Beobachtung:
 
 Hinweis aus Phase III: Ohne bereits laufende Prism-UI kann
 `flatpak run ... --launch` im Vordergrund bis zum Spielende blockieren. Der
-Launch-Client ist langlebig; CouchDeck darf ihn nicht synchron im UI-Thread
+Launch-Client ist langlebig; CapyDeck darf ihn nicht synchron im UI-Thread
 ausführen.
 
 Danach wurde bei **bereits geöffneter UI** gestartet:

@@ -92,7 +92,7 @@ fn admin_pin_matches(
         .any(|profile| secrets.verify(&profile.id, pin))
 }
 
-pub const APP_NAME: &str = "CouchDeck";
+pub const APP_NAME: &str = "CapyDeck";
 pub const APP_VERSION: &str = env!("CARGO_PKG_VERSION");
 
 #[derive(Debug, Clone, Copy)]
@@ -378,7 +378,7 @@ impl Default for AdminState {
     }
 }
 
-pub struct CouchDeckApp {
+pub struct CapyDeckApp {
     pub paths: XdgPaths,
     pub library: Library,
     pub settings: Settings,
@@ -452,7 +452,7 @@ pub struct CouchDeckApp {
     pub frame_count: u64,
 }
 
-impl CouchDeckApp {
+impl CapyDeckApp {
     pub fn new(cc: &eframe::CreationContext<'_>, paths: XdgPaths, options: AppOptions) -> Self {
         let mut notices: Vec<String> = Vec::new();
         let mut fatal = None;
@@ -852,7 +852,7 @@ impl CouchDeckApp {
         {
             log_info(
                 "activation",
-                "CouchDeck ist bereits fokussiert; keine Fensteraktion nötig.",
+                "CapyDeck ist bereits fokussiert; keine Fensteraktion nötig.",
             );
             return;
         }
@@ -3084,7 +3084,7 @@ impl CouchDeckApp {
                     }
                 }
                 ControllerEvent::HomeAction(action) => match action {
-                    HomeAction::ActivateCouchDeck => {
+                    HomeAction::ActivateCapyDeck => {
                         log_info(
                             "controller",
                             "Controller-Home-Chord empfangen; Aktivierung wird angefordert.",
@@ -3933,7 +3933,7 @@ impl CouchDeckApp {
     }
 }
 
-impl eframe::App for CouchDeckApp {
+impl eframe::App for CapyDeckApp {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         self.frame_count += 1;
         self.update_window_focus(ctx);

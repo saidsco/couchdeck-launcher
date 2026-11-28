@@ -4,10 +4,10 @@ Stand: 26. November 2026
 Status: Research abgeschlossen für die geprüften Backends; **keine
 produktive Session-Implementierung, keine Zeitkonten-Ablösung**.
 
-Produktstatus: Der aktuelle Release ist **CouchDeck 0.5.2**. Die geplante
-Umbenennung zu **CapyDeck** ist als 0.6.0 vorgesehen; die Session-Foundation
-folgt als 0.6.1. Dieses Dokument beschreibt die technische Grundlage
-unabhängig vom ausstehenden Rename.
+Produktstatus: Der aktuelle Release ist **CapyDeck 0.6.0**. Die Umbenennung
+von CouchDeck zu CapyDeck ist abgeschlossen; die Session-Foundation folgt als
+0.6.1. Dieses Dokument beschreibt die technische Grundlage unabhängig vom
+Rebranding.
 
 Diese Phase hatte das Ziel, eine belastbare technische Grundlage für den
 GameSessionManager und sessionbasierte Kinder-Zeitkontingente zu schaffen.
@@ -122,7 +122,7 @@ für normale Desktop-Dateien unverändert.
 ### 8. Zeitkonten müssen von der Bibliothekszeit entkoppelt werden
 
 Die aktuelle Messung zählt die Zeit des aktiven Kinderprofils, solange
-CouchDeck läuft – auch ohne Spiel. Das neue Modell zählt nur nachgewiesene
+CapyDeck läuft – auch ohne Spiel. Das neue Modell zählt nur nachgewiesene
 Spielsitzungen, pausiert nicht bei Home/Minimieren, zählt parallele Sessions
 als Vereinigung und erfasst tatsächliche Nutzung auch über das Budget hinaus.
 
@@ -186,7 +186,7 @@ Legende: ✅ nachgewiesen, ⚠️ eingeschränkt/offen, ❌ nicht möglich.
 - Vollständige Spielverläufe inkl. Speichern/Laden.
 - Steam Cloud, Overlay-Interaktion.
 - Weitere Proton-Versionen und Anti-Cheat-/Launcher-Spiele.
-- Suspend/Resume und CouchDeck-Absturz während einer Session.
+- Suspend/Resume und CapyDeck-Absturz während einer Session.
 - PID-Reuse über echte Neustarts.
 - Prism/Minecraft mit mehr als zwei Instanzen.
 - Multi-Monitor-Vollbild.
@@ -260,7 +260,7 @@ zusätzlichen Supervisor. Managed GIO bleibt opt-in.
 
 ## Änderungsumfang
 
-- Keine Änderungen am CouchDeck-/CapyDeck-Quellcode.
+- Keine Änderungen am CapyDeck-/CapyDeck-Quellcode.
 - Keine absichtlichen Änderungen an Steam-/Prism-Konfigurationen.
 - Ryujinx-Tests mit verwalteter Konfiguration nutzten einen temporären Root.
   Der erste Realtest nutzte die bestehende Ryujinx-Konfiguration und

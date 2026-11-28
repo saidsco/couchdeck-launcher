@@ -1,6 +1,6 @@
 //! Best-effort alert sound.
 //!
-//! CouchDeck does not bundle an audio engine. It tries common PipeWire/Pulse/
+//! CapyDeck does not bundle an audio engine. It tries common PipeWire/Pulse/
 //! ALSA/Canberra players in the background. A missing player must never affect
 //! time accounting or block the UI.
 

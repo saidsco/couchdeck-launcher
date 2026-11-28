@@ -1,8 +1,8 @@
-# CouchDeck Datenformat (Schema v1)
+# CapyDeck Datenformat (Schema v1)
 
-Alle Dateien sind menschenlesbar und versioniert. CouchDeck schreibt Bibliothek und Einstellungen atomar (Temp-Datei → `fsync` → `rename`). Bei beschädigten Dateien wird zuerst eine Sicherungskopie angelegt; unlesbare Daten werden **nie still überschrieben**.
+Alle Dateien sind menschenlesbar und versioniert. CapyDeck schreibt Bibliothek und Einstellungen atomar (Temp-Datei → `fsync` → `rename`). Bei beschädigten Dateien wird zuerst eine Sicherungskopie angelegt; unlesbare Daten werden **nie still überschrieben**.
 
-## `$XDG_DATA_HOME/couchdeck/library.json`
+## `$XDG_DATA_HOME/capydeck/library.json`
 
 ```json
 {
@@ -60,21 +60,21 @@ Alle Dateien sind menschenlesbar und versioniert. CouchDeck schreibt Bibliothek 
 | `active_profile_id` | Zuletzt aktives Profil. Beim Start wird direkt dessen Bibliothek geöffnet. |
 | `profiles[].id` | Stabile lokale ID, keine Linux-UID. |
 | `profiles[].role` | `admin` oder `player`. Mindestens ein Admin-Profil bleibt erhalten. |
-| `profiles[].avatar` | Relativer Pfad unterhalb des CouchDeck-Datenordners oder absoluter Pfad. |
+| `profiles[].avatar` | Relativer Pfad unterhalb des CapyDeck-Datenordners oder absoluter Pfad. |
 | `profiles[].favorites` | Reserviertes Feld; im MVP noch ohne eigene UI. |
-| `profiles[].background` | Optionales Profil-Hintergrundbild, relativ zum CouchDeck-Datenordner. Fallback: globales Hintergrundbild. |
+| `profiles[].background` | Optionales Profil-Hintergrundbild, relativ zum CapyDeck-Datenordner. Fallback: globales Hintergrundbild. |
 | `profiles[].is_child` | Aktiviert die Zeitbudget-/Elternfreigabe-Regeln. Kinderprofile erhalten keinen Admin-UI-Zugriff. |
 | `profiles[].daily_limit_minutes` | Tägliches Budget in Minuten; `null` = kein Limit. |
-| `games[].desktop_file` | **Absoluter** Pfad zur Original- oder verwalteten `.desktop`-Datei. Wird nie von CouchDeck editiert. |
+| `games[].desktop_file` | **Absoluter** Pfad zur Original- oder verwalteten `.desktop`-Datei. Wird nie von CapyDeck editiert. |
 | `games[].title_override` | Optionaler Anzeigename; leer/NULL = Name aus Desktop-Datei bzw. gespeicherter `desktop_name`. |
 | `games[].desktop_name` | Zwischengespeicherter Name, damit ein Eintrag auch bei entfernter Desktop-Datei lesbar bleibt. |
 | `games[].desktop_icon` | Zwischengespeicherter `Icon=`-Wert für den Fallback, unabhängig vom eigenen Cover. |
-| `games[].cover` | Eigenes Cover, relativ zum CouchDeck-Datenordner. |
+| `games[].cover` | Eigenes Cover, relativ zum CapyDeck-Datenordner. |
 | `games[].background` | Optionales spielspezifisches Hintergrundbild. |
 | `games[].visible_to_profiles` | `null` = für alle sichtbar; sonst Liste von Profil-IDs. |
 | `games[].hidden` | Admin-Ausblendung; die Desktop-Datei bleibt unangetastet. |
 | `games[].sort_order` | Aufsteigende Reihenfolge im Grid; `10`-Schritte erleichtern Einfügen. |
-| `games[].managed` | `true`, wenn die Datei in `managed-desktop/` von CouchDeck erzeugt wurde. |
+| `games[].managed` | `true`, wenn die Datei in `managed-desktop/` von CapyDeck erzeugt wurde. |
 | `games[].created_at_unix` | Unix-Zeit der Aufnahme (informativ). |
 | `games[].desktop_id` | Stabile XDG-Desktop-ID, wenn der Eintrag aus einer Discovery-Quelle importiert wurde. |
 | `games[].source` | Herkunft: `desktop_entry`, `managed_desktop`, `steam`, `prism`, `manual`, `other`. Fehlt das Feld in alten Dateien, wird `desktop_entry` verwendet. |
@@ -82,9 +82,9 @@ Alle Dateien sind menschenlesbar und versioniert. CouchDeck schreibt Bibliothek 
 
 ### Asset-Pfade
 
-Relative Pfade werden gegen `$XDG_DATA_HOME/couchdeck/` aufgelöst. Absolute Pfade bleiben aus Kompatibilitätsgründen gültig. Beim Import werden Bilder nach `assets/covers/`, `assets/backgrounds/` bzw. `assets/avatars/` kopiert und mit einem sicheren, zeitstempelbasierten Dateinamen versehen.
+Relative Pfade werden gegen `$XDG_DATA_HOME/capydeck/` aufgelöst. Absolute Pfade bleiben aus Kompatibilitätsgründen gültig. Beim Import werden Bilder nach `assets/covers/`, `assets/backgrounds/` bzw. `assets/avatars/` kopiert und mit einem sicheren, zeitstempelbasierten Dateinamen versehen.
 
-## `$XDG_DATA_HOME/couchdeck/secrets.json`
+## `$XDG_DATA_HOME/capydeck/secrets.json`
 
 ```json
 {
@@ -100,7 +100,7 @@ Relative Pfade werden gegen `$XDG_DATA_HOME/couchdeck/` aufgelöst. Absolute Pfa
 - Keine Klartext-PINs. Die PIN ist eine lokale UI-Sperre, keine Betriebssystem-Sicherheitsgrenze.
 - Bei beschädigter Datei wird eine Sicherung angelegt und die Datei erst beim nächsten Setzen einer PIN neu geschrieben.
 
-## `$XDG_CONFIG_HOME/couchdeck/settings.toml`
+## `$XDG_CONFIG_HOME/capydeck/settings.toml`
 
 ```toml
 schema_version = 1
@@ -135,7 +135,7 @@ additional_desktop_dirs = [
 
 Ungültige `settings.toml` führt zu Standardwerten im Speicher und einer Sicherungskopie; die Datei wird erst bei einer expliziten Einstellungsänderung neu geschrieben.
 
-## `$XDG_DATA_HOME/couchdeck/timekeeping.json`
+## `$XDG_DATA_HOME/capydeck/timekeeping.json`
 
 Getrennt von `library.json`, weil die Nutzung häufig aktualisiert wird (alle 30 Sekunden, bei Warnungen, Freigaben, Profilwechseln und beim Beenden).
 
@@ -165,11 +165,11 @@ Hinweise:
 
 - Zusatzzeit gilt nur für den aktuellen Kalendertag und verändert `daily_limit_minutes` nicht.
 - Die Datei wird atomar geschrieben. Bei ungültigem JSON oder neuerem Schema wird vor dem Neuanlegen eine Sicherung erstellt.
-- Erste Stufe: Es wird aktive Profilzeit gemessen, solange CouchDeck läuft. Eine Erkennung tatsächlich laufender Spiele ist nicht enthalten.
+- Erste Stufe: Es wird aktive Profilzeit gemessen, solange CapyDeck läuft. Eine Erkennung tatsächlich laufender Spiele ist nicht enthalten.
 
 ## Verwaltete Desktop-Dateien
 
-`$XDG_DATA_HOME/couchdeck/managed-desktop/` enthält ausschließlich von CouchDeck erzeugte Dateien, z. B.:
+`$XDG_DATA_HOME/capydeck/managed-desktop/` enthält ausschließlich von CapyDeck erzeugte Dateien, z. B.:
 
 ```ini
 [Desktop Entry]
@@ -180,29 +180,29 @@ Icon=com.valvesoftware.Steam
 Terminal=false
 Categories=Game;
 StartupNotify=true
-X-CouchDeck-Managed=true
+X-CapyDeck-Managed=true
 ```
 
 Originaldateien werden weder verändert noch überschrieben. Der Start erfolgt weiterhin über `gio launch` auf den absoluten Pfad.
 
 ## XDG-Autostart
 
-`$XDG_CONFIG_HOME/autostart/couchdeck.desktop` wird nur auf ausdrücklichen Wunsch erzeugt:
+`$XDG_CONFIG_HOME/autostart/capydeck.desktop` wird nur auf ausdrücklichen Wunsch erzeugt:
 
 ```ini
 [Desktop Entry]
 Type=Application
-Name=CouchDeck
-Exec="/home/USER/.local/bin/couchdeck" --autostart
-Icon=couchdeck
+Name=CapyDeck
+Exec="/home/USER/.local/bin/capydeck" --autostart
+Icon=capydeck
 Terminal=false
 Categories=Game;
 StartupNotify=false
 OnlyShowIn=GNOME;
 NotShowIn=gamescope;
 X-GNOME-Autostart-enabled=true
-X-CouchDeck-Autostart=true
-X-CouchDeck-Desktop=GNOME;
+X-CapyDeck-Autostart=true
+X-CapyDeck-Desktop=GNOME;
 ```
 
 - `OnlyShowIn=<KDE|GNOME|XFCE>;` bindet den Eintrag an die erkannte Desktop-Sitzung; `NotShowIn=gamescope;` schließt Steam Gaming Mode/Gamescope aus.
@@ -213,22 +213,22 @@ X-CouchDeck-Desktop=GNOME;
 
 ## Instanz-Lock
 
-- `$XDG_RUNTIME_DIR/couchdeck.lock` (Fallback `$XDG_STATE_HOME/couchdeck/instance.lock`) enthält die PID der laufenden Instanz und wird mit einem exklusiven `flock` gehalten.
+- `$XDG_RUNTIME_DIR/capydeck.lock` (Fallback `$XDG_STATE_HOME/capydeck/instance.lock`) enthält die PID der laufenden Instanz und wird mit einem exklusiven `flock` gehalten.
 - Der Kernel gibt den Lock bei normalem Ende und bei Abstürzen frei. Eine zurückbleibende Lock-Datei blockiert keinen Neustart.
 - Ein zweiter Start beendet sich mit einem Hinweis, bevor Bibliothek oder Zeitbudget verändert werden.
-- `$XDG_RUNTIME_DIR/couchdeck-activate.sock` (Fallback `$XDG_STATE_HOME/couchdeck/activate.sock`) ist der lokale Aktivierungs-Socket für `couchdeck --activate`. Modus `0600`; der Server prüft zusätzlich die Peer-UID. Das Protokoll überträgt optional einen hex-kodierten `XDG_ACTIVATION_TOKEN`; Token werden weder geloggt noch dauerhaft gespeichert. Der Socket enthält keine Spiel- oder Profildaten.
+- `$XDG_RUNTIME_DIR/capydeck-activate.sock` (Fallback `$XDG_STATE_HOME/capydeck/activate.sock`) ist der lokale Aktivierungs-Socket für `capydeck --activate`. Modus `0600`; der Server prüft zusätzlich die Peer-UID. Das Protokoll überträgt optional einen hex-kodierten `XDG_ACTIVATION_TOKEN`; Token werden weder geloggt noch dauerhaft gespeichert. Der Socket enthält keine Spiel- oder Profildaten.
 - Der KDE/Wayland-Fallback schreibt kurzlebige KWin-Skripte nach `$XDG_RUNTIME_DIR` (Fallback State-Verzeichnis), lädt sie einmalig und entfernt sie anschließend. Es gibt keine permanente systemweite Konfiguration.
 
 ## Optionaler Home-Launcher
 
-`couchdeck --install-home-launcher` schreibt ausschließlich
-`$XDG_DATA_HOME/applications/couchdeck-home.desktop` mit
+`capydeck --install-home-launcher` schreibt ausschließlich
+`$XDG_DATA_HOME/applications/capydeck-home.desktop` mit
 `Exec="<absoluter Pfad>" --home`. Der Eintrag ist mit
-`X-CouchDeck-Managed=true` markiert und wird vom Uninstaller entfernt. Die
+`X-CapyDeck-Managed=true` markiert und wird vom Uninstaller entfernt. Die
 globale Tastenkombination/Steam-Input-Zuordnung wird nicht automatisch
 registriert.
 
 ## Cache und Logs
 
-- `$XDG_CACHE_HOME/couchdeck/thumbnails/`: abgeleitete PNG-Thumbnails, Schlüssel enthält Quellpfad, Änderungszeit, Größe und Zielformat. Kann jederzeit gelöscht werden.
-- `$XDG_STATE_HOME/couchdeck/couchdeck.log`: Append-Log; keine Secrets.
+- `$XDG_CACHE_HOME/capydeck/thumbnails/`: abgeleitete PNG-Thumbnails, Schlüssel enthält Quellpfad, Änderungszeit, Größe und Zielformat. Kann jederzeit gelöscht werden.
+- `$XDG_STATE_HOME/capydeck/capydeck.log`: Append-Log; keine Secrets.

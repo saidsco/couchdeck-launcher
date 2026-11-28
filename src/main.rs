@@ -1,25 +1,25 @@
 use std::path::PathBuf;
 use std::process::ExitCode;
 
-use couchdeck::app::{AppOptions, CouchDeckApp};
-use couchdeck::paths::XdgPaths;
-use couchdeck::{activation, home, instance, logging, permissions, session, storage};
+use capydeck::app::{AppOptions, CapyDeckApp};
+use capydeck::paths::XdgPaths;
+use capydeck::{activation, home, instance, logging, permissions, session, storage};
 
 const USAGE: &str = "\
-CouchDeck – familienfreundlicher, controller-first Spiele-Launcher
+CapyDeck – familienfreundlicher, controller-first Spiele-Launcher
 
 VERWENDUNG:
-    couchdeck [OPTIONEN]
-    couchdeck --activate
-    couchdeck --home
+    capydeck [OPTIONEN]
+    capydeck --activate
+    capydeck --home
 
 OPTIONEN:
     --windowed              Fenster statt Vollbild (Entwicklung)
     --no-controller         Gamepad-Thread deaktivieren (Diagnose)
     --autostart             Wird vom XDG-Autostart-Eintrag verwendet
-    --activate              Laufende CouchDeck-Instanz um Fensteraktivierung bitten
-    --home                  CouchDeck aktivieren oder starten, falls nicht laufend
-    --install-home-launcher Optionalen „CouchDeck Home“-Menüeintrag anlegen
+    --activate              Laufende CapyDeck-Instanz um Fensteraktivierung bitten
+    --home                  CapyDeck aktivieren oder starten, falls nicht laufend
+    --install-home-launcher Optionalen „CapyDeck Home“-Menüeintrag anlegen
     --remove-home-launcher  Optionalen Home-Menüeintrag entfernen
     --setup-input-permissions  Benutzer zur Gruppe input hinzufügen (Controller-Home)
     --yes                   Bestätigung für --setup-input-permissions überspringen
@@ -35,7 +35,7 @@ fn main() -> ExitCode {
     match run() {
         Ok(()) => ExitCode::SUCCESS,
         Err(err) => {
-            eprintln!("CouchDeck: {err}");
+            eprintln!("CapyDeck: {err}");
             logging::log_error("main", &err);
             ExitCode::FAILURE
         }
@@ -66,7 +66,7 @@ fn run() -> Result<(), String> {
             "--yes" => assume_yes = true,
             "--diagnose-window" => diagnose_window = true,
             "--version" | "-V" => {
-                println!("couchdeck {}", env!("CARGO_PKG_VERSION"));
+                println!("capydeck {}", env!("CARGO_PKG_VERSION"));
                 return Ok(());
             }
             "--help" | "-h" => {
@@ -96,7 +96,7 @@ fn run() -> Result<(), String> {
     logging::log_info(
         "main",
         format!(
-            "couchdeck {} | Session={} | Wayland={} | Desktop={:?} | DesktopTokens={:?} | XDG_DATA_HOME={} | Autostart={} | Diagnose={}",
+            "capydeck {} | Session={} | Wayland={} | Desktop={:?} | DesktopTokens={:?} | XDG_DATA_HOME={} | Autostart={} | Diagnose={}",
             env!("CARGO_PKG_VERSION"),
             std::env::var("XDG_SESSION_TYPE").unwrap_or_else(|_| "unbekannt".into()),
             std::env::var("WAYLAND_DISPLAY").unwrap_or_else(|_| "nicht gesetzt".into()),
@@ -150,7 +150,7 @@ fn run() -> Result<(), String> {
         }
         logging::log_info(
             "activation",
-            "CLI --home: keine laufende Instanz; CouchDeck wird normal gestartet.",
+            "CLI --home: keine laufende Instanz; CapyDeck wird normal gestartet.",
         );
     }
     if activate {
@@ -167,7 +167,7 @@ fn run() -> Result<(), String> {
     }
     storage::ensure_directories(&paths)?;
     // A token from the environment is only meaningful for a window that is
-    // being created. CouchDeck's window already exists here; do not leak the
+    // being created. CapyDeck's window already exists here; do not leak the
     // one-shot token into games/launchers started later.
     if std::env::var_os("XDG_ACTIVATION_TOKEN").is_some()
         || std::env::var_os("DESKTOP_STARTUP_ID").is_some()
@@ -185,9 +185,9 @@ fn run() -> Result<(), String> {
         Err(instance::InstanceError::AlreadyRunning) => {
             logging::log_info(
                 "main",
-                "CouchDeck läuft bereits; zweiter Start wird beendet.",
+                "CapyDeck läuft bereits; zweiter Start wird beendet.",
             );
-            println!("CouchDeck läuft bereits.");
+            println!("CapyDeck läuft bereits.");
             return Ok(());
         }
         Err(err) => return Err(err.to_string()),
@@ -200,8 +200,8 @@ fn run() -> Result<(), String> {
     };
     let paths_for_app = paths.clone();
     let viewport = eframe::egui::ViewportBuilder::default()
-        .with_title("CouchDeck")
-        .with_app_id("couchdeck")
+        .with_title("CapyDeck")
+        .with_app_id("capydeck")
         .with_inner_size([1600.0, 900.0])
         .with_min_inner_size([960.0, 540.0])
         .with_decorations(windowed)
@@ -215,11 +215,11 @@ fn run() -> Result<(), String> {
     };
 
     let result = eframe::run_native(
-        "CouchDeck",
+        "CapyDeck",
         native_options,
         Box::new(move |cc| {
             Ok(
-                Box::new(CouchDeckApp::new(cc, paths_for_app.clone(), options))
+                Box::new(CapyDeckApp::new(cc, paths_for_app.clone(), options))
                     as Box<dyn eframe::App>,
             )
         }),
@@ -266,7 +266,7 @@ fn setup_input_permissions_cli(assume_yes: bool) -> Result<(), String> {
             );
         }
         println!(
-            "CouchDeck benötigt Lesezugriff auf Gamepad-Geräte. Dafür wird der Benutzer zur Gruppe 'input' hinzugefügt.\nDies ist eine einmalige Systemänderung und erfordert Admin-Rechte. Danach ist eine Neuanmeldung nötig."
+            "CapyDeck benötigt Lesezugriff auf Gamepad-Geräte. Dafür wird der Benutzer zur Gruppe 'input' hinzugefügt.\nDies ist eine einmalige Systemänderung und erfordert Admin-Rechte. Danach ist eine Neuanmeldung nötig."
         );
         println!("Jetzt hinzufügen? [y/N] ");
         let mut answer = String::new();

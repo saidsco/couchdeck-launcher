@@ -8,8 +8,8 @@ use eframe::egui::{
 use std::path::PathBuf;
 
 use crate::app::{
-    ConfirmAction, ConfirmDialog, CouchDeckApp, FilePickerState, ImportState, MenuAction,
-    MenuState, MessageDialog, MessageSeverity, Overlay, PermissionPromptDialog, PinPad, PinPurpose,
+    CapyDeckApp, ConfirmAction, ConfirmDialog, FilePickerState, ImportState, MenuAction, MenuState,
+    MessageDialog, MessageSeverity, Overlay, PermissionPromptDialog, PinPad, PinPurpose,
 };
 use crate::desktop::{self, Severity};
 use crate::ui::{
@@ -38,7 +38,7 @@ enum Outcome {
     Consume(Option<OverlayAction>),
 }
 
-pub fn draw_overlay(app: &mut CouchDeckApp, ctx: &egui::Context) {
+pub fn draw_overlay(app: &mut CapyDeckApp, ctx: &egui::Context) {
     if matches!(app.overlay, Overlay::None) {
         return;
     }
@@ -71,7 +71,7 @@ pub fn draw_overlay(app: &mut CouchDeckApp, ctx: &egui::Context) {
     }
 }
 
-fn apply_action(app: &mut CouchDeckApp, ctx: &egui::Context, action: OverlayAction) {
+fn apply_action(app: &mut CapyDeckApp, ctx: &egui::Context, action: OverlayAction) {
     match action {
         OverlayAction::Menu(action) => app.execute_menu_action(ctx, action),
         OverlayAction::ImportSelected(entry) => app.import_entry(&entry),
@@ -114,7 +114,7 @@ pub(crate) fn show_modal<R>(
         .inner
 }
 
-fn draw_menu(ctx: &egui::Context, app: &mut CouchDeckApp, mut state: MenuState) -> Outcome {
+fn draw_menu(ctx: &egui::Context, app: &mut CapyDeckApp, mut state: MenuState) -> Outcome {
     let scale = ui::ui_scale(ctx);
     let mut clicked = None;
     show_modal(ctx, "menu-modal", scale, |ui| {
@@ -165,7 +165,7 @@ fn draw_menu(ctx: &egui::Context, app: &mut CouchDeckApp, mut state: MenuState) 
     }
 }
 
-fn draw_import(ctx: &egui::Context, app: &mut CouchDeckApp, mut state: ImportState) -> Outcome {
+fn draw_import(ctx: &egui::Context, app: &mut CapyDeckApp, mut state: ImportState) -> Outcome {
     let scale = ui::ui_scale(ctx);
     let mut action: Option<OverlayAction> = None;
     show_modal(ctx, "import-modal", scale, |ui| {
@@ -430,7 +430,7 @@ fn draw_import(ctx: &egui::Context, app: &mut CouchDeckApp, mut state: ImportSta
     }
 }
 
-fn draw_picker(ctx: &egui::Context, app: &mut CouchDeckApp, mut state: FilePickerState) -> Outcome {
+fn draw_picker(ctx: &egui::Context, app: &mut CapyDeckApp, mut state: FilePickerState) -> Outcome {
     let scale = ui::ui_scale(ctx);
     let mut action: Option<OverlayAction> = None;
     show_modal(ctx, "picker-modal", scale, |ui| {
@@ -631,7 +631,7 @@ fn draw_picker(ctx: &egui::Context, app: &mut CouchDeckApp, mut state: FilePicke
     }
 }
 
-fn draw_pin(ctx: &egui::Context, app: &mut CouchDeckApp, pad: PinPad) -> Outcome {
+fn draw_pin(ctx: &egui::Context, app: &mut CapyDeckApp, pad: PinPad) -> Outcome {
     let scale = ui::ui_scale(ctx);
     let mut pressed = None;
     show_modal(ctx, "pin-modal", scale, |ui| {
@@ -725,7 +725,7 @@ fn draw_pin(ctx: &egui::Context, app: &mut CouchDeckApp, pad: PinPad) -> Outcome
     }
 }
 
-fn draw_confirm(ctx: &egui::Context, app: &mut CouchDeckApp, dialog: ConfirmDialog) -> Outcome {
+fn draw_confirm(ctx: &egui::Context, app: &mut CapyDeckApp, dialog: ConfirmDialog) -> Outcome {
     let scale = ui::ui_scale(ctx);
     let mut action = None;
     show_modal(ctx, "confirm-modal", scale, |ui| {
@@ -782,7 +782,7 @@ fn draw_confirm(ctx: &egui::Context, app: &mut CouchDeckApp, dialog: ConfirmDial
 
 fn draw_permission_prompt(
     ctx: &egui::Context,
-    app: &CouchDeckApp,
+    app: &CapyDeckApp,
     dialog: PermissionPromptDialog,
 ) -> Outcome {
     let scale = ui::ui_scale(ctx);
@@ -849,7 +849,7 @@ fn draw_permission_prompt(
     }
 }
 
-fn draw_message(ctx: &egui::Context, app: &CouchDeckApp, dialog: MessageDialog) -> Outcome {
+fn draw_message(ctx: &egui::Context, app: &CapyDeckApp, dialog: MessageDialog) -> Outcome {
     let scale = ui::ui_scale(ctx);
     let mut close = false;
     let (accent, label) = match dialog.severity {
@@ -898,7 +898,7 @@ fn draw_message(ctx: &egui::Context, app: &CouchDeckApp, dialog: MessageDialog) 
     }
 }
 
-pub fn draw_power(app: &CouchDeckApp, ctx: &egui::Context) {
+pub fn draw_power(app: &CapyDeckApp, ctx: &egui::Context) {
     let Some(state) = app.system.state() else {
         return;
     };
@@ -943,7 +943,7 @@ pub fn draw_power(app: &CouchDeckApp, ctx: &egui::Context) {
     });
 }
 
-pub fn draw_launch(app: &mut CouchDeckApp, ctx: &egui::Context) {
+pub fn draw_launch(app: &mut CapyDeckApp, ctx: &egui::Context) {
     let Some(state) = &app.launch else {
         return;
     };
@@ -1029,7 +1029,7 @@ pub fn draw_launch(app: &mut CouchDeckApp, ctx: &egui::Context) {
     }
 }
 
-pub fn draw_fatal(app: &mut CouchDeckApp, ctx: &egui::Context) {
+pub fn draw_fatal(app: &mut CapyDeckApp, ctx: &egui::Context) {
     let scale = ui::ui_scale(ctx);
     egui::CentralPanel::default()
         .frame(egui::Frame::NONE.fill(ui::BACKGROUND))

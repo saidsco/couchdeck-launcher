@@ -2,7 +2,7 @@
 # Download and unpack the pinned AppImage build tool used by the release workflow.
 set -euo pipefail
 
-TOOLS_DIR="${1:-/tmp/couchdeck-release-tools}"
+TOOLS_DIR="${1:-/tmp/capydeck-release-tools}"
 URL="https://github.com/linuxdeploy/linuxdeploy/releases/download/1-alpha-20251107-1/linuxdeploy-x86_64.AppImage"
 SHA256="c20cd71e3a4e3b80c3483cef793cda3f4e990aca14014d23c544ca3ce1270b4d"
 

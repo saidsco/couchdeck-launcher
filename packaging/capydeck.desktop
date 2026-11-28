@@ -1,12 +1,12 @@
 [Desktop Entry]
 Type=Application
-Name=CouchDeck
-Name[de]=CouchDeck
+Name=CapyDeck
+Name[de]=CapyDeck
 Comment=Controller-first fullscreen game launcher
 Comment[de]=Controllerfreundliche Fullscreen-Spielebibliothek
-Exec=couchdeck
-Icon=couchdeck
+Exec=capydeck
+Icon=capydeck
 Terminal=false
 Categories=Game;
 StartupNotify=true
-X-CouchDeck-AppImage=true
+X-CapyDeck-AppImage=true

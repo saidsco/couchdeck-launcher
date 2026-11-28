@@ -10,7 +10,7 @@ use eframe::egui::{
     UiBuilder, Vec2,
 };
 
-use crate::app::{AdminView, CouchDeckApp, Overlay, PickerPurpose};
+use crate::app::{AdminView, CapyDeckApp, Overlay, PickerPurpose};
 use crate::artwork::ArtworkKind;
 use crate::desktop::{self, Severity};
 use crate::i18n::LanguagePreference;
@@ -21,7 +21,7 @@ use crate::ui::{
     DANGER, MUTED, OK, TEXT, WARNING,
 };
 
-pub fn draw(ui: &mut egui::Ui, app: &mut CouchDeckApp) {
+pub fn draw(ui: &mut egui::Ui, app: &mut CapyDeckApp) {
     let ctx = ui.ctx().clone();
     let scale = ui::ui_scale(&ctx);
     let screen = ctx.screen_rect();
@@ -80,7 +80,7 @@ pub fn draw(ui: &mut egui::Ui, app: &mut CouchDeckApp) {
     draw_footer(ui, app, footer, scale);
 }
 
-fn draw_footer(ui: &mut egui::Ui, app: &mut CouchDeckApp, rect: Rect, scale: f32) {
+fn draw_footer(ui: &mut egui::Ui, app: &mut CapyDeckApp, rect: Rect, scale: f32) {
     ui.scope_builder(
         UiBuilder::new().max_rect(rect).id_salt("admin-footer"),
         |ui| {
@@ -138,7 +138,7 @@ fn note_focus(response: &egui::Response, focus: &mut FocusOrder) {
 /// Apply controller D-pad steps after all widgets of the current admin view
 /// have been created. Requesting focus here takes effect on the next frame,
 /// while confirm is injected at the beginning of the next frame.
-fn finish_focus(ctx: &egui::Context, app: &mut CouchDeckApp, focus: &FocusOrder) {
+fn finish_focus(ctx: &egui::Context, app: &mut CapyDeckApp, focus: &FocusOrder) {
     if !matches!(app.overlay, Overlay::None) || focus.ids.is_empty() {
         // A pending confirm without a focusable target must not fire later in
         // an unrelated view.
@@ -185,7 +185,7 @@ fn heading(ui: &mut egui::Ui, title: &str, subtitle: &str, scale: f32) {
     ui.add_space(8.0 * scale);
 }
 
-fn draw_menu(ui: &mut egui::Ui, app: &mut CouchDeckApp, rect: Rect, scale: f32) {
+fn draw_menu(ui: &mut egui::Ui, app: &mut CapyDeckApp, rect: Rect, scale: f32) {
     let mut focus = FocusOrder::default();
     ui.scope_builder(
         UiBuilder::new().max_rect(rect).id_salt("admin-menu"),
@@ -265,7 +265,7 @@ fn draw_menu(ui: &mut egui::Ui, app: &mut CouchDeckApp, rect: Rect, scale: f32) 
     finish_focus(ui.ctx(), app, &focus);
 }
 
-fn enter_view(app: &mut CouchDeckApp, view: AdminView) {
+fn enter_view(app: &mut CapyDeckApp, view: AdminView) {
     app.admin.view = view.clone();
     app.admin.needs_initial_focus = true;
     app.admin.pending_steps = 0;
@@ -310,7 +310,7 @@ fn enter_view(app: &mut CouchDeckApp, view: AdminView) {
     }
 }
 
-fn draw_games(ui: &mut egui::Ui, app: &mut CouchDeckApp, rect: Rect, scale: f32) {
+fn draw_games(ui: &mut egui::Ui, app: &mut CapyDeckApp, rect: Rect, scale: f32) {
     let mut focus = FocusOrder::default();
     let top_h = 50.0 * scale;
     ui.scope_builder(
@@ -440,7 +440,7 @@ fn draw_games(ui: &mut egui::Ui, app: &mut CouchDeckApp, rect: Rect, scale: f32)
 
 fn draw_game_editor(
     ui: &mut egui::Ui,
-    app: &mut CouchDeckApp,
+    app: &mut CapyDeckApp,
     game: &GameEntry,
     scale: f32,
     focus: &mut FocusOrder,
@@ -737,7 +737,7 @@ fn draw_game_editor(
     }
 }
 
-fn draw_game_edit(ui: &mut egui::Ui, app: &mut CouchDeckApp, rect: Rect, scale: f32, id: &str) {
+fn draw_game_edit(ui: &mut egui::Ui, app: &mut CapyDeckApp, rect: Rect, scale: f32, id: &str) {
     // Compatibility view: show the same editor as the split view.
     let Some(game) = app.library.game(id).cloned() else {
         app.admin.view = AdminView::Games;
@@ -765,7 +765,7 @@ fn draw_game_edit(ui: &mut egui::Ui, app: &mut CouchDeckApp, rect: Rect, scale: 
     finish_focus(ui.ctx(), app, &focus);
 }
 
-fn draw_profiles(ui: &mut egui::Ui, app: &mut CouchDeckApp, rect: Rect, scale: f32) {
+fn draw_profiles(ui: &mut egui::Ui, app: &mut CapyDeckApp, rect: Rect, scale: f32) {
     let mut focus = FocusOrder::default();
     let top_h = 50.0 * scale;
     ui.scope_builder(
@@ -886,7 +886,7 @@ fn draw_profiles(ui: &mut egui::Ui, app: &mut CouchDeckApp, rect: Rect, scale: f
 
 fn draw_profile_editor(
     ui: &mut egui::Ui,
-    app: &mut CouchDeckApp,
+    app: &mut CapyDeckApp,
     profile: &crate::model::Profile,
     scale: f32,
     focus: &mut FocusOrder,
@@ -1222,7 +1222,7 @@ fn draw_profile_editor(
     }
 }
 
-fn draw_integrations(ui: &mut egui::Ui, app: &mut CouchDeckApp, rect: Rect, scale: f32) {
+fn draw_integrations(ui: &mut egui::Ui, app: &mut CapyDeckApp, rect: Rect, scale: f32) {
     let mut focus = FocusOrder::default();
     ui.scope_builder(
         UiBuilder::new()
@@ -1499,7 +1499,7 @@ fn draw_integrations(ui: &mut egui::Ui, app: &mut CouchDeckApp, rect: Rect, scal
     finish_focus(ui.ctx(), app, &focus);
 }
 
-fn draw_discovery(ui: &mut egui::Ui, app: &mut CouchDeckApp, rect: Rect, scale: f32) {
+fn draw_discovery(ui: &mut egui::Ui, app: &mut CapyDeckApp, rect: Rect, scale: f32) {
     let mut focus = FocusOrder::default();
     ui.scope_builder(
         UiBuilder::new().max_rect(rect).id_salt("admin-discovery"),
@@ -1689,7 +1689,7 @@ fn status_chip(ui: &mut egui::Ui, name: &str, ok: bool, detail: &str, scale: f32
         });
 }
 
-fn draw_settings(ui: &mut egui::Ui, app: &mut CouchDeckApp, rect: Rect, scale: f32) {
+fn draw_settings(ui: &mut egui::Ui, app: &mut CapyDeckApp, rect: Rect, scale: f32) {
     let mut focus = FocusOrder::default();
     ui.scope_builder(
         UiBuilder::new().max_rect(rect).id_salt("admin-settings"),
@@ -2061,7 +2061,7 @@ fn draw_settings(ui: &mut egui::Ui, app: &mut CouchDeckApp, rect: Rect, scale: f
     finish_focus(ui.ctx(), app, &focus);
 }
 
-fn draw_pin(ui: &mut egui::Ui, app: &mut CouchDeckApp, rect: Rect, scale: f32) {
+fn draw_pin(ui: &mut egui::Ui, app: &mut CapyDeckApp, rect: Rect, scale: f32) {
     let mut focus = FocusOrder::default();
     ui.scope_builder(UiBuilder::new().max_rect(rect).id_salt("admin-pin"), |ui| {
         ui.horizontal(|ui| {

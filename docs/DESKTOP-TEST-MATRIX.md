@@ -1,6 +1,6 @@
-# Desktop-Testmatrix (Stand 0.5.2)
+# Desktop-Testmatrix (Stand 0.6.0)
 
-CouchDeck ist desktopunabhängig konzipiert. Die folgende Matrix trennt
+CapyDeck ist desktopunabhängig konzipiert. Die folgende Matrix trennt
 **automatisierte/Unit-geprüfte Logik** von tatsächlich durchgeführten
 Sitzungstests. Nicht ausgeführte Kombinationen sind ausdrücklich offen.
 
@@ -13,9 +13,9 @@ Sitzungstests. Nicht ausgeführte Kombinationen sind ausdrücklich offen.
 | SteamOS Desktop Mode | nicht ausgeführt | nicht ausgeführt | nicht ausgeführt | Session-Erkennung unterscheidet Gamescope; Desktop-Mode-Erkennung offen | nicht ausgeführt | IPC unit-getestet; Fokus offen | nicht ausgeführt | nicht ausgeführt | **offen** |
 | Steam Gaming Mode / Gamescope | bewusst nicht Ziel | – | – | ausgeschlossen | – | – | – | – | **nicht unterstützt** |
 
-## Fensteraktivierung / Home (0.5.2)
+## Fensteraktivierung / Home (historisch 0.5.2)
 
-`couchdeck --activate` wurde unter X11/Xwayland und KDE 6.7.5/Wayland
+`capydeck --activate` wurde unter X11/Xwayland und KDE 6.7.5/Wayland
 praktisch geprüft:
 
 - fokussiert → IPC angenommen, keine Fensteraktion

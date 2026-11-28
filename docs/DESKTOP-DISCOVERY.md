@@ -1,6 +1,6 @@
 # Desktop-, Autostart- und Discovery-Architektur (0.4)
 
-CouchDeck is a family-friendly, controller-first game launcher for Linux
+CapyDeck is a family-friendly, controller-first game launcher for Linux
 living-room PCs, independent of a specific distribution or desktop environment.
 
 ## Unterstützte Sitzungen
@@ -29,7 +29,7 @@ Priorität (bei gleicher Desktop-ID gewinnt die frühere Quelle):
 4. Flatpak-Systemexport `/var/lib/flatpak/exports/share/applications`
 5. Tatsächlicher XDG-Desktopordner aus `$XDG_CONFIG_HOME/user-dirs.dirs`
 6. Administrator-Suchverzeichnisse aus `settings.toml`
-7. CouchDeck-verwaltete Dateien in `$XDG_DATA_HOME/couchdeck/managed-desktop`
+7. CapyDeck-verwaltete Dateien in `$XDG_DATA_HOME/capydeck/managed-desktop`
 
 Desktop-IDs werden relativ zur Quelle gebildet; Unterverzeichnisse werden mit
 `-` verbunden, die `.desktop`-Endung bleibt Teil der ID. Dateinamen mit
@@ -53,7 +53,7 @@ führen nie zu einer Zusammenführung.
 
 ## Spielemodell
 
-`GameEntry` behält die stabile CouchDeck-ID. Zusätzlich werden Herkunft
+`GameEntry` behält die stabile CapyDeck-ID. Zusätzlich werden Herkunft
 (`desktop_entry`, `managed_desktop`, `steam`, `prism`, `manual`, `other`),
 optionale Desktop-ID und Startmethode (`gio_desktop`) gespeichert. Alte
 `library.json`-Dateien laden mit Defaults; ein Discovery-Lauf verändert keine
@@ -68,7 +68,7 @@ Gamescope/Gaming-Mode-Tokens deaktivieren Autostart. Die erzeugte Datei enthält
 ```ini
 OnlyShowIn=<KDE|GNOME|XFCE>;
 NotShowIn=gamescope;
-X-CouchDeck-Desktop=<KDE|GNOME|XFCE>;
+X-CapyDeck-Desktop=<KDE|GNOME|XFCE>;
 ```
 
 Unbekannte Sitzungen erhalten keinen Eintrag. Vorhandene Einträge für andere
@@ -77,7 +77,7 @@ Admin-Einstellung oder `install-user.sh --autostart` aktiviert.
 
 ## Single Instance
 
-Ein `flock` auf `$XDG_RUNTIME_DIR/couchdeck.lock` (Fallback im State-Verzeichnis)
+Ein `flock` auf `$XDG_RUNTIME_DIR/capydeck.lock` (Fallback im State-Verzeichnis)
 verhindert parallele UIs. Der Kernel gibt den Lock bei Abstürzen frei. Ein
 zweiter Start beendet sich vor jedem Bibliotheks- oder Zeitbudget-Zugriff.
 

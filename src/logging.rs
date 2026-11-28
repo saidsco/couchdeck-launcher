@@ -1,6 +1,6 @@
 //! Tiny dependency-free file logger.
 //!
-//! Logs are appended to `$XDG_STATE_HOME/couchdeck/couchdeck.log` and also
+//! Logs are appended to `$XDG_STATE_HOME/capydeck/capydeck.log` and also
 //! mirrored to stderr so launching from a terminal remains useful.
 
 use std::fs::{self, File, OpenOptions};
@@ -17,7 +17,7 @@ pub fn init(path: &Path) {
         OpenOptions::new().create(true).append(true).open(path).ok()
     });
     let _ = LOG_FILE.set(Mutex::new(file));
-    log_info("couchdeck", format!("Logdatei: {}", path.display()));
+    log_info("capydeck", format!("Logdatei: {}", path.display()));
 }
 
 fn write(level: &str, target: &str, message: &str) {

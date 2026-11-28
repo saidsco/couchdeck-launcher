@@ -11,7 +11,7 @@ dnf install -y --setopt=install_weak_deps=False \
   gcc gcc-c++ pkgconf-pkg-config make \
   systemd-devel libxkbcommon-devel libxkbcommon-x11-devel wayland-devel \
   mesa-libGL-devel libX11-devel libXcursor-devel libXrandr-devel libXi-devel \
-  glib2 librsvg2-tools desktop-file-utils xorg-x11-server-Xvfb mesa-dri-drivers \
+  glib2 desktop-file-utils xorg-x11-server-Xvfb mesa-dri-drivers \
   dbus-daemon dbus-tools squashfs-tools
 
 curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs \
@@ -20,16 +20,16 @@ curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs \
 export PATH="/usr/sbin:/usr/local/sbin:$PATH"
 rustup component add clippy rustfmt
 
-export CARGO_TARGET_DIR=/tmp/couchdeck-target
+export CARGO_TARGET_DIR=/tmp/capydeck-target
 cargo fmt --check
 cargo clippy --all-targets -- -D warnings
 cargo test --locked
 cargo build --release --locked
 scripts/check-runtime.sh \
-  "$CARGO_TARGET_DIR/release/couchdeck" \
-  /tmp/couchdeck-runtime-info.txt
+  "$CARGO_TARGET_DIR/release/capydeck" \
+  /tmp/capydeck-runtime-info.txt
 
-APPIMAGETOOL="$(scripts/fetch-release-tools.sh /tmp/couchdeck-release-tools)"
+APPIMAGETOOL="$(scripts/fetch-release-tools.sh /tmp/capydeck-release-tools)"
 APPIMAGE_RUNTIME_FILE="${APPIMAGE_RUNTIME_FILE:-/tmp/appimage-runtime-x86_64}"
 if [[ ! -s "$APPIMAGE_RUNTIME_FILE" ]]; then
   rm -f "$APPIMAGE_RUNTIME_FILE"
@@ -48,15 +48,15 @@ if [[ ! -s "$APPIMAGE_RUNTIME_FILE" ]]; then
 fi
 
 VERSION="$VERSION" \
-BINARY="$CARGO_TARGET_DIR/release/couchdeck" \
+BINARY="$CARGO_TARGET_DIR/release/capydeck" \
 APPIMAGETOOL="$APPIMAGETOOL" \
 APPIMAGE_RUNTIME_FILE="$APPIMAGE_RUNTIME_FILE" \
 OUT_DIR=/work/dist \
 scripts/package-release.sh
 
-APPIMAGE="/work/dist/CouchDeck-${VERSION}-x86_64.AppImage"
-SMOKE_LOG=/tmp/couchdeck-appimage-smoke.log
-SMOKE_HOME=/tmp/couchdeck-smoke-home
+APPIMAGE="/work/dist/CapyDeck-${VERSION}-x86_64.AppImage"
+SMOKE_LOG=/tmp/capydeck-appimage-smoke.log
+SMOKE_HOME=/tmp/capydeck-smoke-home
 rm -rf "$SMOKE_HOME"
 mkdir -p "$SMOKE_HOME"/{config,data,cache,state}
 set +e

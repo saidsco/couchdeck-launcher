@@ -26,7 +26,7 @@ for (var i = 0; i < windows.length; ++i) {
     var w = windows[i];
     var app = w.desktopFileName || "";
     var cls = w.resourceClass || w.resourceName || "";
-    if (app === "couchdeck" || app === "couchdeck.desktop" || cls === "couchdeck" || w.caption === "CouchDeck") {
+    if (app === "capydeck" || app === "capydeck.desktop" || cls === "capydeck" || w.caption === "CapyDeck") {
         target = w;
         break;
     }
@@ -119,7 +119,7 @@ fn activate(paths: XdgPaths) -> Result<(), String> {
         .duration_since(UNIX_EPOCH)
         .map(|duration| duration.as_nanos())
         .unwrap_or_default();
-    let plugin = format!("couchdeck-activate-{}-{nonce}", std::process::id());
+    let plugin = format!("capydeck-activate-{}-{nonce}", std::process::id());
     let script_path = dir.join(format!("{plugin}.js"));
     fs::write(&script_path, SCRIPT)
         .map_err(|err| format!("Skript {}: {err}", script_path.display()))?;
@@ -201,9 +201,9 @@ mod tests {
     use super::*;
 
     #[test]
-    fn fallback_script_matches_only_couchdeck() {
-        assert!(SCRIPT.contains("app === \"couchdeck\""));
-        assert!(SCRIPT.contains("w.caption === \"CouchDeck\""));
+    fn fallback_script_matches_only_capydeck() {
+        assert!(SCRIPT.contains("app === \"capydeck\""));
+        assert!(SCRIPT.contains("w.caption === \"CapyDeck\""));
         assert!(SCRIPT.contains("target.minimized = false"));
         assert!(SCRIPT.contains("workspace.activeWindow = target"));
     }

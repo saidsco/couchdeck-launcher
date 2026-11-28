@@ -1,8 +1,31 @@
 # Test- und Messbericht
 
-**Stand:** 25. November 2026 · **Version:** CouchDeck 0.5.2
+**Stand:** 28. November 2026 · **Version:** CapyDeck 0.6.0
 
-**Getestete Umgebung:** Manjaro Linux (KDE Plasma, Wayland-Session), Kernel `6.18.55-1-MANJARO`, NVIDIA RTX 4070 Ti SUPER; zusätzlich Bazzite/KDE/Wayland durch den Betreiber bestätigt.
+## 0.6.0 – CapyDeck Rebrand
+
+- Produkt-/Binary-/App-ID-/XDG-Pfad-Rename von CouchDeck auf CapyDeck.
+- `cargo fmt --check`: OK.
+- `cargo clippy --all-targets --locked -- -D warnings`: OK.
+- `cargo test --locked`: 88 Unit-Tests + 2 GIO-Integrationstests (90 gesamt), alle grün.
+- Release-Build im **Fedora-42-Container**: glibc 2.41, maximal benötigte Symbolversion `GLIBC_2.39`.
+- `capydeck-0.6.0-linux-x86_64.tar.gz` und `CapyDeck-0.6.0-x86_64.AppImage` gebaut.
+- `SHA256SUMS` geprüft; Archiv- und AppImage-`--version` melden `capydeck 0.6.0`.
+- AppImage-Xvfb-Smoke-Test erreicht den Anwendungsstart.
+- Benutzerinstallation/-deinstallation in temporärem `$HOME` geprüft:
+  - `~/.local/bin/capydeck`
+  - `~/.local/share/applications/capydeck.desktop`
+  - PNG-Icons in 256×256 und 512×512
+  - optionaler Autostart `capydeck.desktop`
+- Single-Instance, Aktivierung und Home mit neuen Namen geprüft:
+  - zweiter Start blockiert mit „CapyDeck läuft bereits“
+  - `capydeck --activate` über `$XDG_RUNTIME_DIR/capydeck-activate.sock`
+  - `capydeck --home` aktiviert die laufende Instanz
+- Keine Datenmigration und keine Legacy-Aliase; bestehende CouchDeck-XDG-Ordner werden nicht gelesen.
+- Screenshots unter `docs/screenshots/` zeigen noch die 0.5.2-UI; das Layout ist unverändert, der Screenshot-Refresh bleibt offen.
+- Reale Bazzite-/GNOME-/XFCE-Abnahme nach dem Rebrand: **offen**.
+
+**Getestete Umgebung:** Manjaro Linux (KDE Plasma, Wayland-Session), Kernel `6.18.63-3-MANJARO`, NVIDIA RTX 4070 Ti SUPER; zusätzlich Bazzite/KDE/Wayland durch den Betreiber bestätigt.
 **Release-Buildumgebung:** Fedora 42 Container, glibc 2.41, Rust 1.89.0, x86_64
 **Weiterhin offen:** GNOME/Wayland, XFCE/X11 und SteamOS Desktop Mode wurden nicht real getestet.
 
@@ -33,10 +56,10 @@
 $ cargo fmt --check
 (keine Ausgabe, Exit 0)
 
-$ cargo clippy --all-targets -- -D warnings
+$ cargo clippy --all-targets --locked -- -D warnings
 Finished `dev` profile ... (Exit 0)
 
-$ cargo test
+$ cargo test --locked
 running 88 tests
 test result: ok. 88 passed; 0 failed
 running 2 tests
@@ -52,10 +75,10 @@ Das sind **90 Tests insgesamt** (88 Unit-Tests + 2 GIO-Integrationstests).
 Zusätzlich wurde die Release-Paketierung im Fedora-42-Container geprüft:
 
 ```text
-scripts/check-runtime.sh target/release/couchdeck ...   # ldd ohne "not found"
+scripts/check-runtime.sh target/release/capydeck ...   # ldd ohne "not found"
 scripts/package-release.sh                              # tar.gz + AppImage + SHA256SUMS
-APPIMAGE_EXTRACT_AND_RUN=1 CouchDeck-<version>.AppImage --version
-xvfb-run ... CouchDeck-<version>.AppImage --windowed    # Start bis "app: Start:"
+APPIMAGE_EXTRACT_AND_RUN=1 CapyDeck-<version>.AppImage --version
+xvfb-run ... CapyDeck-<version>.AppImage --windowed    # Start bis "app: Start:"
 sha256sum -c SHA256SUMS
 ```
 
@@ -70,7 +93,7 @@ sha256sum -c SHA256SUMS
 - Persistenz: atomisches Schreiben, keine Temp-Reste, Roundtrip, Schema-zu-neu wird abgelehnt, beschädigte Library/Settings/Secrets werden gesichert und nicht überschrieben, Reset mit Backup.
 - PIN: nur Ziffern 4–12, Argon2id-Hash enthält nicht die Klartext-PIN, Verifikation, `0600`.
 - Controller: Button-Mapping (inkl. LB/RB = Schultertasten), Deadzone/Hysterese, Initial- und Hold-Repeat, Rückkehr von D-Pad zu Stick.
-- Fokus-Gating: Controller-Navigation wird nur bei fokussiertem CouchDeck-Fenster akzeptiert; beim Fokuswechsel wird gepufferte Navigation verworfen.
+- Fokus-Gating: Controller-Navigation wird nur bei fokussiertem CapyDeck-Fenster akzeptiert; beim Fokuswechsel wird gepufferte Navigation verworfen.
 - Admin-/Controller-Fokus: zyklische Fokusreihenfolge, Fokus-Start, und injizierter Enter-Event aktiviert den fokussierten Button.
 - Autostart v0.2.5: KDE-only-Desktop-Entry, Quoting eines Binary-Pfads mit Leerzeichen, `--autostart`, Deaktivierung/Entfernen.
 - Power v0.2.5: feste, shellfreie `systemctl --no-block --no-wall reboot|poweroff`-Argumente und Labels.
@@ -87,7 +110,7 @@ sha256sum -c SHA256SUMS
 - GameEntry-Kompatibilität v0.4.0: 0.3.1-JSON ohne `desktop_id`/`source`/`launch_method` lädt mit Defaults.
 - Aktivierung v0.4.6: Unix-Socket-Server akzeptiert `ACTIVATE 2`/`END`, hex-kodierte Activation-Tokens werden ohne Log-Inhalt weitergegeben; veralteter Socket wird ersetzt; Server entfernt den Socket beim Drop; fehlende Instanz liefert `NotRunning` und entfernt einen veralteten Socket.
 - Wayland-Aktivierung v0.4.6: leerer Token wird abgelehnt; `xdg-activation-v1`-Guest-Client kompiliert und wird nur für eine bestehende Fläche verwendet.
-- KDE-Fallback v0.4.6: Skript matcht ausschließlich CouchDeck; keine dauerhaften Dateien; Fokus-/Timeout-Logging im Hintergrundthread.
+- KDE-Fallback v0.4.6: Skript matcht ausschließlich CapyDeck; keine dauerhaften Dateien; Fokus-/Timeout-Logging im Hintergrundthread.
 - Aktivierungs-Sicherheit v0.4.6: Socket-Modus `0600`, `SO_PEERCRED`-Prüfung auf die eigene lokale UID; keine zweite Instanz über `--activate`; Token wird nicht geloggt.
 - Fullscreen-Aktivierung v0.4.6: Fullscreen wird nur nach beobachtetem Fokus und nur nach interner Minimierung aus dem Fullscreen wiederhergestellt.
 - `--home` v0.5.0: `ActivationResult::NotRunning` ist die einzige Bedingung, die einen UI-Start erlaubt; `Accepted`/`Unavailable` starten keine zweite UI.
@@ -144,15 +167,16 @@ Die UI wurde zusätzlich mit dem X11-Backend (Xwayland) gestartet, damit Fenster
 | v0.5.0-Releasepaket lokal (v0.5.0) | OK; Fedora-42-Container, tar.gz/AppImage/SHA256SUMS, Runtime-Report, AppImage `--version` = 0.5.0, Xvfb-Start bis Bibliothek; kein Tag/Release erzeugt |
 | v0.5.1-Releasepaket lokal (v0.5.1) | OK; Fedora-42-Container, tar.gz/AppImage/SHA256SUMS, Runtime-Report, AppImage `--version` = 0.5.1, Xvfb-Start bis Bibliothek; kein Tag/Release erzeugt |
 | v0.5.2-Releasepaket lokal (v0.5.2) | OK; Fedora-42-Container, tar.gz/AppImage/SHA256SUMS, Runtime-Report, AppImage `--version` = 0.5.2, Xvfb-Start bis Bibliothek; kein Tag/Release erzeugt |
+| CapyDeck-0.6.0-Releasepaket lokal (0.6.0) | OK; Fedora-42-Container, glibc 2.41, tar.gz/AppImage/SHA256SUMS, Runtime-Report, AppImage `--version` = 0.6.0, Xvfb-Start bis Bibliothek, Install/Uninstall in temporärem `$HOME`; kein Tag/Release erzeugt |
 | AppImage/Archiv auf frischer Bazzite-KDE-Installation (v0.3.1) | **Nicht ausgeführt**; manuelle Checkliste in `docs/BAZZITE-RELEASE-TEST.md` |
 | Autostart-Installer mit `XDG_CURRENT_DESKTOP=ubuntu:GNOME` (v0.4.0) | OK; `OnlyShowIn=GNOME`, `NotShowIn=gamescope`, kein `X-KDE-autostart-after` |
 | Autostart-Installer mit `XDG_CURRENT_DESKTOP=gamescope:KDE` (v0.4.0) | OK; Installation/Autostart verweigert, kein Binary installiert |
 | Single-Instance-Smoke mit zwei Prozessen (v0.4.0) | OK; zweiter Prozess beendet sich mit Hinweis, erster läuft weiter |
-| Icon-Installation (v0.4.1) | OK; Installer legt 256-/512-PNG und SVG an, Desktop-/Autostart-Eintrag referenziert absolutes PNG |
+| Icon-Installation (v0.4.1; ab 0.6.0 PNG-only) | Historisch: Installer legte 256-/512-PNG und SVG an; CapyDeck 0.6.0 installiert nur noch PNG-Icons und referenziert das absolute 256-PNG |
 | Fullscreen-Wiederherstellung (v0.4.1) | Zustandslogik unit-getestet; echtes Minimieren/Wiederherstellen auf Bazzite/GNOME/XFCE offen |
 | Discovery-UI unter KDE/Wayland (v0.4.0) | Automatisierte Discovery-Tests grün; Admin-Ansicht „Suchpfade“ nicht vollständig manuell durchgeklickt |
-| `--activate` bei fokussiertem CouchDeck (X11, v0.4.5) | OK; IPC angenommen, keine störende Fensteraktion |
-| `--activate` bei minimiertem CouchDeck (X11, v0.4.5) | OK; Fenster aus `_NET_WM_STATE_HIDDEN` wiederhergestellt und fokussiert |
+| `--activate` bei fokussiertem CapyDeck (X11, v0.4.5) | OK; IPC angenommen, keine störende Fensteraktion |
+| `--activate` bei minimiertem CapyDeck (X11, v0.4.5) | OK; Fenster aus `_NET_WM_STATE_HIDDEN` wiederhergestellt und fokussiert |
 | `--activate` bei minimiertem Fullscreen (X11, v0.4.5) | OK; `_NET_WM_STATE_FULLSCREEN` und Fokus wiederhergestellt |
 | `--activate` ohne laufende Instanz (v0.4.5) | OK; Exit-Code 1, verständliche Meldung, kein zweiter Prozess |
 | Mehrfache schnelle `--activate`-Aufrufe (X11, v0.4.5) | OK; keine zweite Instanz, stabiler Zustand |
@@ -166,9 +190,9 @@ Die UI wurde zusätzlich mit dem X11-Backend (Xwayland) gestartet, damit Fenster
 | KDE/Wayland Taskleisten-Minimierung, IPC-Thread-Fix (v0.4.7) | Auf Manjaro/KDE 6.7.5 nachvollzogen; von Bazzite/KDE/Wayland bestätigt |
 | KDE/Wayland mit `--windowed` (v0.4.7) | OK; Fenster bleibt windowed |
 | Bazzite/KDE/Wayland, 0.4.7 Taskleisten-/Fullscreen-Minimierung | Vom Betreiber als erfolgreich bestätigt; sichtbar/fokussiert ohne Hover |
-| Bazzite/KDE/Wayland, Steam-Flatpak-Spiel (Lego) und Minecraft | Startet; CouchDeck-Rückkehr über `--activate`/Home getestet |
-| `couchdeck --home` ohne Instanz (v0.5.0) | Startet die UI; keine zweite Instanz |
-| `couchdeck --home` bei laufender Instanz (v0.5.0) | IPC angenommen; Fenster kehrt zurück |
+| Bazzite/KDE/Wayland, Steam-Flatpak-Spiel (Lego) und Minecraft | Startet; CapyDeck-Rückkehr über `--activate`/Home getestet |
+| `capydeck --home` ohne Instanz (v0.5.0) | Startet die UI; keine zweite Instanz |
+| `capydeck --home` bei laufender Instanz (v0.5.0) | IPC angenommen; Fenster kehrt zurück |
 | `--install-home-launcher` / `--remove-home-launcher` (v0.5.0) | XDG-Desktop-Datei angelegt bzw. entfernt; `Exec="..." --home`; keine globale Shortcut-Registrierung |
 | Automatischer Berechtigungsdialog bei fehlender input-Gruppe (v0.5.2) | UI/Thread implementiert; echter fehlender-Berechtigung-Test auf Bazzite offen |
 | „Später“ im Berechtigungsdialog (v0.5.2) | Wird in settings.toml gespeichert; wiederholter Start-Prompt unterdrückt |
@@ -190,7 +214,7 @@ Die Screenshots verwenden fiktive Demo-Spiele und Demo-Cover aus der Testumgebun
 - `scripts/fetch-release-tools.sh` lädt ein gepinntes linuxdeploy-Build-Werkzeug mit SHA256-Prüfung und stellt daraus `appimagetool` bereit.
 - Das AppImage enthält die unveränderte native Binary sowie Desktop-/Icon-Metadaten; glibc, GPU-Treiber, Wayland/X11 und `libudev` kommen von Bazzite. Dadurch keine gebündelten System-ABI-Konflikte.
 - `SHA256SUMS` wird nach dem Packaging aus den finalen Dateien erzeugt.
-- v0.4.5, v0.4.6, v0.4.7 und v0.5.0 wurden veröffentlicht; v0.5.1 wurde gebaut/veröffentlicht; v0.5.2-Paketierung wurde im Fedora-42-Container gebaut und mit `sha256sum -c`, `--version` und Xvfb-Start geprüft. Kein Git-Tag/GitHub-Release ohne Freigabe erzeugt.
+- v0.4.5, v0.4.6, v0.4.7 und v0.5.0 wurden veröffentlicht; v0.5.1 wurde gebaut/veröffentlicht; v0.5.2-Paketierung wurde im Fedora-42-Container gebaut und mit `sha256sum -c`, `--version` und Xvfb-Start geprüft. CapyDeck 0.6.0 wurde im Fedora-42-Container gebaut und mit `SHA256SUMS`, `--version`, Xvfb-Start sowie Install/Uninstall in temporärem `$HOME` geprüft. Kein Git-Tag/GitHub-Release ohne Freigabe erzeugt.
 - Die AppImage-type2-Runtime wird im CI mit Wiederholungsversuchen geladen und beim Packaging explizit übergeben; ein vorhandener lokaler Runtime-Cache wird wiederverwendet.
 - AppImage und Archiv-Binary wurden mit `env -i PATH=/usr/bin:/bin` (ohne Cargo/Toolchain im Suchpfad) per `--version` gestartet.
 - Bazzite/KDE/Wayland ist für 0.4.7 vom Betreiber als erfolgreich bestätigt; einzelne 0.5.x-Home-/Steam-Input- und weitere Desktop-Fälle bleiben offen und stehen in `docs/BAZZITE-RELEASE-TEST.md`.
@@ -257,7 +281,7 @@ Diese Punkte sind **nicht** als bestanden zu werten:
 5. **Profilhintergründe**: Persistenz/Fallback sind implementiert und durch Deserialisierung/Code abgesichert; ein manueller Bildimport mit echtem Hintergrund wurde noch nicht durchgeklickt.
 4. **4K/DPI-Skalierung**: Skalierung ist implementiert (Faktor aus Fensterhöhe), aber nicht auf einem 4K-TV getestet.
 5. **Steam- und Prism-Flatpak-Start**: Flatpaks waren in der Testumgebung nicht installiert. Erkennung, Diagnose und Erzeugung der verwalteten Dateien sind getestet; der echte Flatpak-Start ist offen.
-6. **Spiel-Rückkehr/Fokus**: Ob Plasma das gestartete Spiel zuverlässig in den Vordergrund holt und CouchDeck danach wieder erreichbar ist, muss auf Bazzite geprüft werden.
+6. **Spiel-Rückkehr/Fokus**: Ob Plasma das gestartete Spiel zuverlässig in den Vordergrund holt und CapyDeck danach wieder erreichbar ist, muss auf Bazzite geprüft werden.
 7. **Steam Input**: Konflikte mit aktivem Steam Input wurden nicht getestet.
 8. **Minimieren unter Wayland**: Menüpunkt und `ViewportCommand::Minimized` sind implementiert, aber nicht auf Plasma/Wayland verifiziert.
 
@@ -266,11 +290,11 @@ Diese Punkte sind **nicht** als bestanden zu werten:
 1. Auf dem Host die Fedora-Version ermitteln und eine passende Distrobox verwenden.
 2. Im Container `cargo build --release`, `cargo test`, `cargo clippy --all-targets -- -D warnings`, `cargo fmt --check` ausführen.
 3. Auf dem Host `./scripts/install-user.sh` ausführen (ohne sudo).
-4. CouchDeck aus der KDE-Anwendungsliste starten. Erwartung: rahmenloses Vollbild, Bibliothek sichtbar, Profil des letzten Starts aktiv.
+4. CapyDeck aus der KDE-Anwendungsliste starten. Erwartung: rahmenloses Vollbild, Bibliothek sichtbar, Profil des letzten Starts aktiv.
 5. Mit `--windowed` gegenprüfen, ob ein normales Fenster mit Dekoration erscheint.
 6. Controller anschließen: D-Pad und linken Stick durch alle Kacheln bewegen; A startet; B schließt Dialoge; Start öffnet das Menü; LB/RB in der Profilübersicht.
 7. Controller im Betrieb trennen und wieder verbinden. Erwartung: keine Crashs, erneute Eingabe möglich.
-8. Ein Spiel starten. Prüfen: Spielfenster erhält Fokus, CouchDeck bleibt erreichbar/minimierbar, kein „Spiel beendet“-Status.
+8. Ein Spiel starten. Prüfen: Spielfenster erhält Fokus, CapyDeck bleibt erreichbar/minimierbar, kein „Spiel beendet“-Status.
 9. Steam-Flatpak-Spiel und Prism-Instanz über echte `.desktop`-Dateien importieren und starten.
 10. Einen fehlerhaften Steam-Shortcut importieren, Reparatur bestätigen, prüfen, dass das Original unverändert bleibt und der neue Eintrag startet.
 11. 4K-Auflösung/DPI testen: Lesbarkeit, Grid-Spalten, Fokusvergrößerung.

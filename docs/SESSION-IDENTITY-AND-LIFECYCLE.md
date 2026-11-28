@@ -5,9 +5,9 @@ Status: Architektur/Research, keine Implementierung.
 
 Dieses Dokument beantwortet zwei Fragen:
 
-1. **Woran erkennt CouchDeck zuverlässig, dass eine bestimmte Spielsitzung
+1. **Woran erkennt CapyDeck zuverlässig, dass eine bestimmte Spielsitzung
    noch läuft?**
-2. **Wann darf CouchDeck sagen, dass sie beendet ist?**
+2. **Wann darf CapyDeck sagen, dass sie beendet ist?**
 
 Es trennt ausdrücklich:
 
@@ -23,16 +23,16 @@ wiederverwendet. Eine Fenster-PID allein ist kein Lebensdauerbeweis: Fenster
 können nach einem Absturz kurzzeitig weiterleben oder von einem anderen Prozess
 neu erstellt werden.
 
-CouchDeck verwendet deshalb einen **Identitätstupel** und verifiziert ihn bei
+CapyDeck verwendet deshalb einen **Identitätstupel** und verifiziert ihn bei
 jeder Zustandsänderung erneut.
 
 ## Identitätstupel
 
 ```rust
 struct SessionIdentity {
-    session_id: SessionId,          // von CouchDeck erzeugt (UUID)
+    session_id: SessionId,          // von CapyDeck erzeugt (UUID)
     backend: BackendKind,
-    game_key: String,               // stabile CouchDeck-Spiel-ID
+    game_key: String,               // stabile CapyDeck-Spiel-ID
     profile_id: String,             // startendes Profil
     started_at_unix: i64,
     started_at_boottime: u64,
@@ -94,7 +94,7 @@ struct WindowIdentity {
 | `steam_app_id` | Ordnet Scope und Fenster dem Spiel zu |
 | `prism_instance_id` | Ordnet Java-Prozess der Prism-Instanz zu |
 | `window` | Nur Beobachtung/Fokus, **kein** Lebensdauerbeweis |
-| `session_id` | CouchDeck-eigene, unveränderliche Sitzungs-ID |
+| `session_id` | CapyDeck-eigene, unveränderliche Sitzungs-ID |
 
 ## Backend-Handles und Verifikation
 
@@ -331,13 +331,13 @@ Nachlaufzeiten:
   Fenstermodus/Aufräumen.
 - Fenster können nach einem Absturz kurzzeitig (Sekunden) weiterleben.
 
-CouchDeck sollte nach einem erkannten Ende eine kurze **Settle-Frist** (z. B.
+CapyDeck sollte nach einem erkannten Ende eine kurze **Settle-Frist** (z. B.
 2–5 s) abwarten, bevor es die Session endgültig als `Ended` persistiert, um
 Flackern bei Fenster-/Prozessneuaufbau zu vermeiden.
 
 ## Neustart, Absturz, Suspend
 
-### CouchDeck-Neustart
+### CapyDeck-Neustart
 
 Beim Start:
 
@@ -494,7 +494,7 @@ Pro Session sollten mindestens geloggt werden:
 
 - PID-Reuse-Test über einen echten Neustart.
 - Suspend/Resume auf Bazzite (logind, Zeitquellen).
-- CouchDeck-Absturz während einer Session und Wiederaufnahme.
+- CapyDeck-Absturz während einer Session und Wiederaufnahme.
 - Mehrere Benutzer gleichzeitig (nicht Ziel, aber Datenmodell sollte nicht
   brechen).
 - Steam-Client-Neustart während einer laufenden Spiel-Scope.

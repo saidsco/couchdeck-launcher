@@ -7,18 +7,18 @@ Zeitmessung bleibt zunächst aktiv; die neue Messung läuft im Shadow Mode.
 ## Warum ein neues Modell?
 
 Die aktuelle Messung in `src/app.rs` (`tick_time_budget`) zählt die Zeit des
-aktiven Kinderprofils, **solange CouchDeck läuft** – unabhängig davon, ob ein
+aktiven Kinderprofils, **solange CapyDeck läuft** – unabhängig davon, ob ein
 Spiel läuft. Bibliotheksnavigation, Einstellungen und Profilwechsel zählen
 mit. Das ist für ein Zeitkontingent „Spielzeit“ zu grob.
 
 Das neue Modell zählt nur **nachgewiesene Spielsitzungen** und behandelt
 Home-Rückkehr, Minimieren und Fokuswechsel korrekt.
 
-## Ist-Zustand (CouchDeck 0.5.2)
+## Ist-Zustand (CapyDeck 0.6.0; Verhalten unverändert seit 0.5.2)
 
 - `timekeeping.json`, Schema 1.
 - `ProfileTime { date, used_seconds, bonus_minutes, warned_5, warned_1 }`.
-- `tick_time_budget()` läuft, solange CouchDeck geöffnet ist und das aktive
+- `tick_time_budget()` läuft, solange CapyDeck geöffnet ist und das aktive
   Profil ein Kind mit `daily_limit_minutes` ist.
 - `add_usage()` addiert höchstens die Restzeit; `used_seconds` wird am
   Gesamtbudget gekappt.
@@ -150,15 +150,15 @@ Umsetzung:
 
 | Fall | Verhalten |
 |---|---|
-| CouchDeck-Neustart, Session läuft weiter | Handle verifizieren; Zeit ab `last_accounted_at` weiterzählen |
-| CouchDeck-Absturz, Session läuft weiter | Beim Start Handle verifizieren; Lücke zwischen letztem Stand und Start als „uncertain“ markieren |
+| CapyDeck-Neustart, Session läuft weiter | Handle verifizieren; Zeit ab `last_accounted_at` weiterzählen |
+| CapyDeck-Absturz, Session läuft weiter | Beim Start Handle verifizieren; Lücke zwischen letztem Stand und Start als „uncertain“ markieren |
 | Systemneustart (`boot_id` anders) | Keine Session kann weiterlaufen; Ende beim letzten bestätigten Stand oder Shutdown-Zeitpunkt |
 | Session-Handle nicht verifizierbar | `Unknown`/`TrackingLost`; Policy anwenden, nicht stillschweigend pausieren |
 | Prozess tot, Unit/Scope tot | `Ended`; Endzeit aus letztem bestätigten Lebenszeichen + Settle-Frist |
 | Supervisor weg, Unit aktiv | `TrackingLost`; über Unit/cgroup/Fenster weiter beobachten |
 | unit cgroup leer, Spiel tot | `Ended`; Supervisor-/Unit-Endzeit + Settle |
 
-**Lückenpolitik:** Wenn CouchDeck nicht lief, aber das Spiel nachweislich
+**Lückenpolitik:** Wenn CapyDeck nicht lief, aber das Spiel nachweislich
 weiterlief (z. B. Direct-Unit noch aktiv), wird die Zeit ab
 `last_accounted_at` bis zur Wiederaufnahme als Spielzeit gezählt. Ist der
 Beweis nicht möglich, wird die Lücke als `uncertain` markiert und je nach
@@ -265,12 +265,12 @@ Empfehlung: **optional**, nicht Standard.
   Boottime/Monotonic-Differenz als Fallback genutzt.
 - Die lokale Zeitzone ist während einer Sitzung stabil; Zeitzonenwechsel werden
   trotzdem defensiv behandelt.
-- Die Session-Handles bleiben über kurze Lücken (CouchDeck-Neustart) gültig.
+- Die Session-Handles bleiben über kurze Lücken (CapyDeck-Neustart) gültig.
 
 ## Offene Forschungsfragen
 
 - Genaues Suspend-/Resume-Verhalten auf Bazzite/KDE/Wayland.
-- Verhalten bei CouchDeck-Absturz während einer Steam-/Prism-Session.
+- Verhalten bei CapyDeck-Absturz während einer Steam-/Prism-Session.
 - Zeitmessung bei einem Spiel, das ohne Fenster läuft (z. B. Server/Headless).
 - Sehr lange Sessions über mehrere Tage.
 - Zeitänderung durch manuelle Uhrumstellung.

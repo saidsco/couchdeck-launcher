@@ -1,6 +1,6 @@
 //! Launching through GIO.
 //!
-//! `gio launch <absolute path>` is the only launch mechanism. CouchDeck never
+//! `gio launch <absolute path>` is the only launch mechanism. CapyDeck never
 //! splits, evaluates or shell-interprets the `Exec=` value. A successful
 //! `gio launch` means "start request accepted", never "game is running" or
 //! "game has exited".
@@ -121,7 +121,7 @@ fn run_gio(path: &Path, title: &str, started: Instant) -> LaunchOutcome {
             title: title.to_owned(),
             success: true,
             message: format!(
-                "Startbefehl an GIO übergeben ({}). CouchDeck erkennt nicht automatisch, wann das Spiel endet.",
+                "Startbefehl an GIO übergeben ({}). CapyDeck erkennt nicht automatisch, wann das Spiel endet.",
                 output.status
             ),
             duration,

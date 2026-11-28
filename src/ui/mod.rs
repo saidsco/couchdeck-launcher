@@ -11,7 +11,7 @@ use eframe::egui::{
     TextStyle, UiBuilder, Vec2,
 };
 
-use crate::app::{CouchDeckApp, ToastKind};
+use crate::app::{CapyDeckApp, ToastKind};
 use crate::model::GameEntry;
 
 pub const ACCENT: Color32 = Color32::from_rgb(255, 118, 64);
@@ -29,7 +29,7 @@ pub fn ui_scale(ctx: &egui::Context) -> f32 {
     (ctx.screen_rect().height() / 1080.0).clamp(0.80, 2.2)
 }
 
-pub fn draw(app: &mut CouchDeckApp, ctx: &egui::Context) {
+pub fn draw(app: &mut CapyDeckApp, ctx: &egui::Context) {
     if app.fatal.is_some() {
         dialogs::draw_fatal(app, ctx);
         return;
@@ -125,7 +125,7 @@ pub fn danger_button(text: impl Into<String>) -> egui::Button<'static> {
         .corner_radius(12)
 }
 
-pub fn paint_background(app: &mut CouchDeckApp, ui: &mut egui::Ui) {
+pub fn paint_background(app: &mut CapyDeckApp, ui: &mut egui::Ui) {
     let ctx = ui.ctx().clone();
     let rect = ctx.screen_rect();
     ui.painter().rect_filled(rect, 0, BACKGROUND);
@@ -204,10 +204,10 @@ pub fn paint_texture(ui: &egui::Ui, texture: &egui::TextureHandle, rect: Rect, c
         .paint_at(ui, rect);
 }
 
-pub fn header(ui: &mut egui::Ui, app: &mut CouchDeckApp, rect: Rect, scale: f32) {
+pub fn header(ui: &mut egui::Ui, app: &mut CapyDeckApp, rect: Rect, scale: f32) {
     ui.scope_builder(UiBuilder::new().max_rect(rect).id_salt("header"), |ui| {
         ui.horizontal_centered(|ui| {
-            let title = RichText::new("COUCHDECK")
+            let title = RichText::new("CAPYDECK")
                 .size(26.0 * scale)
                 .strong()
                 .color(TEXT)
@@ -299,7 +299,7 @@ pub fn header(ui: &mut egui::Ui, app: &mut CouchDeckApp, rect: Rect, scale: f32)
     });
 }
 
-fn profile_chip(ui: &mut egui::Ui, app: &mut CouchDeckApp, scale: f32) {
+fn profile_chip(ui: &mut egui::Ui, app: &mut CapyDeckApp, scale: f32) {
     let Some(profile) = app.active_profile().cloned() else {
         return;
     };
@@ -378,7 +378,7 @@ pub fn draw_focus_ring(ui: &egui::Ui, scale: f32) {
     }
 }
 
-pub fn profile_role_label(app: &CouchDeckApp, profile: &crate::model::Profile) -> String {
+pub fn profile_role_label(app: &CapyDeckApp, profile: &crate::model::Profile) -> String {
     if profile.is_child {
         app.t("profile-role-child")
     } else if profile.is_admin() {
@@ -405,7 +405,7 @@ pub enum TileImage {
 }
 
 pub fn game_tile_image(
-    app: &mut CouchDeckApp,
+    app: &mut CapyDeckApp,
     ctx: &egui::Context,
     game: &GameEntry,
 ) -> Option<TileImage> {
@@ -424,7 +424,7 @@ pub fn game_tile_image(
         .map(TileImage::Icon)
 }
 
-fn draw_toast(app: &CouchDeckApp, ctx: &egui::Context) {
+fn draw_toast(app: &CapyDeckApp, ctx: &egui::Context) {
     let Some(toast) = &app.toast else {
         return;
     };

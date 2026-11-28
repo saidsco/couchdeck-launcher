@@ -1,6 +1,6 @@
-//! Optional user-level "CouchDeck Home" desktop launcher.
+//! Optional user-level "CapyDeck Home" desktop launcher.
 //!
-//! The launcher is never installed automatically. `couchdeck
+//! The launcher is never installed automatically. `capydeck
 //! --install-home-launcher` is an explicit user action and writes only into
 //! `$XDG_DATA_HOME/applications/`. The actual global key/controller binding
 //! remains a user decision in the desktop environment/Steam Input.
@@ -11,7 +11,7 @@ use std::path::{Path, PathBuf};
 
 use crate::paths::XdgPaths;
 
-pub const LAUNCHER_FILE: &str = "couchdeck-home.desktop";
+pub const LAUNCHER_FILE: &str = "capydeck-home.desktop";
 
 pub fn launcher_path(paths: &XdgPaths) -> PathBuf {
     paths.data_home.join("applications").join(LAUNCHER_FILE)
@@ -30,16 +30,16 @@ pub fn desktop_entry(executable: &Path) -> String {
     format!(
         "[Desktop Entry]\n\
 Type=Application\n\
-Name=CouchDeck Home\n\
-Name[de]=CouchDeck Home\n\
-Comment=Return to CouchDeck or start it\n\
-Comment[de]=Zu CouchDeck zurückkehren oder CouchDeck starten\n\
+Name=CapyDeck Home\n\
+Name[de]=CapyDeck Home\n\
+Comment=Return to CapyDeck or start it\n\
+Comment[de]=Zu CapyDeck zurückkehren oder CapyDeck starten\n\
 Exec=\"{quoted}\" --home\n\
-Icon=couchdeck\n\
+Icon=capydeck\n\
 Terminal=false\n\
 Categories=Game;Utility;\n\
 StartupNotify=false\n\
-X-CouchDeck-Managed=true\n"
+X-CapyDeck-Managed=true\n"
     )
 }
 
@@ -77,10 +77,10 @@ mod tests {
 
     #[test]
     fn desktop_entry_quotes_path_and_uses_home() {
-        let entry = desktop_entry(Path::new("/tmp/Couch Deck/couchdeck"));
-        assert!(entry.contains("Exec=\"/tmp/Couch Deck/couchdeck\" --home"));
-        assert!(entry.contains("X-CouchDeck-Managed=true"));
-        assert!(entry.contains("Icon=couchdeck"));
+        let entry = desktop_entry(Path::new("/tmp/Couch Deck/capydeck"));
+        assert!(entry.contains("Exec=\"/tmp/Couch Deck/capydeck\" --home"));
+        assert!(entry.contains("X-CapyDeck-Managed=true"));
+        assert!(entry.contains("Icon=capydeck"));
     }
 
     #[test]
@@ -93,7 +93,7 @@ mod tests {
     fn install_and_remove_launcher_are_atomic_and_explicit() {
         let tmp = tempfile::tempdir().unwrap();
         let paths = XdgPaths::for_home(tmp.path());
-        let exe = tmp.path().join("Couch Deck/couchdeck");
+        let exe = tmp.path().join("Couch Deck/capydeck");
         let path = install_launcher(&paths, &exe).unwrap();
         assert_eq!(path, launcher_path(&paths));
         let content = fs::read_to_string(&path).unwrap();

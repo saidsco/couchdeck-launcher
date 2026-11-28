@@ -1,6 +1,6 @@
 # Release-Pakete und Distribution
 
-CouchDeck wird als natives Linux-x86_64-Programm über GitHub Releases verteilt.
+CapyDeck wird als natives Linux-x86_64-Programm über GitHub Releases verteilt.
 Es gibt **kein Flatpak** und **keine Root-Installation**. Beide Paketformen
 nutzen dieselben XDG-Datenordner wie eine bestehende Benutzerinstallation.
 
@@ -10,9 +10,9 @@ Bei einem Tag `v*` erzeugt GitHub Actions:
 
 | Datei | Inhalt |
 |---|---|
-| `couchdeck-<version>-linux-x86_64.tar.gz` | portables Archiv mit Binary, Icon, Installer/Uninstaller, README, Docs, `runtime-info.txt` |
-| `CouchDeck-<version>-x86_64.AppImage` | ausführbares AppImage mit eingebettetem Desktop-Eintrag und Icon |
-| `couchdeck-<version>-runtime-info.txt` | Ergebnis der `ldd`-Prüfung, Build-glibc und maximal benötigte GLIBC-Symbolversion |
+| `capydeck-<version>-linux-x86_64.tar.gz` | portables Archiv mit Binary, Icon, Installer/Uninstaller, README, Docs, `runtime-info.txt` |
+| `CapyDeck-<version>-x86_64.AppImage` | ausführbares AppImage mit eingebettetem Desktop-Eintrag und Icon |
+| `capydeck-<version>-runtime-info.txt` | Ergebnis der `ldd`-Prüfung, Build-glibc und maximal benötigte GLIBC-Symbolversion |
 | `SHA256SUMS` | SHA-256-Prüfsummen für alle veröffentlichten Dateien |
 
 Der Build läuft in einem **Fedora-42-Container** (glibc 2.41). Das erzeugte
@@ -23,7 +23,7 @@ Releases.
 
 ## Warum kein Flatpak?
 
-CouchDeck soll direkt auf die aktive KDE-/GNOME-/XFCE-Sitzung, GIO,
+CapyDeck soll direkt auf die aktive KDE-/GNOME-/XFCE-Sitzung, GIO,
 Controller-Devices, PipeWire/PulseAudio und systemctl/Polkit der Host-Session
 zugreifen.
 Eine Flatpak-Sandbox würde zusätzliche Portale, Berechtigungen und
@@ -51,13 +51,13 @@ sudo dnf install -y \
   cargo rust clippy rustfmt gcc gcc-c++ pkgconf-pkg-config \
   systemd-devel libxkbcommon-devel libxkbcommon-x11-devel wayland-devel \
   mesa-libGL-devel libX11-devel libXcursor-devel libXrandr-devel libXi-devel \
-  glib2 librsvg2-tools desktop-file-utils file binutils curl tar gzip
+  glib2 desktop-file-utils file binutils curl tar gzip
 
 cargo build --release --locked
-scripts/check-runtime.sh target/release/couchdeck dist/runtime-info.txt
+scripts/check-runtime.sh target/release/capydeck dist/runtime-info.txt
 
 # Gepinntes appimagetool aus dem linuxdeploy-Build-Werkzeug holen
-APPIMAGETOOL="$(scripts/fetch-release-tools.sh /tmp/couchdeck-release-tools)"
+APPIMAGETOOL="$(scripts/fetch-release-tools.sh /tmp/capydeck-release-tools)"
 
 # Optional: eine bereits geladene type2-Runtime verwenden. Ohne diese Variable
 # lädt appimagetool die Runtime selbst herunter.
@@ -97,15 +97,16 @@ System fehlt, lässt es sich mit `APPIMAGE_EXTRACT_AND_RUN=1` starten.
 
 ```bash
 sha256sum -c SHA256SUMS
-tar -xzf couchdeck-<version>-linux-x86_64.tar.gz
-./couchdeck-<version>-linux-x86_64/scripts/install-user.sh
+tar -xzf capydeck-<version>-linux-x86_64.tar.gz
+./capydeck-<version>-linux-x86_64/scripts/install-user.sh
 ```
 
 Installiert werden nur:
 
-- `~/.local/bin/couchdeck`
-- `~/.local/share/applications/couchdeck.desktop`
-- `~/.local/share/icons/hicolor/scalable/apps/couchdeck.svg`
+- `~/.local/bin/capydeck`
+- `~/.local/share/applications/capydeck.desktop`
+- `~/.local/share/icons/hicolor/256x256/apps/capydeck.png`
+- `~/.local/share/icons/hicolor/512x512/apps/capydeck.png`
 - optional ein desktopbezogener XDG-Autostart-Eintrag mit `--autostart`
 
 Bibliothek, Profile, PIN-Hash, Artwork und Einstellungen werden **nicht**
@@ -114,8 +115,8 @@ Bibliothek, Profile, PIN-Hash, Artwork und Einstellungen werden **nicht**
 ### AppImage
 
 ```bash
-chmod +x CouchDeck-<version>-x86_64.AppImage
-./CouchDeck-<version>-x86_64.AppImage
+chmod +x CapyDeck-<version>-x86_64.AppImage
+./CapyDeck-<version>-x86_64.AppImage
 ```
 
 Das AppImage kann beliebig abgelegt werden und nutzt dieselben XDG-Datenordner.
@@ -133,13 +134,13 @@ Einstellungen, Cache und Logs nach expliziter Bestätigung.
 
 ## Fensteraktivierung / Controller Home im Release
 
-Das Release-Binary enthält `couchdeck --activate`, `couchdeck --home`, den lokalen
+Das Release-Binary enthält `capydeck --activate`, `capydeck --home`, den lokalen
 Aktivierungs-Socket und den nativen Controller-Home-Chord. Standard ist
 Start + Select für 2 Sekunden; Alternativen sind in den Einstellungen wählbar.
 `--home` aktiviert eine laufende Instanz oder startet die UI; optional kann mit
 `--install-home-launcher` ein benutzerspezifischer Menüeintrag angelegt werden.
 Für den Chord wird Lesezugriff auf `/dev/input` benötigt. Beim Start prüft
-CouchDeck die Berechtigung und bietet eine ausdrückliche Polkit-Einrichtung an;
+CapyDeck die Berechtigung und bietet eine ausdrückliche Polkit-Einrichtung an;
 `--setup-input-permissions` bleibt als Fallback verfügbar, der Installer fragt
 zusätzlich nach der input-Gruppe. Globale Shortcuts/Steam-Input werden nicht
 automatisch registriert. Es sind keine zusätzlichen Systemdienste, Root-Rechte oder

@@ -317,8 +317,8 @@ fn sanitize_slug(input: &str) -> String {
     }
 }
 
-/// Validate and copy a user-selected image into CouchDeck's own asset tree.
-/// Returns a path relative to the CouchDeck data directory.
+/// Validate and copy a user-selected image into CapyDeck's own asset tree.
+/// Returns a path relative to the CapyDeck data directory.
 pub fn import_image(
     source: &Path,
     paths: &XdgPaths,

@@ -215,8 +215,8 @@ Voraussetzung: natives Steam, ein natives Linux-Spiel und ein Proton-Spiel.
 
 | ID | Test | Erwartung | Manjaro | Bazzite |
 |---|---|---|---|---|
-| F1 | CouchDeck neu starten, Spiel läuft weiter | Session wird adoptiert oder `Unknown`, nie blind „läuft“ | offen | `[ ]` |
-| F2 | CouchDeck-Absturz während Session | Recovery korrekt, keine erfundene Endzeit | offen | `[ ]` |
+| F1 | CapyDeck neu starten, Spiel läuft weiter | Session wird adoptiert oder `Unknown`, nie blind „läuft“ | offen | `[ ]` |
+| F2 | CapyDeck-Absturz während Session | Recovery korrekt, keine erfundene Endzeit | offen | `[ ]` |
 | F3 | Systemneustart während Session | `boot_id` anders → Session beendet | offen | `[ ]` |
 | F4 | Suspend/Resume während Session | Session bleibt; Schlafzeit zählt nicht | offen | `[ ]` |
 | F5 | PID-Reuse-Simulation | Startzeit verhindert Verwechslung | offen | `[ ]` |

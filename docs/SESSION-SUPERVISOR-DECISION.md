@@ -80,7 +80,7 @@ C kombiniert die Stärken:
 
 - `ExitType=cgroup` hält die Unit am Leben, wenn der Supervisor stirbt.
 - Der Supervisor liefert die Anwendungsebene.
-- CouchDeck kann nach einem Supervisor-Crash über Unit/cgroup/Fenster
+- CapyDeck kann nach einem Supervisor-Crash über Unit/cgroup/Fenster
   wieder anknüpfen und die Sitzung stoppen.
 - Ein UI-Crash beeinflusst die Unit nicht.
 - Der Stop der Unit beendet die gesamte Sitzung.
@@ -180,7 +180,7 @@ Der Manager:
 
 - Die Unit kann weiterleben, aber der Supervisor liefert keine Ereignisse
   mehr.
-- CouchDeck prüft Unit, cgroup, Fenster und PID/Startzeit.
+- CapyDeck prüft Unit, cgroup, Fenster und PID/Startzeit.
 - Die Zeitmessung darf nicht stillschweigend pausieren. Sie zählt
   konservativ weiter, bis ein belastbarer Endebeleg vorliegt, oder blockiert
   neue Starts im strikten Modus.

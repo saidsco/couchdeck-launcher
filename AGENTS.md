@@ -1,19 +1,19 @@
-# CouchDeck — Coding-Agent-Auftrag
+# CapyDeck — Coding-Agent-Auftrag
 
 ## Rolle und Arbeitsauftrag
 Du bist ein erfahrener Rust-/Linux-Desktop-Entwicklungsagent. Implementiere ein quelloffenes, controller-first, fullscreenfähiges Game-Launcher-MVP für **Linux-Wohnzimmer-PCs**. Der Launcher startet direkt in eine persönliche Spielebibliothek. Kein Shop, keine News, keine Accounts von Spieleplattformen, kein Overlay. Arbeite inkrementell, führe Tests aus und dokumentiere reale Testergebnisse. Frage nur bei tatsächlich blockierenden Unklarheiten; verwende sonst die Vorgaben in diesem Paket.
 
-**Produktziel:** „CouchDeck is a family-friendly, controller-first game launcher for Linux living-room PCs, independent of a specific distribution or desktop environment.“
+**Produktziel:** „CapyDeck is a family-friendly, controller-first game launcher for Linux living-room PCs, independent of a specific distribution or desktop environment.“
 
-**Projektname:** CouchDeck (Arbeitstitel; Namenskonflikte vor Veröffentlichung prüfen).
+**Projektname:** CapyDeck (Arbeitstitel; Namenskonflikte vor Veröffentlichung prüfen).
 **Technologie:** Rust stable, eframe/egui, gilrs, serde + JSON, toml, standard/XDG-Pfade, GLib/GIO-Desktop-Launching über `gio launch`. Wähle gepflegte kompatible Versionen, lege `Cargo.lock` ab. Bevorzuge möglichst wenig Abhängigkeiten. Kein Web-Frontend, Electron, Python, Datenbankserver, sudo im Produkt oder Netzwerkzwang.
 
 **Zielumgebungen:** KDE Plasma, GNOME und XFCE unter Wayland oder X11, soweit die jeweilige Sitzung und eframe/egui es unterstützen. Bazzite und SteamOS im Desktop Mode sind Zielplattformen, aber keine technischen Voraussetzungen. Steam Gaming Mode/Gamescope ist derzeit **nicht** zugesichert.
 
 ## Nicht verhandelbare Regeln
-1. **Native Benutzeranwendung**. Kein Flatpak für CouchDeck selbst. Build in einem zur Ziel-Fedora-Version passenden Container; Installation nach `~/.local/bin/` und XDG Desktop Entry; keine `rpm-ostree`-Layer, kein root erforderlich. Release-Pakete: portables tar.gz und AppImage, ohne Rust-Toolchain auf dem Zielsystem.
-2. **Desktop-Dateien sind die Startquelle**. Unterstütze `.desktop`-Dateien aus XDG-Anwendungsordnern, Flatpak-Exports, dem tatsächlichen XDG-Desktopordner, benutzerdefinierten Suchverzeichnissen und CouchDeck-verwalteten Dateien. Desktop-Entry-Spezifikation beachten (Name, Icon, Exec, NoDisplay, Hidden, TryExec, Path, DBusActivatable, OnlyShowIn, NotShowIn, Kategorien, lokalisierte Werte). Für das tatsächliche Starten `gio launch /absoluter/pfad/datei.desktop` benutzen; **niemals** `Exec=` per eigenem `split(' ')`, `eval`, `sh -c` o. ä. interpretieren. Rust-`Command` mit separaten Argumenten, nie dynamische Shell-Konkatenation. `gio launch`-Fehler anzeigen.
-3. **Artwork unabhängig von `Icon=`!** Pro Bibliothekseintrag lassen sich eigenes Cover und optional eigener Hintergrund festlegen. Speichere diese Overrides in CouchDeck, **ohne die ursprüngliche `.desktop`-Datei zu verändern**. Bilder per Dateiauswahl importieren und in XDG_DATA_HOME/couchdeck/assets/ kopieren; PNG/JPEG/WebP, sichere Namen, skalieren/cachen, Fehler-Fallback. Bei keinem Cover: Desktop-Icon (absoluter Pfad oder Icon-Theme-Name), danach neutrale Kachel.
+1. **Native Benutzeranwendung**. Kein Flatpak für CapyDeck selbst. Build in einem zur Ziel-Fedora-Version passenden Container; Installation nach `~/.local/bin/` und XDG Desktop Entry; keine `rpm-ostree`-Layer, kein root erforderlich. Release-Pakete: portables tar.gz und AppImage, ohne Rust-Toolchain auf dem Zielsystem.
+2. **Desktop-Dateien sind die Startquelle**. Unterstütze `.desktop`-Dateien aus XDG-Anwendungsordnern, Flatpak-Exports, dem tatsächlichen XDG-Desktopordner, benutzerdefinierten Suchverzeichnissen und CapyDeck-verwalteten Dateien. Desktop-Entry-Spezifikation beachten (Name, Icon, Exec, NoDisplay, Hidden, TryExec, Path, DBusActivatable, OnlyShowIn, NotShowIn, Kategorien, lokalisierte Werte). Für das tatsächliche Starten `gio launch /absoluter/pfad/datei.desktop` benutzen; **niemals** `Exec=` per eigenem `split(' ')`, `eval`, `sh -c` o. ä. interpretieren. Rust-`Command` mit separaten Argumenten, nie dynamische Shell-Konkatenation. `gio launch`-Fehler anzeigen.
+3. **Artwork unabhängig von `Icon=`!** Pro Bibliothekseintrag lassen sich eigenes Cover und optional eigener Hintergrund festlegen. Speichere diese Overrides in CapyDeck, **ohne die ursprüngliche `.desktop`-Datei zu verändern**. Bilder per Dateiauswahl importieren und in XDG_DATA_HOME/capydeck/assets/ kopieren; PNG/JPEG/WebP, sichere Namen, skalieren/cachen, Fehler-Fallback. Bei keinem Cover: Desktop-Icon (absoluter Pfad oder Icon-Theme-Name), danach neutrale Kachel.
 4. **Controller-first**. D-Pad und linker Stick für Fokus; A bestätigen/starten; B zurück; LB/RB Profilwechsel (nur in Profilübersicht oder wie im UI angezeigt); Start öffnet Menü; Tastatur und Maus parallel bedienbar. Deadzone, Hold-Repeat, Debouncing, Hotplug, Wechsel zwischen Controllern. Test mit einem realen Controller und Wayland/X11, falls möglich; andernfalls genaue Hardwaretest-Anleitung und Einschränkungen dokumentieren.
 5. **Fullscreen ab App-Start** in der aktiven Desktop-Sitzung. Fensterrahmenlos, Focus State jederzeit klar, Overlay- oder Settings-Zustände ohne Browserfenster; optional Windowed-Debug-Schalter `--windowed`. Unter Wayland können Compositor und Fokusregeln das Verhalten beeinflussen; dokumentiere Einschränkungen statt sie zu verbergen.
 6. **Bibliothek**: Cover-Kacheln im Grid, 16:9- bzw. 2:3/3:4-Artwork per center crop, sanfte Fokusvergrößerung/-umrandung (150–200 ms), 60 fps während Animationen, niedrige CPU-Auslastung im Idle, optionales Hintergrundbild. App startet direkt in Bibliothek des zuletzt gewählten Profils; Erststart darf Profilwahl/Setup anbieten.
@@ -25,7 +25,7 @@ Du bist ein erfahrener Rust-/Linux-Desktop-Entwicklungsagent. Implementiere ein 
 12. **Sicherheitsmodell**: Eine `.desktop`-Datei kann beliebige Befehle ausführen. Zeige Admin beim Import Name, Pfad, Quelle, Desktop-ID und `Exec`-Inhalt zur Prüfung. Nur lokal explizit vom Admin freigegebene Einträge ausführbar. Neu gefundene Einträge werden **nie automatisch** in die Bibliothek übernommen und **nie automatisch für Kinderprofile freigeschaltet**. Keine ungeprüften Downloads.
 13. **Desktopunabhängiger Autostart**: XDG-Autostart ist opt-in und an die erkannte Sitzung (KDE, GNOME, XFCE) gebunden. Unbekannte Sitzungen und Gamescope/Steam Gaming Mode erhalten keinen Autostart. Kein blindes Entfernen von `OnlyShowIn`-Beschränkungen.
 14. **Single Instance**: Ein benutzerspezifischer Lock verhindert parallele UIs gegen dieselbe Bibliothek und dasselbe Zeitbudget. Der Lock muss bei Abstürzen automatisch freigegeben werden.
-15. **Controller Home (0.5.2)**: `couchdeck --home` aktiviert eine laufende Instanz oder startet CouchDeck, wenn keine läuft. Zusätzlich erkennt der bestehende gilrs-Thread global den standardmäßig aktiven Home-Chord **Start + Select für 2 Sekunden** (Alternativen: Start + linker/rechter Stickklick), auch bei minimierter UI. Der Chord liest `/dev/input` read-only, greift nicht exklusiv zu, nutzt keinen uinput-Treiber und löst dieselbe Aktivierung wie `--home` aus. `--setup-input-permissions` bleibt als Fallback; beim Start prüft CouchDeck die Berechtigung und bietet einen Dialog mit ausdrücklicher Polkit-Bestätigung und „Später“ an; der Installer fragt ebenfalls nach einer input-Gruppen-Mitgliedschaft. Eine Neuanmeldung wird dokumentiert. Keine globale Controller-Navigation, keine Spielbeendigung, keine PIN-/Kinderumgehung; Home-Aktionen bleiben erweiterbar, ohne jetzt einen GameSessionManager einzuführen.
+15. **Controller Home (0.5.2)**: `capydeck --home` aktiviert eine laufende Instanz oder startet CapyDeck, wenn keine läuft. Zusätzlich erkennt der bestehende gilrs-Thread global den standardmäßig aktiven Home-Chord **Start + Select für 2 Sekunden** (Alternativen: Start + linker/rechter Stickklick), auch bei minimierter UI. Der Chord liest `/dev/input` read-only, greift nicht exklusiv zu, nutzt keinen uinput-Treiber und löst dieselbe Aktivierung wie `--home` aus. `--setup-input-permissions` bleibt als Fallback; beim Start prüft CapyDeck die Berechtigung und bietet einen Dialog mit ausdrücklicher Polkit-Bestätigung und „Später“ an; der Installer fragt ebenfalls nach einer input-Gruppen-Mitgliedschaft. Eine Neuanmeldung wird dokumentiert. Keine globale Controller-Navigation, keine Spielbeendigung, keine PIN-/Kinderumgehung; Home-Aktionen bleiben erweiterbar, ohne jetzt einen GameSessionManager einzuführen.
 
 ## Implementationsphasen
 **Phase 0 – Probe**: Minimal-Binary fullscreen in der aktiven Desktop-Sitzung, Controller-Input mit gilrs auf echtem Gerät, `gio launch` für Test-Desktop-Datei. Dokumentiere potenzielle Steam-Input-Konflikte. Trenne Probleme der Game-Session (Gamescope/Steam Gaming Mode) vom Desktop.
@@ -55,9 +55,9 @@ Du bist ein erfahrener Rust-/Linux-Desktop-Entwicklungsagent. Implementiere ein 
 - User ohne Admin kann keine Edit-Aktionen in der UI ausführen. Admin-PIN ist gehasht und mit Controller eingebbar. Profilwechsel zeigt unterschiedliche Auswahl/Cover wenn konfiguriert.
 - Autostart wird nur für erkannte KDE-/GNOME-/XFCE-Sitzungen und nur nach expliziter Entscheidung erzeugt; Gamescope/unbekannte Sitzungen bleiben ausgeschlossen.
 - Ein zweiter gleichzeitiger Start beendet sich mit Hinweis, ohne Bibliothek, Zeitbudget oder PIN zu beschädigen.
-- `couchdeck --activate` erreicht eine laufende Instanz über lokale IPC; bei fehlender Instanz, veraltetem Socket oder verweigerter Aktivierung gibt es einen verständlichen Fehler und keine falsche Erfolgsmeldung.
-- Ein Spielstart löst keine automatische Fokusübernahme aus; manuelle Aktivierung stellt Fullscreen nur wieder her, wenn CouchDeck zuvor fullscreen war.
-- `couchdeck --home` startet ohne Instanz die UI und aktiviert sonst die laufende Instanz; ein laufendes Spiel bleibt unangetastet.
+- `capydeck --activate` erreicht eine laufende Instanz über lokale IPC; bei fehlender Instanz, veraltetem Socket oder verweigerter Aktivierung gibt es einen verständlichen Fehler und keine falsche Erfolgsmeldung.
+- Ein Spielstart löst keine automatische Fokusübernahme aus; manuelle Aktivierung stellt Fullscreen nur wieder her, wenn CapyDeck zuvor fullscreen war.
+- `capydeck --home` startet ohne Instanz die UI und aktiviert sonst die laufende Instanz; ein laufendes Spiel bleibt unangetastet.
 - Der optionale Home-Launcher wird nur nach explizitem Benutzerbefehl angelegt und registriert keine globale Tastenkombination.
 - Entfernte `.desktop`-Datei, unlesbares Bild, fehlendes GIO, fehlendes Controllergerät und fehlerhaftes JSON erzeugen keine Abstürze.
 - Benutzerinstallation und -deinstallation ohne root; `cargo test`, `cargo fmt --check`, `cargo clippy` laufen im passenden Build-Container.
@@ -93,14 +93,14 @@ tests/
 Keine unnötige Microservice-/Backend-Struktur. `UI -> AppState -> Library/Profiles -> Desktop Launcher (GIO)`.
 
 ## Datei-/Datenspeichervertrag
-- `~/.config/couchdeck/settings.toml`: UI-Einstellungen, Animationen, Sprache, zusätzliche Desktop-Suchverzeichnisse (keine Geheimnisse).
-- `~/.local/share/couchdeck/library.json`: Profil- und Spielemetadaten, Referenzen auf `.desktop`-Dateien, Herkunft/Startmethode, Artwork-Overrides, Sortierung/Sichtbarkeit.
-- `~/.local/share/couchdeck/assets/`: importierte Covers, Hintergründe, Avatare.
-- `~/.local/share/couchdeck/managed-desktop/`: optionale *eigene* verwaltete Launcher-Dateien; GIO muss absolute Pfade akzeptieren. Originaldateien bleiben unangetastet.
-- `~/.local/share/couchdeck/timekeeping.json`: Tagesnutzung und Zusatzzeit der Kinderprofile.
+- `~/.config/capydeck/settings.toml`: UI-Einstellungen, Animationen, Sprache, zusätzliche Desktop-Suchverzeichnisse (keine Geheimnisse).
+- `~/.local/share/capydeck/library.json`: Profil- und Spielemetadaten, Referenzen auf `.desktop`-Dateien, Herkunft/Startmethode, Artwork-Overrides, Sortierung/Sichtbarkeit.
+- `~/.local/share/capydeck/assets/`: importierte Covers, Hintergründe, Avatare.
+- `~/.local/share/capydeck/managed-desktop/`: optionale *eigene* verwaltete Launcher-Dateien; GIO muss absolute Pfade akzeptieren. Originaldateien bleiben unangetastet.
+- `~/.local/share/capydeck/timekeeping.json`: Tagesnutzung und Zusatzzeit der Kinderprofile.
 - PIN-Hash lokal getrennt gespeichert (XDG_DATA_HOME, private Dateirechte), kein Anspruch auf OS-Sicherheitsisolation.
-- `~/.local/state/couchdeck/` bzw. `$XDG_RUNTIME_DIR`: Logs, Instanz-Lock und Aktivierungs-Socket (`couchdeck-activate.sock`).
-- `~/.cache/couchdeck/`: decodierte/skalierte Thumbnails nach Bedarf.
+- `~/.local/state/capydeck/` bzw. `$XDG_RUNTIME_DIR`: Logs, Instanz-Lock und Aktivierungs-Socket (`capydeck-activate.sock`).
+- `~/.cache/capydeck/`: decodierte/skalierte Thumbnails nach Bedarf.
 Nutze XDG-Variablen und `HOME`, niemals feste Benutzernamen, niemals blindes Parsen/Expansion aus importierten `Exec=`.
 
 ## Ergonomie

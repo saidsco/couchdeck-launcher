@@ -22,7 +22,7 @@ Begleitdokumente:
 
 ## 1. Ziel
 
-CouchDeck/CapyDeck soll Spielsitzungen nicht nur als „Startbefehl wurde
+CapyDeck soll Spielsitzungen nicht nur als „Startbefehl wurde
 angenommen“ kennen, sondern abhängig vom Backend:
 
 - den tatsächlichen Start erkennen,
@@ -287,7 +287,7 @@ Nachlauf:
 - Der Supervisor-Settle (Default 300 ms) verzögert nur das Supervisor-Ende,
   nicht den Spielprozess.
 
-CouchDeck wartet nach einem erkannten Ende eine kurze Settle-Frist, bevor es
+CapyDeck wartet nach einem erkannten Ende eine kurze Settle-Frist, bevor es
 `Ended` persistiert.
 
 ### TrackingLost und Supervisor-Ausfall
@@ -324,7 +324,7 @@ Kurzfassung; Details in [`TIME-ACCOUNTING.md`](TIME-ACCOUNTING.md).
 - Zunächst Shadow Mode parallel zur bestehenden Messung.
 
 Wichtiger Unterschied zum Ist-Zustand: Die aktuelle Messung zählt die Zeit des
-aktiven Kinderprofils, solange CouchDeck läuft (auch Bibliotheksnavigation),
+aktiven Kinderprofils, solange CapyDeck läuft (auch Bibliotheksnavigation),
 und kappt `used_seconds` am Budget. Das neue Modell misst echte
 Session-Zeit und speichert `used_seconds_actual` ungekappt.
 
@@ -451,7 +451,7 @@ GameSessionManager (eigener Thread/Event-Loop)
 - Supervisor weg, Unit aktiv → `TrackingLost`, nicht `Ended`.
 - Unit weg/Spiel tot → `Ended`.
 - Nicht verifizierte Sessions → `Unknown`/`Ended`, nie blind „läuft“.
-- Alte CouchDeck-Daten werden beim CapyDeck-Rename nicht migriert (keine
+- Alte CapyDeck-Daten werden beim CapyDeck-Rename nicht migriert (keine
   echten Benutzer); die neuen Schemata starten sauber.
 
 ## 11. Nachgewiesen / Technische Annahmen / Offen
@@ -492,7 +492,7 @@ GameSessionManager (eigener Thread/Event-Loop)
 - systemd-User-Units/cgroups und KWin stehen auf Bazzite/KDE zur Verfügung.
 - systemd 262 auf Bazzite verhält sich wie auf Manjaro.
 - Flatpak-Instanz-IDs und `flatpak ps` bleiben stabil genug.
-- Steam behält das Scope-Schema; CouchDeck verifiziert es trotzdem.
+- Steam behält das Scope-Schema; CapyDeck verifiziert es trotzdem.
 - Prism behält den Instanzpfad im Java-Kommando.
 - Ryujinx behält Config-Schlüssel und Root-Struktur.
 - GIOs Launchmanager-Verhalten bleibt für die genannten Desktop-Typen stabil.
@@ -504,7 +504,7 @@ GameSessionManager (eigener Thread/Event-Loop)
 - Vollständige Spielverläufe inkl. Controller, Home, Speichern/Laden.
 - Steam Cloud/Overlay-Interaktion.
 - Weitere Proton-Versionen, Anti-Cheat/Launcher-Spiele.
-- Suspend/Resume, CouchDeck-Absturz, PID-Reuse.
+- Suspend/Resume, CapyDeck-Absturz, PID-Reuse.
 - Supervisor-Crash, während das Spiel in einer anderen cgroup läuft.
 - Langzeit-CPU/RSS über Stunden.
 - FPS/Frametimes in echten Spielen (bisher synthetisch/vsync-limitiert).

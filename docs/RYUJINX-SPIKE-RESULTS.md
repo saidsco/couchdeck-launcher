@@ -87,7 +87,7 @@ geom=0,0 1080x1920
 Auffällig: Das Vollbild landete auf dem linken, **rotierten** Monitor
 (DP-2, 1080x1920), nicht auf dem Hauptmonitor DP-3 (1920x1080). Die
 Monitorwahl ist ein Compositor-/Fensterplatzierungsthema und sollte nicht als
-CouchDeck-Aufgabe betrachtet werden. Auf einem typischen einzelnen
+CapyDeck-Aufgabe betrachtet werden. Auf einem typischen einzelnen
 Wohnzimmerbildschirm ist das unkritisch; bei Multi-Monitor-Setups muss die
 Zielhardware getestet werden.
 
@@ -138,7 +138,7 @@ Danach beendete `closeWindow()` das Spiel regulär:
 - Fenster und Prozess verschwanden; keine Rückfrage.
 
 Das ist der empfohlene Weg für ein Direct/Managed-Backend: Ryujinx mit einem
-CouchDeck-verwalteten Root/Config starten, in dem `show_confirm_exit=false`
+CapyDeck-verwalteten Root/Config starten, in dem `show_confirm_exit=false`
 gesetzt ist. Die Benutzerkonfiguration muss dabei nicht verändert werden.
 
 ### Fenstermodus (erster Test)
@@ -282,7 +282,7 @@ wurde anschließend wiederhergestellt.
 ## Technische Annahmen
 
 - Ryujinx-Konfigurationsschlüssel (`start_fullscreen`, `remember_window_state`,
-  `show_confirm_exit`) sind versionsabhängig. CouchDeck sollte die verwaltete
+  `show_confirm_exit`) sind versionsabhängig. CapyDeck sollte die verwaltete
   Konfiguration versioniert erzeugen und bei Ryujinx-Updates prüfen.
 - Die Monitorwahl im Vollbild ist compositorabhängig.
 - Die gemessenen Start-/Endzeiten sind keine festen Zusagen.

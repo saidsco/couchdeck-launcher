@@ -1,6 +1,6 @@
 //! Daily play-time accounting for child profiles.
 //!
-//! First stage: active profile time is measured while the CouchDeck process is
+//! First stage: active profile time is measured while the CapyDeck process is
 //! running. Running games are not force-closed; only new launches are blocked.
 //! The state is intentionally separate from `library.json` because it is
 //! updated frequently.
@@ -253,7 +253,7 @@ pub fn load(paths: &XdgPaths) -> TimekeepingLoad {
         let backup = crate::storage::backup_file(&path).ok();
         return TimekeepingLoad::Corrupt {
             message: format!(
-                "timekeeping.json verwendet Schema {}, CouchDeck unterstützt höchstens {}.",
+                "timekeeping.json verwendet Schema {}, CapyDeck unterstützt höchstens {}.",
                 timekeeping.schema_version, SCHEMA_VERSION
             ),
             backup,

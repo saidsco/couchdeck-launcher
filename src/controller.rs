@@ -45,7 +45,7 @@ pub enum HomeAction {
     /// Return to the already-running launcher. Future actions can be added
     /// here (for example an explicit end-of-session action) without changing
     /// the chord detector.
-    ActivateCouchDeck,
+    ActivateCapyDeck,
 }
 
 #[derive(Debug, Clone)]
@@ -61,7 +61,7 @@ pub enum ControllerEvent {
 }
 
 enum ControllerCommand {
-    /// The CouchDeck window gained or lost input focus. When inactive, all
+    /// The CapyDeck window gained or lost input focus. When inactive, all
     /// navigation events are suppressed and held-button/stick state is reset so
     /// a game running in the foreground cannot keep navigating the launcher.
     SetActive(bool),
@@ -134,7 +134,7 @@ pub fn spawn(
     }
     let stop_thread = stop.clone();
     let join = thread::Builder::new()
-        .name("couchdeck-gamepad".to_owned())
+        .name("capydeck-gamepad".to_owned())
         .spawn(move || run(ctx, tx, command_rx, stop_thread, home, paths, focus_state))
         .ok();
     ControllerHandle {
@@ -299,7 +299,7 @@ fn run(
                     "controller",
                     "Controller-Home-Chord erkannt; Aktivierung wird angefordert.",
                 );
-                let _ = tx.send(ControllerEvent::HomeAction(HomeAction::ActivateCouchDeck));
+                let _ = tx.send(ControllerEvent::HomeAction(HomeAction::ActivateCapyDeck));
                 trigger_home_background(&paths, &focus_state);
                 produced = true;
             }

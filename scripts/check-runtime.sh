@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
-# Build a runtime dependency report for a CouchDeck binary.
+# Build a runtime dependency report for a CapyDeck binary.
 # Fails if ldd reports missing libraries. Safe to run on the target system.
 set -euo pipefail
 
-BINARY="${1:-target/release/couchdeck}"
+BINARY="${1:-target/release/capydeck}"
 REPORT="${2:-runtime-info.txt}"
 
 if [[ ! -x "$BINARY" ]]; then
@@ -21,7 +21,7 @@ if [[ -r /etc/os-release ]]; then
 fi
 
 check_report() {
-  echo "CouchDeck runtime dependency report"
+  echo "CapyDeck runtime dependency report"
   echo "generated_utc=$(date -u +%Y-%m-%dT%H:%M:%SZ)"
   echo "host=${os_name}"
   echo "kernel=$(uname -sr)"

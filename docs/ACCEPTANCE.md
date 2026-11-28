@@ -5,12 +5,25 @@ Legende:
 - `[~]` implementiert; Prüfung auf Bazzite-Zielhardware steht aus
 - `[ ]` nicht umgesetzt oder nicht geprüft
 
+## 0.6.0 Rebrand (28. November 2026)
+
+- [x] Produkt-/Binary-/App-ID-/XDG-Pfad-Rename auf CapyDeck.
+- [x] Desktop-, Autostart- und Home-Launcher-Dateien auf `capydeck` umgestellt.
+- [x] Lock, Aktivierungs-Socket, Log und verwaltete Desktop-Dateien umbenannt.
+- [x] PNG-Icons (`capydeck.png`, `capydeck-512.png`, `capydeck-1024.png`) eingebunden; SVG-Icon entfernt.
+- [x] `cargo fmt --check`, Clippy und 90 Tests grün.
+- [x] Fedora-42-Release-Build, tar.gz + AppImage, `SHA256SUMS`, `--version` und Xvfb-Smoke-Test.
+- [x] Benutzerinstallation/-deinstallation in temporärem `$HOME` mit neuen Pfaden/Icons geprüft.
+- [x] Single-Instance-Lock, `capydeck --activate` und `capydeck --home` mit neuen Socket-/Lock-Namen geprüft.
+- [x] Keine Datenmigration/Legacy-Aliase; alte CouchDeck-XDG-Ordner werden nicht gelesen.
+- [~] Bazzite-/GNOME-/XFCE-Abnahme nach dem Rebrand offen.
+
 ## Technisch
 
 - [ ] Reproduzierbarer Build in Distrobox auf passendem Fedora-Release — Befehle dokumentiert, aber nicht auf Bazzite ausgeführt (Entwicklungsumgebung: Manjaro).
 - [x] `cargo fmt --check` erfolgreich.
-- [x] `cargo clippy --all-targets -- -D warnings` erfolgreich.
-- [x] `cargo test` erfolgreich: 88 Unit-Tests + 2 GIO-Integrationstests.
+- [x] `cargo clippy --all-targets --locked -- -D warnings` erfolgreich.
+- [x] `cargo test --locked` erfolgreich: 88 Unit-Tests + 2 GIO-Integrationstests.
 - [x] `cargo build --release` erfolgreich.
 - [~] Fullscreen unter KDE/GNOME/XFCE (Wayland/X11) + `--windowed` — Fensterbetrieb auf KDE/Xwayland geprüft; andere Sitzungen offen.
 - [x] Install/Uninstall ohne sudo, kein `rpm-ostree`-Layer — in temporärem `$HOME` getestet.
@@ -42,7 +55,7 @@ Legende:
 - [x] D-Pad + linker Stick mit Deadzone/Hysterese und Hold-Repeat implementiert und unit-getestet.
 - [x] A/South = bestätigen/starten, B/East = zurück, Start = Menü, LB/RB = Profilübersicht.
 - [x] LB/RB korrekt auf die Schultertasten (`Button::LeftTrigger`/`RightTrigger`) gemappt; Unit-Test vorhanden.
-- [x] Navigation nur bei fokussiertem CouchDeck-Fenster; Connect/Disconnect weiterhin verarbeitet, Eingabepuffer bei Fokuswechsel verworfen.
+- [x] Navigation nur bei fokussiertem CapyDeck-Fenster; Connect/Disconnect weiterhin verarbeitet, Eingabepuffer bei Fokuswechsel verworfen.
 - [x] Hotplug-Events (Connected/Disconnected) implementiert.
 - [x] Doppelstart-Schutz: Start-Overlay, Cooldown, laufender Start blockiert weitere Starts.
 - [x] Tastatur und Maus parallel bedienbar.
@@ -67,7 +80,7 @@ Legende:
 ## Kinderprofile und Zeitkontingente
 
 - [x] Optionales Kinderprofil mit täglichem Zeitbudget.
-- [x] Aktive Profilzeit wird gemessen, solange CouchDeck läuft; Persistenz in `timekeeping.json`.
+- [x] Aktive Profilzeit wird gemessen, solange CapyDeck läuft; Persistenz in `timekeeping.json`.
 - [x] Restzeitanzeige, 5-/1-Minuten-Warnungen, optionaler Best-Effort-Alarmton.
 - [x] Zentrale Startprüfung für neue Spiele/Medien; laufende Spiele werden nicht beendet.
 - [x] Tageswechsel setzt Nutzung/Zusatzzeit/Warnflags zurück.
@@ -134,7 +147,7 @@ Legende:
 
 - [x] `XDG_ACTIVATION_TOKEN` wird vom CLI gelesen, über den lokalen IPC-Socket weitergegeben und nicht geloggt.
 - [x] Eingehender Token wird über `xdg-activation-v1` auf die bereits bestehende Wayland-Oberfläche angewendet; kein neues Fenster.
-- [x] KDE/Wayland-Fallback per einmaligem KWin-Scripting nur für das CouchDeck-Fenster; keine Polling-Schleife, keine fremden Fenster.
+- [x] KDE/Wayland-Fallback per einmaligem KWin-Scripting nur für das CapyDeck-Fenster; keine Polling-Schleife, keine fremden Fenster.
 - [x] Minimierungszustand unter Wayland wird als nicht zuverlässig erkannt und nicht als Steuerungsgrundlage verwendet.
 - [x] Fullscreen wird nur nach beobachtetem Fokus und interner Minimierung aus dem Fullscreen wiederhergestellt; extern minimiertes Fullscreen bleibt ohne unnötigen Toggle.
 - [x] Getrennte Diagnose für IPC, Token vorhanden/angewendet, Fokus angefordert/beobachtet, Timeout und KWin-Fallback.
@@ -145,12 +158,12 @@ Legende:
 
 ## Fensteraktivierung (v0.4.5, historisch)
 
-- [x] `couchdeck --activate` existiert und kontaktiert die laufende Instanz über lokalen Unix-Socket.
+- [x] `capydeck --activate` existiert und kontaktiert die laufende Instanz über lokalen Unix-Socket.
 - [x] Kein zweiter UI-Prozess; Single-Instance-Lock bleibt maßgeblich.
 - [x] Socket `0600` und `SO_PEERCRED`-Prüfung auf gleiche lokale UID.
 - [x] Veralteter Socket wird ersetzt; fehlende Instanz liefert Exit-Code ungleich 0.
 - [x] Minimiertes Fenster wird wiederhergestellt; vorheriger Fullscreen wird wiederhergestellt; Windowed bleibt Windowed.
-- [x] Fokussiertes CouchDeck erhält keine störende Aktion.
+- [x] Fokussiertes CapyDeck erhält keine störende Aktion.
 - [x] Spielstart fordert keinen Fokus automatisch zurück.
 - [x] Fokus-/Minimierungs-/Fullscreen-/IPC-Logging und `--diagnose-window`.
 - [x] X11-Smoke-Tests für fokussiert, minimiert, Fullscreen-minimiert, mehrfache Aufrufe und No-Instance.
@@ -158,7 +171,7 @@ Legende:
 
 ## Controller Home & Return (v0.5.2)
 
-- [x] `couchdeck --home` aktiviert eine laufende Instanz oder startet CouchDeck, wenn keine läuft.
+- [x] `capydeck --home` aktiviert eine laufende Instanz oder startet CapyDeck, wenn keine läuft.
 - [x] Keine zweite UI; `Accepted`/`Unavailable` starten keinen zweiten Prozess.
 - [x] Keine Spiel-/Launcher-Beendigung, keine PIN-/Kinder-/Zeitbudget-Umgehung.
 - [x] `--activate` bleibt reiner Aktivierungsbefehl mit Fehler bei fehlender Instanz.
@@ -168,7 +181,7 @@ Legende:
 - [x] Steam-Input-Anleitung dokumentiert; keine automatische globale Shortcut-/Steam-Registrierung.
 - [x] 0.4.7-Bazzite-Test vom Betreiber bestätigt; 0.5.1-Controller-Home-/Steam-Input-Test auf Bazzite offen.
 - [x] Nativer Controller-Home-Chord: Start+Select 2 s, standardmäßig aktiv; Alternativen Start+linker/rechter Stickklick.
-- [x] Chord-Erkennung läuft unabhängig vom Fensterfokus, solange CouchDeck läuft; keine Navigation bei unfokussiertem Fenster.
+- [x] Chord-Erkennung läuft unabhängig vom Fensterfokus, solange CapyDeck läuft; keine Navigation bei unfokussiertem Fenster.
 - [x] UI-Hinweis in Bibliotheks-Footer und Admin → Einstellungen.
 - [x] Installer fragt nach input-Gruppe; `--setup-input-permissions` für AppImage; `pkexec`/`sudo` ohne Shell; Neuanmeldung dokumentiert.
 - [x] Berechtigungsstatus in Admin → Einstellungen.
@@ -185,7 +198,7 @@ Legende:
 - [x] `SHA256SUMS` für tar.gz, AppImage und Runtime-Report.
 - [x] `ldd`-Prüfung und Dokumentation von Build-glibc sowie maximaler GLIBC-Symbolversion.
 - [x] Release-Pakete laufen ohne installierten Rust-Compiler; Build-Tools nur im CI-Container.
-- [x] Installation über `~/.local/bin/couchdeck` und XDG-Desktop-Entry weiterhin unterstützt.
+- [x] Installation über `~/.local/bin/capydeck` und XDG-Desktop-Entry weiterhin unterstützt.
 - [x] Installer überschreibt keine Profile, Artwork oder Einstellungen; Update ist derselbe Aufruf.
 - [x] AppImage/Archiv im Fedora-42-Container gebaut, per `--version` und Xvfb-Start geprüft.
 - [x] GitHub Release `v0.3.1` mit allen Assets veröffentlicht; Download und SHA256-Prüfung erneut verifiziert.
@@ -199,6 +212,6 @@ Legende:
 - Keine Accounts, kein Sync, keine Cloud.
 - Keine eigene Gamescope-/Login-Session.
 - Kein systemweiter Autostart ohne Opt-in.
-- Kein Flatpak-Paket für CouchDeck selbst; stattdessen portables tar.gz und natives AppImage.
+- Kein Flatpak-Paket für CapyDeck selbst; stattdessen portables tar.gz und natives AppImage.
 - Favoriten-UI nicht implementiert (Datenfeld reserviert).
-- SVG-Desktop-Icons werden nicht rasterisiert.
+- CapyDeck verwendet PNG-Icons (`256x256`, `512x512`, `1024x1024`); ein SVG-Desktop-Icon ist nicht mehr Teil der Installation.

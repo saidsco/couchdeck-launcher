@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Install CouchDeck for the current user. No sudo, no rpm-ostree layer.
+# Install CapyDeck for the current user. No sudo, no rpm-ostree layer.
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -33,7 +33,7 @@ EOF
 done
 
 if [[ ${EUID} -eq 0 ]]; then
-  echo "Fehler: CouchDeck wird als normaler Benutzer installiert, nicht als root." >&2
+  echo "Fehler: CapyDeck wird als normaler Benutzer installiert, nicht als root." >&2
   exit 1
 fi
 
@@ -83,13 +83,13 @@ if [[ $AUTOSTART -eq 1 ]]; then
   fi
 fi
 
-if [[ -n "${COUCHDECK_BINARY:-}" ]]; then
-  BINARY="$COUCHDECK_BINARY"
-elif [[ -x "$PACKAGE_ROOT/couchdeck" ]]; then
-  # Release archive layout: couchdeck-<version>/couchdeck
-  BINARY="$PACKAGE_ROOT/couchdeck"
+if [[ -n "${CAPYDECK_BINARY:-}" ]]; then
+  BINARY="$CAPYDECK_BINARY"
+elif [[ -x "$PACKAGE_ROOT/capydeck" ]]; then
+  # Release archive layout: capydeck-<version>/capydeck
+  BINARY="$PACKAGE_ROOT/capydeck"
 else
-  BINARY="$PACKAGE_ROOT/target/release/couchdeck"
+  BINARY="$PACKAGE_ROOT/target/release/capydeck"
 fi
 
 if [[ ! -x "$BINARY" ]]; then
@@ -99,83 +99,70 @@ Fehler: $BINARY wurde nicht gefunden oder ist nicht ausführbar.
 Baue zuerst im passenden Distrobox-Container:
     cargo build --release
 
-Oder verwende ein vollständiges CouchDeck-Release-Archiv. Danach dieses Skript
+Oder verwende ein vollständiges CapyDeck-Release-Archiv. Danach dieses Skript
 auf dem Host (ohne sudo) ausführen.
 EOF
   exit 1
 fi
 
-if [[ -n "${COUCHDECK_ICON:-}" ]]; then
-  ICON_SVG="$COUCHDECK_ICON"
-elif [[ -f "$PACKAGE_ROOT/assets/couchdeck.svg" ]]; then
-  ICON_SVG="$PACKAGE_ROOT/assets/couchdeck.svg"
-elif [[ -f "$PACKAGE_ROOT/couchdeck.svg" ]]; then
+if [[ -n "${CAPYDECK_ICON_PNG:-}" ]]; then
+  ICON_PNG="$CAPYDECK_ICON_PNG"
+elif [[ -f "$PACKAGE_ROOT/assets/capydeck.png" ]]; then
+  ICON_PNG="$PACKAGE_ROOT/assets/capydeck.png"
+elif [[ -f "$PACKAGE_ROOT/capydeck.png" ]]; then
   # Release archive layout
-  ICON_SVG="$PACKAGE_ROOT/couchdeck.svg"
+  ICON_PNG="$PACKAGE_ROOT/capydeck.png"
 else
-  echo "Fehler: couchdeck.svg wurde nicht gefunden." >&2
+  echo "Fehler: capydeck.png wurde nicht gefunden." >&2
   exit 1
 fi
 
-if [[ -n "${COUCHDECK_ICON_PNG:-}" ]]; then
-  ICON_PNG="$COUCHDECK_ICON_PNG"
-elif [[ -f "$PACKAGE_ROOT/assets/couchdeck.png" ]]; then
-  ICON_PNG="$PACKAGE_ROOT/assets/couchdeck.png"
-elif [[ -f "$PACKAGE_ROOT/couchdeck.png" ]]; then
-  ICON_PNG="$PACKAGE_ROOT/couchdeck.png"
-else
-  echo "Fehler: couchdeck.png wurde nicht gefunden." >&2
-  exit 1
-fi
-
-if [[ -n "${COUCHDECK_ICON_PNG_512:-}" ]]; then
-  ICON_PNG_512="$COUCHDECK_ICON_PNG_512"
-elif [[ -f "$PACKAGE_ROOT/assets/couchdeck-512.png" ]]; then
-  ICON_PNG_512="$PACKAGE_ROOT/assets/couchdeck-512.png"
-elif [[ -f "$PACKAGE_ROOT/couchdeck-512.png" ]]; then
-  ICON_PNG_512="$PACKAGE_ROOT/couchdeck-512.png"
+if [[ -n "${CAPYDECK_ICON_PNG_512:-}" ]]; then
+  ICON_PNG_512="$CAPYDECK_ICON_PNG_512"
+elif [[ -f "$PACKAGE_ROOT/assets/capydeck-512.png" ]]; then
+  ICON_PNG_512="$PACKAGE_ROOT/assets/capydeck-512.png"
+elif [[ -f "$PACKAGE_ROOT/capydeck-512.png" ]]; then
+  ICON_PNG_512="$PACKAGE_ROOT/capydeck-512.png"
 else
   ICON_PNG_512=""
 fi
 
 BIN_DIR="$HOME/.local/bin"
 APP_DIR="$HOME/.local/share/applications"
-ICON_SCALABLE_DIR="$HOME/.local/share/icons/hicolor/scalable/apps"
 ICON_256_DIR="$HOME/.local/share/icons/hicolor/256x256/apps"
 ICON_512_DIR="$HOME/.local/share/icons/hicolor/512x512/apps"
-ICON_ABS="$ICON_256_DIR/couchdeck.png"
+ICON_ABS="$ICON_256_DIR/capydeck.png"
 
-install -Dm755 "$BINARY" "$BIN_DIR/couchdeck"
-install -Dm644 "$ICON_SVG" "$ICON_SCALABLE_DIR/couchdeck.svg"
+install -Dm755 "$BINARY" "$BIN_DIR/capydeck"
 install -Dm644 "$ICON_PNG" "$ICON_ABS"
 if [[ -n "$ICON_PNG_512" ]]; then
-  install -Dm644 "$ICON_PNG_512" "$ICON_512_DIR/couchdeck.png"
+  install -Dm644 "$ICON_PNG_512" "$ICON_512_DIR/capydeck.png"
 fi
 install -d "$APP_DIR"
 
-cat > "$APP_DIR/couchdeck.desktop" <<DESKTOP
+cat > "$APP_DIR/capydeck.desktop" <<DESKTOP
 [Desktop Entry]
 Type=Application
-Name=CouchDeck
+Name=CapyDeck
 Comment=Controllerfreundliche Fullscreen-Spielebibliothek
-Exec="${HOME}/.local/bin/couchdeck"
+Exec="${HOME}/.local/bin/capydeck"
 Icon=$ICON_ABS
 Terminal=false
 Categories=Game;
 StartupNotify=true
 DESKTOP
-chmod 0644 "$APP_DIR/couchdeck.desktop"
+chmod 0644 "$APP_DIR/capydeck.desktop"
 
 CONFIG_HOME="${XDG_CONFIG_HOME:-$HOME/.config}"
-AUTOSTART_FILE="$CONFIG_HOME/autostart/couchdeck.desktop"
+AUTOSTART_FILE="$CONFIG_HOME/autostart/capydeck.desktop"
 if [[ $AUTOSTART -eq 1 ]]; then
   install -d "$CONFIG_HOME/autostart"
   cat > "$AUTOSTART_FILE" <<DESKTOP
 [Desktop Entry]
 Type=Application
-Name=CouchDeck
+Name=CapyDeck
 Comment=Controllerfreundliche Fullscreen-Spielebibliothek
-Exec="${HOME}/.local/bin/couchdeck" --autostart
+Exec="${HOME}/.local/bin/capydeck" --autostart
 Icon=$ICON_ABS
 Terminal=false
 Categories=Game;
@@ -183,8 +170,8 @@ StartupNotify=false
 OnlyShowIn=${AUTOSTART_DESKTOP};
 NotShowIn=gamescope;
 X-GNOME-Autostart-enabled=true
-X-CouchDeck-Autostart=true
-X-CouchDeck-Desktop=${AUTOSTART_DESKTOP};
+X-CapyDeck-Autostart=true
+X-CapyDeck-Desktop=${AUTOSTART_DESKTOP};
 DESKTOP
   chmod 0644 "$AUTOSTART_FILE"
 fi
@@ -211,35 +198,35 @@ if ! id -nG "$INPUT_USER" 2>/dev/null | tr ' ' '\n' | grep -qx input; then
     read -r -p "Jetzt zur Gruppe input hinzufügen? [y/N] " INPUT_ANSWER
     case "${INPUT_ANSWER,,}" in
       y|yes|j|ja)
-        if "$BIN_DIR/couchdeck" --setup-input-permissions --yes; then
+        if "$BIN_DIR/capydeck" --setup-input-permissions --yes; then
           echo "Bitte einmal ab- und wieder anmelden, damit die Gruppe aktiv wird."
         else
           echo "Die Berechtigung konnte nicht eingerichtet werden." >&2
-          echo "Später manuell möglich: $BIN_DIR/couchdeck --setup-input-permissions" >&2
+          echo "Später manuell möglich: $BIN_DIR/capydeck --setup-input-permissions" >&2
         fi
         ;;
       *)
-        echo "Übersprungen. Später möglich: $BIN_DIR/couchdeck --setup-input-permissions"
+        echo "Übersprungen. Später möglich: $BIN_DIR/capydeck --setup-input-permissions"
         ;;
     esac
   else
-    echo "Später manuell möglich: $BIN_DIR/couchdeck --setup-input-permissions"
+    echo "Später manuell möglich: $BIN_DIR/capydeck --setup-input-permissions"
   fi
 else
   echo "Controller-Home: Gruppe input ist bereits zugewiesen (ggf. Neuanmeldung nötig)."
 fi
 
 cat <<EOF
-CouchDeck installiert:
-  Binary:  $BIN_DIR/couchdeck
-  Eintrag: $APP_DIR/couchdeck.desktop
+CapyDeck installiert:
+  Binary:  $BIN_DIR/capydeck
+  Eintrag: $APP_DIR/capydeck.desktop
   Icon:    $ICON_ABS
 
-Start:  ~/.local/bin/couchdeck
-Debug:  ~/.local/bin/couchdeck --windowed --no-controller
+Start:  ~/.local/bin/capydeck
+Debug:  ~/.local/bin/capydeck --windowed --no-controller
 Autostart: $(if [[ $AUTOSTART -eq 1 ]]; then echo "aktiv für $AUTOSTART_DESKTOP ($AUTOSTART_FILE)"; else echo "inaktiv"; fi)
 
-Der Autostart kann später auch in CouchDeck unter Admin → Einstellungen
+Der Autostart kann später auch in CapyDeck unter Admin → Einstellungen
 ein- und ausgeschaltet werden.
 
 Bibliothek, Profile, PIN, Artwork und Einstellungen werden durch dieses

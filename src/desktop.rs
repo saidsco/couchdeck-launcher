@@ -2,7 +2,7 @@
 //! diagnostics.
 //!
 //! # Launching rule
-//! CouchDeck **never** interprets `Exec=` itself. The raw value is displayed
+//! CapyDeck **never** interprets `Exec=` itself. The raw value is displayed
 //! to the administrator for review, but actual launches always go through
 //! `gio launch /absolute/path.desktop` (see [`crate::launch`]). The small
 //! tokenizer below exists only to produce read-only diagnostics and to build
@@ -510,7 +510,7 @@ fn classify_data_dir(paths: &XdgPaths, applications: &Path) -> DiscoverySource {
 }
 
 /// All roots in discovery order: user XDG, Flatpak user/system, XDG data dirs,
-/// the real XDG desktop folder, administrator paths and CouchDeck's managed
+/// the real XDG desktop folder, administrator paths and CapyDeck's managed
 /// files. Discovery de-duplicates roots and desktop IDs.
 pub fn discovery_roots(paths: &XdgPaths, additional: &[PathBuf]) -> Vec<DiscoveryRoot> {
     let mut roots = Vec::new();
@@ -982,7 +982,7 @@ pub fn analyze_entry(entry: &DesktopFile, paths: &XdgPaths) -> Vec<Diagnostic> {
                 )));
             } else {
                 out.push(Diagnostic::warning(format!(
-                    "Steam-Spiel-URI mit App-ID {} erkannt (kein Flatpak-Aufruf). Bei Flatpak-Steam kann dieser Shortcut eventuell nicht funktionieren. CouchDeck kann nach Zustimmung eine separate verwaltete Datei erzeugen.",
+                    "Steam-Spiel-URI mit App-ID {} erkannt (kein Flatpak-Aufruf). Bei Flatpak-Steam kann dieser Shortcut eventuell nicht funktionieren. CapyDeck kann nach Zustimmung eine separate verwaltete Datei erzeugen.",
                     steam.app_id
                 )));
                 if !flatpak_app_installed(paths, "com.valvesoftware.Steam") {
@@ -1016,7 +1016,7 @@ pub fn analyze_entry(entry: &DesktopFile, paths: &XdgPaths) -> Vec<Diagnostic> {
         }
         if exec.contains('%') {
             out.push(Diagnostic::info(
-                "Exec enthält Desktop-Feldcodes (%f, %u …). GIO expandiert sie beim Start; CouchDeck übergibt die Datei unverändert an GIO.",
+                "Exec enthält Desktop-Feldcodes (%f, %u …). GIO expandiert sie beim Start; CapyDeck übergibt die Datei unverändert an GIO.",
             ));
         }
     }
@@ -1116,13 +1116,13 @@ fn managed_desktop_contents(name: &str, comment: &str, exec: &str, icon: &str) -
          Terminal=false\n\
          Categories=Game;\n\
          StartupNotify=true\n\
-         X-CouchDeck-Managed=true\n"
+         X-CapyDeck-Managed=true\n"
     )
 }
 
 pub fn managed_steam_path(paths: &XdgPaths, app_id: &str) -> PathBuf {
     paths.managed_desktop_dir().join(format!(
-        "couchdeck-steam-{}.desktop",
+        "capydeck-steam-{}.desktop",
         sanitize_file_component(app_id)
     ))
 }
@@ -1149,7 +1149,7 @@ pub fn write_managed_steam(
     let path = managed_steam_path(paths, app_id);
     let contents = managed_desktop_contents(
         &escape_desktop_value(title),
-        "Von CouchDeck verwalteter Steam-Flatpak-Start (Original unverändert)",
+        "Von CapyDeck verwalteter Steam-Flatpak-Start (Original unverändert)",
         &format!("flatpak run com.valvesoftware.Steam steam://rungameid/{app_id}"),
         icon.filter(|s| !s.trim().is_empty())
             .unwrap_or("com.valvesoftware.Steam"),
@@ -1169,7 +1169,7 @@ pub fn managed_prism_path(paths: &XdgPaths, instance_id: &str) -> PathBuf {
         hash = hash.wrapping_mul(16_777_619);
     }
     paths.managed_desktop_dir().join(format!(
-        "couchdeck-prism-{}-{hash:08x}.desktop",
+        "capydeck-prism-{}-{hash:08x}.desktop",
         sanitize_file_component(instance_id)
     ))
 }
@@ -1194,7 +1194,7 @@ pub fn write_managed_prism(
     let path = managed_prism_path(paths, instance_id);
     let contents = managed_desktop_contents(
         &escape_desktop_value(title),
-        "Von CouchDeck verwalteter Prism-Launcher-Instanzstart",
+        "Von CapyDeck verwalteter Prism-Launcher-Instanzstart",
         &format!(
             "flatpak run org.prismlauncher.PrismLauncher --launch {}",
             exec_quote(instance_id)

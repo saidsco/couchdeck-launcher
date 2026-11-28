@@ -2,7 +2,7 @@
 //!
 //! The controller-home chord needs read access to `/dev/input/event*`. Many
 //! systems grant this through an active-session `uaccess` ACL; otherwise the
-//! user can be added to the `input` group. CouchDeck never elevates silently.
+//! user can be added to the `input` group. CapyDeck never elevates silently.
 
 use std::io::IsTerminal;
 use std::process::{Command, Stdio};

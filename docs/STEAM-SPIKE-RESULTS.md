@@ -47,7 +47,7 @@ in Phase II separat Disco Elysium getestet.
 ### Start und Scope
 
 `gio launch "$HOME/.local/share/applications/LEGO Bricktales.desktop"` wurde als
-normaler CouchDeck-GIO-Pfad verwendet.
+normaler CapyDeck-GIO-Pfad verwendet.
 
 Beobachtung:
 
@@ -245,9 +245,9 @@ Beobachtung:
   eigenen Steam-App-Scope.
 - Nach dem Schließen des Spiels verschwand die Spiel-Scope; Steam blieb laufen.
 
-Konsequenz für CouchDeck: Beim Kaltstart erbt der Steam-Client die cgroup des
+Konsequenz für CapyDeck: Beim Kaltstart erbt der Steam-Client die cgroup des
 Prozesses, der `gio launch` ausführt. Die Spiel-Scope bleibt trotzdem eindeutig.
-CouchDeck darf niemals seine eigene cgroup oder die seines Launcher-Prozesses
+CapyDeck darf niemals seine eigene cgroup oder die seines Launcher-Prozesses
 beenden, um ein Spiel zu stoppen.
 
 ## Phase-II-Test 5: Fokus, Minimieren, Vollbild
@@ -305,7 +305,7 @@ Vollbildoptionen.
 ## Technische Annahmen
 
 - Das Scope-Namensschema ist ein Implementierungsdetail von Steam und kann sich
-  ändern. CouchDeck darf sich nicht ausschließlich darauf verlassen, sondern
+  ändern. CapyDeck darf sich nicht ausschließlich darauf verlassen, sondern
   muss die Scope zusätzlich über cgroup/Prozess und Fenster verifizieren.
 - Die gemessenen Startzeiten sind von Steam-Client, Proton-Prefix, Shader-Cache
   und Spiel abhängig. Sie sind keine festen Zusagen.
@@ -313,7 +313,7 @@ Vollbildoptionen.
   „Spielende“. Für die Zeitmessung sollte die Prozess-/Scope-Lebensdauer mit
   einer kurzen Toleranz und einem definierten Endzustand verwendet werden.
 - Der Kaltstart-Client in der Launcher-cgroup ist ein Risiko für unsaubere
-  Notfall-Stops, wenn CouchDeck seine eigene cgroup beenden würde. Die
+  Notfall-Stops, wenn CapyDeck seine eigene cgroup beenden würde. Die
   Architektur verbietet das.
 
 ## Offene Forschungsfragen

@@ -6,7 +6,7 @@ testen. Der Test benötigt **keinen Rust-Compiler** und **keine Root-Rechte**.
 ## Vorbereitung
 
 1. Frisches Bazzite KDE Plasma (Wayland) starten, möglichst neues Benutzerkonto
-   ohne vorhandene CouchDeck-Daten.
+   ohne vorhandene CapyDeck-Daten.
 2. Release-Assets und `SHA256SUMS` von GitHub herunterladen.
 3. Im Download-Ordner:
 
@@ -17,6 +17,17 @@ sha256sum -c SHA256SUMS --ignore-missing
 Nur die heruntergeladenen Dateien werden geprüft; `--ignore-missing` erlaubt
 einen Test von AppImage und Archiv getrennt.
 
+## 0.6.0 CapyDeck Rebrand – Bazzite Abnahme (offen)
+
+- [ ] Frische Installation ohne CouchDeck-/CapyDeck-Daten
+- [ ] tar.gz installiert `~/.local/bin/capydeck`, `capydeck.desktop` und PNG-Icons
+- [ ] AppImage meldet `capydeck 0.6.0`
+- [ ] Alte `~/.config/couchdeck`-/`~/.local/share/couchdeck`-Ordner werden nicht gelesen
+- [ ] Fenstertitel/App-ID/Log/Socket/Lock verwenden `capydeck`
+- [ ] Controller-Home, `--home`, `--activate` funktionieren mit den neuen Namen
+- [ ] GIO-Spielstart und Deinstallation ohne Reste der alten Namen
+- [ ] Keine Regression bei Autostart/Icon/Fokus auf Bazzite KDE/Wayland
+
 ## 0.4.1 Fix-Retest (offen)
 
 - [X] Menü-Icon wird nach Installation/Update korrekt angezeigt (PNG + absoluter Pfad)
@@ -26,23 +37,23 @@ einen Test von AppImage und Archiv getrennt.
 ## 0.4.5 Fensteraktivierung (manuell)
 
 Die Aktivierung ist Best-Effort. Unter Wayland kann der Compositor den Fokus
-verweigern. `/home/USER/.local/bin/couchdeck` durch den tatsächlichen Pfad
+verweigern. `/home/USER/.local/bin/capydeck` durch den tatsächlichen Pfad
 ersetzen; bei AppImage den AppImage-Pfad verwenden.
 
-- [X] `couchdeck --activate` bei fokussiertem CouchDeck: keine sichtbare Störung
-- [ ] CouchDeck minimieren → `--activate` → Fenster wieder sichtbar - Defekt: da passiert nichts
-- [ ] CouchDeck im Fullscreen minimieren → `--activate` → Fullscreen und Fokus wieder da - Defekt: da passiert nichts
-- [ ] CouchDeck mit `--windowed` minimieren → `--activate` → bleibt Windowed - auch defekt
+- [X] `capydeck --activate` bei fokussiertem CapyDeck: keine sichtbare Störung
+- [ ] CapyDeck minimieren → `--activate` → Fenster wieder sichtbar - Defekt: da passiert nichts
+- [ ] CapyDeck im Fullscreen minimieren → `--activate` → Fullscreen und Fokus wieder da - Defekt: da passiert nichts
+- [ ] CapyDeck mit `--windowed` minimieren → `--activate` → bleibt Windowed - auch defekt
 - [X] Zwei schnelle `--activate`-Aufrufe → keine zweite Instanz, stabiler Zustand
-- [X] CouchDeck beenden → `--activate` → Exit-Code ungleich 0, verständliche Meldung
+- [X] CapyDeck beenden → `--activate` → Exit-Code ungleich 0, verständliche Meldung
 - [ ] Steam-Spiel starten, Steam-/Proton-/Launcher-Fenster zulassen, danach
-      manuell `--activate`; CouchDeck darf den Fokus nur auf Anforderung holen
+      manuell `--activate`; CapyDeck darf den Fokus nur auf Anforderung holen
 - [ ] `--diagnose-window` aktivieren; Fokus-/Minimierungs-/Fullscreen-Wechsel im Log prüfen
 Fehlerlog:
-[1794151262] INFO  couchdeck: Logdatei: /home/cr/.local/state/couchdeck/couchdeck.log
-[1794151262] INFO  main: couchdeck 0.4.5 | Session=wayland | Wayland=wayland-1 | Desktop=Some(Kde) | DesktopTokens=["KDE", "/USR/SHARE/WAYLAND-SESSIONS/PLASMA.DESKTOP"] | XDG_DATA_HOME=/home/cr/.local/share | Autostart=false | Diagnose=true
+[1794151262] INFO  capydeck: Logdatei: /home/cr/.local/state/capydeck/capydeck.log
+[1794151262] INFO  main: capydeck 0.4.5 | Session=wayland | Wayland=wayland-1 | Desktop=Some(Kde) | DesktopTokens=["KDE", "/USR/SHARE/WAYLAND-SESSIONS/PLASMA.DESKTOP"] | XDG_DATA_HOME=/home/cr/.local/share | Autostart=false | Diagnose=true
 [1794151262] INFO  launch: GIO: 2.90.1
-[1794151262] INFO  app: Start: 3 Profile, 2 Spiele, Daten: /home/cr/.local/share/couchdeck
+[1794151262] INFO  app: Start: 3 Profile, 2 Spiele, Daten: /home/cr/.local/share/capydeck
 [1794151262] INFO  app: Hintergrund: None, anzeigen=true
 [1794151262] INFO  window: Fokus verloren (Hintergrund); fullscreen=true; minimized=Some(false)
 [1794151262] INFO  controller: Fensterfokus verloren; Gamepad-Navigation pausiert.
@@ -56,15 +67,15 @@ Fehlerlog:
 [1794151266] INFO  window: Fokus verloren (Hintergrund); fullscreen=true; minimized=Some(false)
 [1794151266] INFO  controller: Fensterfokus verloren; Gamepad-Navigation pausiert.
 [1794151266] INFO  window: diagnose: focused=false, minimized=Some(false), fullscreen=true
-[1794151272] INFO  couchdeck: Logdatei: /home/cr/.local/state/couchdeck/couchdeck.log
-[1794151272] INFO  main: couchdeck 0.4.5 | Session=wayland | Wayland=wayland-1 | Desktop=Some(Kde) | DesktopTokens=["KDE", "/USR/SHARE/WAYLAND-SESSIONS/PLASMA.DESKTOP"] | XDG_DATA_HOME=/home/cr/.local/share | Autostart=false | Diagnose=false
+[1794151272] INFO  capydeck: Logdatei: /home/cr/.local/state/capydeck/capydeck.log
+[1794151272] INFO  main: capydeck 0.4.5 | Session=wayland | Wayland=wayland-1 | Desktop=Some(Kde) | DesktopTokens=["KDE", "/USR/SHARE/WAYLAND-SESSIONS/PLASMA.DESKTOP"] | XDG_DATA_HOME=/home/cr/.local/share | Autostart=false | Diagnose=false
 [1794151272] INFO  activation: Aktivierungsanforderung an die UI übermittelt.
 [1794151272] INFO  activation: CLI --activate: Accepted - Aktivierungsanforderung übermittelt (Fensterfokus nicht bestätigt).
 [1794151272] INFO  activation: Anforderung empfangen: focused=false, minimized=false, fullscreen=true, was_fullscreen=false
 [1794151272] INFO  activation: Fullscreen wird wiederhergestellt.
 [1794151272] INFO  activation: Fokus angefordert (Compositor kann die Anforderung ablehnen).
 
-- [ ] Globalen Shortcut für `couchdeck --activate` einrichten und testen
+- [ ] Globalen Shortcut für `capydeck --activate` einrichten und testen
 
 ## 0.4.6 Bugfix Fensteraktivierung – Bazzite Retest (offen)
 
@@ -74,16 +85,16 @@ nutzt unter KDE/Wayland zusätzlich einen begrenzten KWin-Scripting-Fallback.
 
 Die folgenden Fälle sind auf **Bazzite/KDE/Wayland** noch nicht durchgeführt:
 
-- [ ] Terminal ohne Token: `couchdeck --activate` bei minimiertem CouchDeck → Fenster sichtbar und fokussiert, **ohne** Maus-Hover über der Taskleiste
+- [ ] Terminal ohne Token: `capydeck --activate` bei minimiertem CapyDeck → Fenster sichtbar und fokussiert, **ohne** Maus-Hover über der Taskleiste
 - [ ] Terminal ohne Token bei minimiertem Fullscreen-Fenster → Fullscreen/Fokus korrekt, kein unnötiger Toggle
 - [ ] Taskleisten-Minimierung (Windowed und Fullscreen) → `--activate` → sofort sichtbar, kein Hover nötig
-- [ ] `couchdeck --windowed`, minimieren, `--activate` → bleibt Windowed
-- [ ] Benutzerdefinierter KDE-Shortcut auf `couchdeck --activate` → Verhalten dokumentieren (Token vorhanden/nicht vorhanden)
+- [ ] `capydeck --windowed`, minimieren, `--activate` → bleibt Windowed
+- [ ] Benutzerdefinierter KDE-Shortcut auf `capydeck --activate` → Verhalten dokumentieren (Token vorhanden/nicht vorhanden)
 - [ ] KDE/KIO- oder Launcher-gestarteter Prozess mit `XDG_ACTIVATION_TOKEN` → Token wird angewendet, Fokus beobachtet
 - [ ] Absichtlich ungültiger/leerer Token → KWin-Fallback oder verständlicher Timeout, keine falsche Erfolgsmeldung
 - [ ] `--diagnose-window`: Logs für IPC, Token, KWin-Fallback, Fokus und Timeout prüfen
 - [ ] Zwei schnelle `--activate`-Aufrufe → keine zweite Instanz, stabiler Zustand
-- [ ] Laufendes Steam-/Proton-/Launcher-/Spiel-Szenario: CouchDeck kehrt nur auf Anforderung zurück, Spiel/Launcher läuft weiter
+- [ ] Laufendes Steam-/Proton-/Launcher-/Spiel-Szenario: CapyDeck kehrt nur auf Anforderung zurück, Spiel/Launcher läuft weiter
 
 Auf dem Entwicklungsystem **Manjaro/KDE 6.7.5/Wayland** wurden Terminal-Fallback,
 KIO-Token, minimiertes Windowed-/Fullscreen-Fenster, `--windowed` und ein
@@ -110,12 +121,12 @@ und stellt Fullscreen erst nach stabilisiertem Fokus wieder her.
 
 ## 0.5.0 Controller Home & Return – Bazzite Retest (offen)
 
-- [ ] `couchdeck --home` bei laufender Instanz → Rückkehr aus minimiertem/fullscreen Zustand
-- [ ] `couchdeck --home` ohne laufende Instanz → CouchDeck startet normal
+- [ ] `capydeck --home` bei laufender Instanz → Rückkehr aus minimiertem/fullscreen Zustand
+- [ ] `capydeck --home` ohne laufende Instanz → CapyDeck startet normal
 - [ ] Keine zweite Instanz, laufendes Steam-/Flatpak-Spiel bleibt aktiv
-- [ ] `couchdeck --install-home-launcher` → Menüeintrag „CouchDeck Home“ legt an; `--remove-home-launcher` entfernt ihn
+- [ ] `capydeck --install-home-launcher` → Menüeintrag „CapyDeck Home“ legt an; `--remove-home-launcher` entfernt ihn
 - [ ] Home-Menüeintrag enthält einen absoluten AppImage-/Binary-Pfad (kein temporäres Extraktionsverzeichnis)
-- [ ] Steam Input Controller-Kombination → Desktop-Shortcut → `couchdeck --home`
+- [ ] Steam Input Controller-Kombination → Desktop-Shortcut → `capydeck --home`
 - [ ] Kinderprofil/PIN/Zeitbudget werden durch `--home` nicht umgangen
 - [ ] Log prüfen: `CLI --home`, Aktivierung/Start und Fokus
 
@@ -123,14 +134,14 @@ Die vollständige Steam-Input-Anleitung steht in [`STEAM-INPUT.md`](STEAM-INPUT.
 
 ## 0.5.1 Nativer Controller-Home-Chord – Bazzite Retest (offen)
 
-- [ ] Start + Select 2 s halten → CouchDeck kommt aus minimiertem/fullscreen Zustand zurück
+- [ ] Start + Select 2 s halten → CapyDeck kommt aus minimiertem/fullscreen Zustand zurück
 - [ ] Chord funktioniert bei laufendem Steam-/Flatpak-Spiel; Spiel bleibt aktiv
 - [ ] Chord funktioniert ohne Steam/Steam Input
 - [ ] Alternativen Start + linker/rechter Stickklick in den Einstellungen testen
 - [ ] Bibliotheks-Footer und Admin → Einstellungen zeigen die gewählte Kombination
 - [ ] Installer fragt nach input-Gruppe; `--setup-input-permissions` funktioniert auch aus dem AppImage
 - [ ] Nach Gruppenänderung: Neuanmeldung und erneuter Test
-- [ ] Keine Doppel-Eingaben/Navigation, wenn CouchDeck unfokussiert ist
+- [ ] Keine Doppel-Eingaben/Navigation, wenn CapyDeck unfokussiert ist
 - [ ] Controller-Hotplug/Reconnect mit aktivem Chord
 - [ ] Log prüfen: `Controller-Home-Chord erkannt`, Aktivierung/Fokus
 
@@ -146,15 +157,15 @@ Die vollständige Steam-Input-Anleitung steht in [`STEAM-INPUT.md`](STEAM-INPUT.
 ## A. AppImage
 
 ```bash
-chmod +x CouchDeck-<version>-x86_64.AppImage
-./CouchDeck-<version>-x86_64.AppImage --version
-./CouchDeck-<version>-x86_64.AppImage
+chmod +x CapyDeck-<version>-x86_64.AppImage
+./CapyDeck-<version>-x86_64.AppImage --version
+./CapyDeck-<version>-x86_64.AppImage
 ```
 
 Falls FUSE fehlt:
 
 ```bash
-APPIMAGE_EXTRACT_AND_RUN=1 ./CouchDeck-<version>-x86_64.AppImage
+APPIMAGE_EXTRACT_AND_RUN=1 ./CapyDeck-<version>-x86_64.AppImage
 ```
 
 Prüfen:
@@ -176,18 +187,18 @@ Prüfen:
 ## B. tar.gz / Benutzerinstallation
 
 ```bash
-tar -xzf couchdeck-<version>-linux-x86_64.tar.gz
-./couchdeck-<version>-linux-x86_64/scripts/install-user.sh
-~/.local/bin/couchdeck --version
+tar -xzf capydeck-<version>-linux-x86_64.tar.gz
+./capydeck-<version>-linux-x86_64/scripts/install-user.sh
+~/.local/bin/capydeck --version
 ```
 
 Danach dieselben UI-/Controller-/GIO-Tests wie oben. Zusätzlich:
 
-- [X] `~/.local/bin/couchdeck` existiert und ist ausführbar
+- [X] `~/.local/bin/capydeck` existiert und ist ausführbar
 - [X] Desktop-Eintrag und Icon erscheinen in der Desktop-Anwendungsliste — 0.4.0-Defect: kein Icon; 0.4.1 liefert PNG + absoluten Icon-Pfad, 0.4.1 Retest erfolgreich
-- [X] `ldd ~/.local/bin/couchdeck` enthält kein `not found`
+- [X] `ldd ~/.local/bin/capydeck` enthält kein `not found`
 - [X] `ldd --version` erfüllt die dokumentierte glibc-Anforderung (ldd (GNU libc) 2.44)
-- [X] `~/.local/share/couchdeck/` wird bei einem Update nicht überschrieben
+- [X] `~/.local/share/capydeck/` wird bei einem Update nicht überschrieben
 - [X] Einstellungen/Profile/Artwork bleiben nach Update erhalten
 - [X] `scripts/uninstall-user.sh` entfernt nur Binary/Menü/Icon/Autostart
 - [X] `--purge` verlangt die explizite Löschbestätigung
@@ -201,7 +212,7 @@ prüfen:
 - [X] gleiche Profile und Spiele
 - [X] gleiches Cover/Artwork
 - [X] gleiche Einstellungen und Admin-PIN
-- [X] neue CouchDeck-Version wird gestartet
+- [X] neue CapyDeck-Version wird gestartet
 
 ## D. Ergebnis dokumentieren
 

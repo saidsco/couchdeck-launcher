@@ -1,21 +1,21 @@
-# Steam Input: Controller-Home / Rückkehr zu CouchDeck
+# Steam Input: Controller-Home / Rückkehr zu CapyDeck
 
-Ab CouchDeck 0.5.1 gibt es den **nativen Controller-Home-Chord** (standardmäßig
+Seit 0.5.1 gibt es den **nativen Controller-Home-Chord** (standardmäßig
 Start + Select, 2 Sekunden halten). Steam Input ist dafür **nicht** nötig.
 
 Diese Anleitung beschreibt Steam Input nur als optionalen alternativen Weg für
-Benutzer, die eine eigene Steam-Input-Kombination bevorzugen. CouchDeck
+Benutzer, die eine eigene Steam-Input-Kombination bevorzugen. CapyDeck
 implementiert keinen eigenen Input-Treiber und keinen exklusiven Geräte-Grab.
 Der optionale Steam-Input-Weg ist:
 
 ```text
 Steam Input / Controller-Kombination
         → globale Tastenkombination oder Desktop-Aktion
-        → couchdeck --home
+        → capydeck --home
 ```
 
-`couchdeck --home` aktiviert eine laufende CouchDeck-Instanz oder startet
-CouchDeck, wenn keine Instanz läuft. Es startet keinen zweiten Prozess, beendet
+`capydeck --home` aktiviert eine laufende CapyDeck-Instanz oder startet
+CapyDeck, wenn keine Instanz läuft. Es startet keinen zweiten Prozess, beendet
 keine Spiele und umgeht keine PIN-/Kinderprüfung.
 
 ## Empfohlene KDE-Einrichtung
@@ -27,22 +27,22 @@ keine Spiele und umgeht keine PIN-/Kinderprüfung.
    Kurzbefehle** einen neuen globalen Kurzbefehl anlegen:
 
 ```text
-/home/USER/.local/bin/couchdeck --home
+/home/USER/.local/bin/capydeck --home
 ```
 
 Bei einer AppImage-Installation den absoluten AppImage-Pfad verwenden:
 
 ```text
-/home/USER/Applications/CouchDeck-0.5.2-x86_64.AppImage --home
+/home/USER/Applications/CapyDeck-0.6.0-x86_64.AppImage --home
 ```
 
 Optional kann vorher ein Menüeintrag erzeugt werden:
 
 ```bash
-couchdeck --install-home-launcher
+capydeck --install-home-launcher
 ```
 
-Der Eintrag heißt „CouchDeck Home“ und startet `couchdeck --home`. Die
+Der Eintrag heißt „CapyDeck Home“ und startet `capydeck --home`. Die
 Zuweisung der globalen Tastenkombination bleibt eine manuelle Entscheidung.
 
 ## GNOME / XFCE
@@ -55,11 +55,11 @@ Befehl gelegt. Genaue Pfade und Beispiele stehen in
 
 - Steam Input darf die Kombination als **Desktop-Tastatur** senden.
 - Die Tastenkombination muss von KDE als globaler Kurzbefehl erkannt werden.
-- CouchDeck nutzt bei KDE/Wayland den begrenzten KWin-Fallback, wenn kein
+- CapyDeck nutzt bei KDE/Wayland den begrenzten KWin-Fallback, wenn kein
   xdg-activation-Token vorhanden ist.
-- Der native CouchDeck-Chord funktioniert unabhängig von Steam, solange
-  CouchDeck läuft und die `/dev/input`-Berechtigung vorhanden ist.
-- Ein laufendes Spiel bleibt im Hintergrund aktiv; CouchDeck beendet es nicht.
+- Der native CapyDeck-Chord funktioniert unabhängig von Steam, solange
+  CapyDeck läuft und die `/dev/input`-Berechtigung vorhanden ist.
+- Ein laufendes Spiel bleibt im Hintergrund aktiv; CapyDeck beendet es nicht.
 
 ## Grenzen
 
@@ -68,18 +68,18 @@ Befehl gelegt. Genaue Pfade und Beispiele stehen in
   spielabhängig.
 - Es gibt keine Garantie für eine bestimmte Controller-Taste oder ein
   bestimmtes Steam-Layout.
-- CouchDeck schreibt keine Steam-Input-Konfiguration und registriert keinen
+- CapyDeck schreibt keine Steam-Input-Konfiguration und registriert keinen
   systemweiten Hotkey automatisch.
 - Der native Controller-Home-Chord ist Teil von 0.5.1; ein separater
   Hintergrunddienst ist **nicht** Teil von 0.5.1.
 
 ## Manueller Test
 
-1. CouchDeck starten, ein Spiel über Steam starten.
+1. CapyDeck starten, ein Spiel über Steam starten.
 2. Controller-Kombination auslösen.
-3. Erwartung: CouchDeck kommt sichtbar und fokussiert zurück, das Spiel läuft
+3. Erwartung: CapyDeck kommt sichtbar und fokussiert zurück, das Spiel läuft
    weiter.
-4. CouchDeck über die Taskleiste minimieren, Kombination erneut auslösen.
+4. CapyDeck über die Taskleiste minimieren, Kombination erneut auslösen.
 5. Erwartung: Rückkehr ohne Maus-Hover; auf KDE/Wayland ggf.
    `--diagnose-window` und das Log prüfen.
 

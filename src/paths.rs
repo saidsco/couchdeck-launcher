@@ -88,7 +88,7 @@ impl XdgPaths {
             }
         }
         // Flatpak exports are normally part of XDG_DATA_DIRS on desktop systems, but
-        // make sure icon/desktop discovery also works when CouchDeck is started
+        // make sure icon/desktop discovery also works when CapyDeck is started
         // from a minimal environment.
         if include_flatpak_exports {
             for extra in [
@@ -128,19 +128,19 @@ impl XdgPaths {
     }
 
     pub fn config_dir(&self) -> PathBuf {
-        self.config_home.join("couchdeck")
+        self.config_home.join("capydeck")
     }
 
     pub fn data_dir(&self) -> PathBuf {
-        self.data_home.join("couchdeck")
+        self.data_home.join("capydeck")
     }
 
     pub fn cache_dir(&self) -> PathBuf {
-        self.cache_home.join("couchdeck")
+        self.cache_home.join("capydeck")
     }
 
     pub fn state_dir(&self) -> PathBuf {
-        self.state_home.join("couchdeck")
+        self.state_home.join("capydeck")
     }
 
     pub fn settings_path(&self) -> PathBuf {
@@ -184,20 +184,20 @@ impl XdgPaths {
     }
 
     pub fn log_path(&self) -> PathBuf {
-        self.state_dir().join("couchdeck.log")
+        self.state_dir().join("capydeck.log")
     }
 
     /// XDG autostart entry. Its `OnlyShowIn=` value is generated from the
     /// active desktop session (KDE, GNOME or XFCE).
     pub fn autostart_path(&self) -> PathBuf {
-        self.config_home.join("autostart/couchdeck.desktop")
+        self.config_home.join("autostart/capydeck.desktop")
     }
 
     /// Instance lock. Prefer the per-user runtime directory; fall back to the
     /// state directory when XDG_RUNTIME_DIR is unavailable.
     pub fn instance_lock_path(&self) -> PathBuf {
         if let Some(runtime) = env::var_os("XDG_RUNTIME_DIR").filter(|value| !value.is_empty()) {
-            PathBuf::from(runtime).join("couchdeck.lock")
+            PathBuf::from(runtime).join("capydeck.lock")
         } else {
             self.state_dir().join("instance.lock")
         }
@@ -207,7 +207,7 @@ impl XdgPaths {
     /// the same per-user runtime/state permissions.
     pub fn activation_socket_path(&self) -> PathBuf {
         if let Some(runtime) = env::var_os("XDG_RUNTIME_DIR").filter(|value| !value.is_empty()) {
-            PathBuf::from(runtime).join("couchdeck-activate.sock")
+            PathBuf::from(runtime).join("capydeck-activate.sock")
         } else {
             self.state_dir().join("activate.sock")
         }
@@ -306,18 +306,18 @@ mod tests {
         .unwrap();
         assert_eq!(
             paths.settings_path(),
-            Path::new("/tmp/cfg/couchdeck/settings.toml")
+            Path::new("/tmp/cfg/capydeck/settings.toml")
         );
         assert_eq!(
             paths.library_path(),
-            Path::new("/tmp/data/couchdeck/library.json")
+            Path::new("/tmp/data/capydeck/library.json")
         );
         assert_eq!(
             paths.secrets_path(),
-            Path::new("/tmp/data/couchdeck/secrets.json")
+            Path::new("/tmp/data/capydeck/secrets.json")
         );
-        assert_eq!(paths.cache_dir(), Path::new("/tmp/cache/couchdeck"));
-        assert_eq!(paths.state_dir(), Path::new("/tmp/state/couchdeck"));
+        assert_eq!(paths.cache_dir(), Path::new("/tmp/cache/capydeck"));
+        assert_eq!(paths.state_dir(), Path::new("/tmp/state/capydeck"));
         assert_eq!(
             paths.data_dirs,
             vec![PathBuf::from("/one"), PathBuf::from("/two")]
@@ -347,14 +347,11 @@ mod tests {
     #[test]
     fn falls_back_to_home() {
         let paths = XdgPaths::from_env(Path::new("/home/x"), |_| None).unwrap();
-        assert_eq!(paths.config_dir(), Path::new("/home/x/.config/couchdeck"));
-        assert_eq!(
-            paths.data_dir(),
-            Path::new("/home/x/.local/share/couchdeck")
-        );
+        assert_eq!(paths.config_dir(), Path::new("/home/x/.config/capydeck"));
+        assert_eq!(paths.data_dir(), Path::new("/home/x/.local/share/capydeck"));
         assert_eq!(
             paths.thumbnails_dir(),
-            Path::new("/home/x/.cache/couchdeck/thumbnails")
+            Path::new("/home/x/.cache/capydeck/thumbnails")
         );
     }
 }

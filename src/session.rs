@@ -1,6 +1,6 @@
 //! Desktop-session detection and desktop-independent XDG autostart.
 //!
-//! CouchDeck targets ordinary Linux desktop sessions. Autostart is opt-in and
+//! CapyDeck targets ordinary Linux desktop sessions. Autostart is opt-in and
 //! restricted to the desktop environment that is actually active. Unknown or
 //! gamescope/Steam-Gaming-Mode sessions are never guessed.
 
@@ -186,18 +186,18 @@ pub fn write_autostart_for(
     let contents = format!(
         "[Desktop Entry]\n\
          Type=Application\n\
-         Name=CouchDeck\n\
+         Name=CapyDeck\n\
          Comment=Family-friendly, controller-first game launcher\n\
          Exec={} --autostart\n\
-         Icon=couchdeck\n\
+         Icon=capydeck\n\
          Terminal=false\n\
          Categories=Game;\n\
          StartupNotify=false\n\
          OnlyShowIn={};\n\
          NotShowIn=gamescope;\n\
          X-GNOME-Autostart-enabled=true\n\
-         X-CouchDeck-Autostart=true\n\
-         X-CouchDeck-Desktop={};\n",
+         X-CapyDeck-Autostart=true\n\
+         X-CapyDeck-Desktop={};\n",
         crate::desktop::exec_quote(binary),
         environment.token(),
         environment.token()
@@ -254,12 +254,12 @@ mod tests {
     fn autostart_is_bound_to_current_desktop_and_not_kde_only() {
         let tmp = tempfile::tempdir().unwrap();
         let paths = XdgPaths::for_home(tmp.path());
-        let binary = tmp.path().join("My Games/couchdeck");
+        let binary = tmp.path().join("My Games/capydeck");
         let path = write_autostart_for(&paths, &binary, DesktopEnvironment::Gnome).unwrap();
         let text = fs::read_to_string(&path).unwrap();
         assert!(text.contains("OnlyShowIn=GNOME;"));
         assert!(text.contains("NotShowIn=gamescope;"));
-        assert!(text.contains("X-CouchDeck-Desktop=GNOME;"));
+        assert!(text.contains("X-CapyDeck-Desktop=GNOME;"));
         assert!(!text.contains("OnlyShowIn=KDE;"));
         assert!(!text.contains("X-KDE-autostart-after"));
         assert!(text.contains("--autostart"));

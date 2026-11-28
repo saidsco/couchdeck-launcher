@@ -1,4 +1,4 @@
-//! Persistent data model for CouchDeck.
+//! Persistent data model for CapyDeck.
 //!
 //! The on-disk contract is versioned. `library.json` contains profiles and
 //! game entries, `settings.toml` contains UI preferences and the admin PIN
@@ -56,7 +56,7 @@ pub struct Profile {
     pub name: String,
     #[serde(default = "default_role")]
     pub role: ProfileRole,
-    /// Path to an imported avatar, relative to the CouchDeck data directory.
+    /// Path to an imported avatar, relative to the CapyDeck data directory.
     #[serde(default)]
     pub avatar: Option<PathBuf>,
     /// Optional per-profile favourites (game ids). Ordering in the grid is
@@ -64,7 +64,7 @@ pub struct Profile {
     /// UI refinement but persisted now so no data is lost.
     #[serde(default)]
     pub favorites: Vec<String>,
-    /// Optional profile-specific background, relative to the CouchDeck data
+    /// Optional profile-specific background, relative to the CapyDeck data
     /// directory. `None` falls back to the global background.
     #[serde(default)]
     pub background: Option<PathBuf>,
@@ -122,7 +122,7 @@ pub enum LaunchMethod {
 pub struct GameEntry {
     pub id: String,
     /// Absolute path to the original or managed `.desktop` file. The source
-    /// file is never modified by CouchDeck.
+    /// file is never modified by CapyDeck.
     pub desktop_file: PathBuf,
     #[serde(default)]
     pub title_override: Option<String>,
@@ -132,10 +132,10 @@ pub struct GameEntry {
     /// Last known `Icon=` value, used when the desktop file disappears.
     #[serde(default)]
     pub desktop_icon: Option<String>,
-    /// Cover override, relative to the CouchDeck data directory.
+    /// Cover override, relative to the CapyDeck data directory.
     #[serde(default)]
     pub cover: Option<PathBuf>,
-    /// Background override, relative to the CouchDeck data directory.
+    /// Background override, relative to the CapyDeck data directory.
     #[serde(default)]
     pub background: Option<PathBuf>,
     /// `None` means visible to every profile. `Some(vec)` restricts visibility.
@@ -146,7 +146,7 @@ pub struct GameEntry {
     pub hidden: bool,
     #[serde(default)]
     pub sort_order: i64,
-    /// True when CouchDeck generated this desktop file in `managed-desktop/`.
+    /// True when CapyDeck generated this desktop file in `managed-desktop/`.
     #[serde(default)]
     pub managed: bool,
     #[serde(default)]
@@ -157,7 +157,7 @@ pub struct GameEntry {
     /// Origin of the entry. `desktop_file` stays the launch source.
     #[serde(default)]
     pub source: GameSource,
-    /// How CouchDeck launches the entry. Only GIO desktop launches exist in 0.4.
+    /// How CapyDeck launches the entry. Only GIO desktop launches exist in 0.4.
     #[serde(default)]
     pub launch_method: LaunchMethod,
 }
@@ -360,7 +360,7 @@ pub struct Settings {
     pub schema_version: u32,
     #[serde(default = "default_true")]
     pub animations: bool,
-    /// Global background image, relative to the CouchDeck data directory.
+    /// Global background image, relative to the CapyDeck data directory.
     #[serde(default)]
     pub background: Option<PathBuf>,
     /// Preferred number of grid columns; `None` = automatic.
@@ -376,7 +376,7 @@ pub struct Settings {
     /// Play a best-effort alert sound at time-budget warnings.
     #[serde(default = "default_true")]
     pub alarm_sound: bool,
-    /// Global controller-home chord; active while CouchDeck runs, including
+    /// Global controller-home chord; active while CapyDeck runs, including
     /// while the window is minimized.
     #[serde(default = "default_true")]
     pub controller_home_enabled: bool,

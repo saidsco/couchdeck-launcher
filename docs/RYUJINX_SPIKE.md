@@ -1,20 +1,20 @@
-# CouchDeck – Native Ryujinx Integration
+# CapyDeck – Native Ryujinx Integration
 
-Repository: https://github.com/saidsco/couchdeck-launcher
+Repository: https://github.com/saidsco/capydeck
 
 ## Ziel
 
 Implementiere eine native Integration des originalen Ryujinx-Emulators unter Linux.
 
-Ausgangsbasis ist die bestehende CouchDeck-Architektur auf `main`. Kein Rewrite.
+Ausgangsbasis ist die bestehende CapyDeck-Architektur auf `main`. Kein Rewrite.
 
 Der Benutzer hat Ryujinx bereits vollständig installiert und konfiguriert (liegt momentan auf dem Entwicklungsrechner lokal in ~/dat2/publish).
 
 Folgende drei Anforderungen müssen erfüllt werden:
 
-1. Ein emuliertes Spiel erscheint als eigene Kachel in CouchDeck.
+1. Ein emuliertes Spiel erscheint als eigene Kachel in CapyDeck.
 2. Das Spiel startet möglichst nahtlos direkt im Vollbild, ohne zusätzliche Navigation durch Ryujinx.
-3. Die aktive Emulatorsitzung kann mit einer konfigurierbaren Controller-Kombination gezielt und möglichst schonend beendet werden. Anschließend kehrt der Benutzer zu CouchDeck zurück.
+3. Die aktive Emulatorsitzung kann mit einer konfigurierbaren Controller-Kombination gezielt und möglichst schonend beendet werden. Anschließend kehrt der Benutzer zu CapyDeck zurück.
 
 ## Phase 1 – Ryujinx erkennen und Direktstart
 
@@ -36,7 +36,7 @@ Erweitere `LaunchMethod` um eine rückwärtskompatible Variante für verwaltete 
 
 Normale Desktop-Dateien müssen weiterhin ausschließlich über GIO gestartet werden.
 
-Für verwaltete Ryujinx-Einträge darf CouchDeck den Emulator direkt über `std::process::Command` starten.
+Für verwaltete Ryujinx-Einträge darf CapyDeck den Emulator direkt über `std::process::Command` starten.
 
 Die Startparameter werden aus validierten, strukturierten Daten zusammengesetzt – nicht durch Shell-Parsing beliebiger Desktop-Dateien. Generierte Desktop-Dateien und der verwaltete Startweg müssen dieselbe Konfiguration verwenden.
 
@@ -76,9 +76,9 @@ Kein blindes `pkill`, kein root-Zugriff und keine unbestätigte zwangsweise Proz
 
 ## Phase 4 – Nahtlose Rückkehr
 
-Nach bestätigtem Sitzungsende soll CouchDeck wieder in den Vordergrund wechseln.
+Nach bestätigtem Sitzungsende soll CapyDeck wieder in den Vordergrund wechseln.
 
-Verwende die bereits vorhandene Fensteraktivierung aus CouchDeck v0.4.x, statt eine parallele Aktivierungslogik zu entwickeln.
+Verwende die bereits vorhandene Fensteraktivierung aus CapyDeck v0.4.x, statt eine parallele Aktivierungslogik zu entwickeln.
 
 Kein Fokusdiebstahl während des laufenden Spiels.
 
@@ -113,12 +113,12 @@ Ergänze Unit- und Integrationstests für:
 
 Manuelle Abnahme unter Bazzite KDE/Wayland:
 
-1. Spiel aus CouchDeck starten.
+1. Spiel aus CapyDeck starten.
 2. Ryujinx startet das korrekte Spiel im Vollbild.
 3. Controller funktioniert im Spiel.
 4. Beenden-Kombination wird erkannt.
 5. Ausschließlich die verwaltete Sitzung wird beendet.
-6. CouchDeck erscheint wieder mit korrekt gesetztem Fokus.
+6. CapyDeck erscheint wieder mit korrekt gesetztem Fokus.
 7. Normale Steam-, Prism- und Desktop-Spiele funktionieren weiterhin.
 
 ## Umsetzung

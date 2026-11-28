@@ -1,4 +1,4 @@
-//! Local IPC used by `couchdeck --activate`.
+//! Local IPC used by `capydeck --activate`.
 //!
 //! The running UI owns a Unix-domain socket in the per-user XDG runtime
 //! directory (or the state directory as fallback). The socket is mode 0600 and
@@ -213,7 +213,7 @@ fn bind_listener(path: &Path) -> Result<UnixListener, String> {
         Ok(listener) => Ok(listener),
         Err(err) if err.kind() == std::io::ErrorKind::AddrInUse => {
             // A connectable socket means another server is alive. Otherwise a
-            // previous CouchDeck process crashed and left a stale socket.
+            // previous CapyDeck process crashed and left a stale socket.
             if UnixStream::connect(path).is_ok() {
                 return Err(format!(
                     "Aktivierungs-Socket {} ist bereits von einer laufenden Instanz belegt.",
@@ -375,10 +375,10 @@ impl ActivationResult {
                 }
             }
             Self::NotRunning => {
-                "CouchDeck läuft nicht; es gibt keine Instanz zum Aktivieren.".to_owned()
+                "CapyDeck läuft nicht; es gibt keine Instanz zum Aktivieren.".to_owned()
             }
             Self::Unavailable(reason) => {
-                format!("CouchDeck läuft, Aktivierung nicht möglich: {reason}")
+                format!("CapyDeck läuft, Aktivierung nicht möglich: {reason}")
             }
         }
     }

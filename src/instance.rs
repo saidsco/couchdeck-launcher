@@ -20,7 +20,7 @@ pub enum InstanceError {
 impl fmt::Display for InstanceError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Self::AlreadyRunning => write!(f, "CouchDeck läuft bereits für diesen Benutzer."),
+            Self::AlreadyRunning => write!(f, "CapyDeck läuft bereits für diesen Benutzer."),
             Self::Io(message) => write!(f, "{message}"),
         }
     }
@@ -90,7 +90,7 @@ mod tests {
     #[test]
     fn second_instance_is_rejected_and_lock_recovers_after_drop() {
         let tmp = tempfile::tempdir().unwrap();
-        let path = tmp.path().join("couchdeck.lock");
+        let path = tmp.path().join("capydeck.lock");
         let first = InstanceGuard::acquire(&path).unwrap();
         assert!(matches!(
             InstanceGuard::acquire(&path),

@@ -1,5 +1,5 @@
 /*
- * GIO launch-manager PID-callback spike for CapyDeck/CouchDeck research.
+ * GIO launch-manager PID-callback spike for CapyDeck research.
  *
  * Build:
  *   gcc -O2 -Wall -Wextra -o /tmp/gio-pid-spike docs/spikes/gio-pid-spike.c \

@@ -1,6 +1,6 @@
-# Fensteraktivierung, Controller-Home und Rückkehr (0.5.2)
+# Fensteraktivierung, Controller-Home und Rückkehr (0.6.0)
 
-CouchDeck fordert den Fokus **nicht** automatisch zurück, wenn ein Spiel, Steam,
+CapyDeck fordert den Fokus **nicht** automatisch zurück, wenn ein Spiel, Steam,
 ein vorgeschalteter Launcher (z. B. Larian), Heroic, Lutris, Wine, Prism oder ein
 Emulator ein Fenster öffnet. Ein erfolgreicher `gio launch`-Aufruf ist nur ein
 Startauftrag und keine Aussage darüber, ob ein Spiel läuft oder beendet ist.
@@ -11,8 +11,8 @@ Startauftrag und keine Aussage darüber, ob ein Spiel läuft oder beendet ist.
 
 Die laufende UI besitzt einen lokalen Server:
 
-- Unix-Domain-Socket in `$XDG_RUNTIME_DIR/couchdeck-activate.sock`
-  (Fallback: `$XDG_STATE_HOME/couchdeck/activate.sock`).
+- Unix-Domain-Socket in `$XDG_RUNTIME_DIR/capydeck-activate.sock`
+  (Fallback: `$XDG_STATE_HOME/capydeck/activate.sock`).
 - Socket-Modus `0600`; zusätzlich prüft der Server `SO_PEERCRED` und akzeptiert
   nur die eigene lokale UID.
 - Der Server nimmt kleine, begrenzte Anfragen an, sendet ein Ereignis an den
@@ -23,7 +23,7 @@ Die laufende UI besitzt einen lokalen Server:
 - Der bestehende Single-Instance-`flock` bleibt die Autorität dafür, ob eine
   Instanz läuft.
 
-`couchdeck --activate` ist ein kurzer Client:
+`capydeck --activate` ist ein kurzer Client:
 
 1. liest optional `XDG_ACTIVATION_TOKEN`,
 2. verbindet sich mit dem Socket,
@@ -37,7 +37,7 @@ einen tatsächlich gesetzten Fensterfokus. Die CLI unterscheidet deshalb:
 
 - `Activation-Token weitergegeben` (Token war vorhanden)
 - `kein Activation-Token vorhanden`
-- `CouchDeck läuft nicht` / `Aktivierung nicht möglich`
+- `CapyDeck läuft nicht` / `Aktivierung nicht möglich`
 
 ### xdg-activation-v1 auf Wayland
 
@@ -51,7 +51,7 @@ Winit/Wayland kann bei einem **bereits bestehenden** Fenster:
   `minimized=Some(false)`, obwohl das Fenster minimiert ist).
 
 eframe 0.32 stellt keinen direkten Weg bereit, einen eingehenden
-Activation-Token auf eine bestehende Oberfläche anzuwenden. CouchDeck nutzt
+Activation-Token auf eine bestehende Oberfläche anzuwenden. CapyDeck nutzt
 deshalb einen kleinen Wayland-Guest-Client:
 
 - Die Raw-Handles von `wl_display` und `wl_surface` kommen aus dem
@@ -64,20 +64,20 @@ deshalb einen kleinen Wayland-Guest-Client:
 
 Ein gültiger Token entsteht nur im Zusammenhang mit einer Benutzeraktion. Ein
 normaler Terminalaufruf hat häufig keinen `XDG_ACTIVATION_TOKEN`; ein über
-KDE/KIO gestarteter Prozess kann dagegen einen Token erhalten. CouchDeck
+KDE/KIO gestarteter Prozess kann dagegen einen Token erhalten. CapyDeck
 behauptet nie, dass ein Token ohne Benutzeraktion einen Fokus erzwingt.
 
 ### KDE/KWin-Fallback
 
 Wenn unter KDE/Wayland kein Token vorhanden ist oder der Compositor den Token
-nicht in einen beobachteten Fokus umsetzt, startet CouchDeck einen begrenzten
+nicht in einen beobachteten Fokus umsetzt, startet CapyDeck einen begrenzten
 KWin-Scripting-Fallback:
 
 - nur bei erkannter KDE-Sitzung und Wayland,
 - nur nach einer expliziten `--activate`-Anforderung,
 - ein einmaliger Versuch pro Anforderung, kein Polling,
-- das Skript sucht ausschließlich das CouchDeck-Fenster anhand von
-  `desktopFileName`, `resourceClass` oder dem Titel `CouchDeck`,
+- das Skript sucht ausschließlich das CapyDeck-Fenster anhand von
+  `desktopFileName`, `resourceClass` oder dem Titel `CapyDeck`,
 - es setzt `minimized = false` und `workspace.activeWindow`,
 - es wird bei KDE/Wayland aus dem IPC-Thread gestartet, wenn die UI keine
   Frames erhält (Taskleisten-Minimierung),
@@ -94,13 +94,13 @@ Viewport-/Window-Manager-Fähigkeiten.
 
 ## Aktivierungsverhalten
 
-- Ist CouchDeck bereits fokussiert und sichtbar: keine Aktion.
+- Ist CapyDeck bereits fokussiert und sichtbar: keine Aktion.
 - Minimiert: unter X11 `Minimized(false)`, unter Wayland Token und ggf.
   KWin-Fallback. Der Minimalzustand wird nicht als verlässlich vorausgesetzt.
 - Sichtbar, aber unfokussiert: Token, KWin-Fallback oder X11-`Focus`;
   `RequestUserAttention` ist nur ein Hinweis, falls kein Token vorliegt.
 - Vorher Fullscreen: Fullscreen wird nur nach tatsächlich beobachtetem Fokus
-  wiederhergestellt, wenn CouchDeck für das Minimieren aus dem Fullscreen
+  wiederhergestellt, wenn CapyDeck für das Minimieren aus dem Fullscreen
   gewechselt wurde.
 - Windowed oder manuell verlassenes Fullscreen: bleibt windowed.
 - Keine aggressiven Wiederholungen, kein Beenden oder Verschieben anderer
@@ -138,27 +138,27 @@ Viewport-/Window-Manager-Fähigkeiten.
 
 ## `--home`: aktivieren oder starten
 
-`couchdeck --home` ist der empfohlene Befehl für Controller-/Desktop-Shortcuts:
+`capydeck --home` ist der empfohlene Befehl für Controller-/Desktop-Shortcuts:
 
-- läuft CouchDeck bereits → Aktivierung wie bei `--activate`
-- läuft CouchDeck nicht → normaler UI-Start
+- läuft CapyDeck bereits → Aktivierung wie bei `--activate`
+- läuft CapyDeck nicht → normaler UI-Start
 - keine zweite Instanz, keine Prozessbeendigung, keine PIN-/Kinderumgehung
 - `--activate` bleibt der reine Aktivierungsbefehl und endet ohne Instanz mit Fehler
 
 Optional kann ein benutzerspezifischer Menüeintrag angelegt werden:
 
 ```bash
-couchdeck --install-home-launcher
-couchdeck --remove-home-launcher
+capydeck --install-home-launcher
+capydeck --remove-home-launcher
 ```
 
-Der Eintrag landete in `$XDG_DATA_HOME/applications/couchdeck-home.desktop` und
-startet `couchdeck --home`. Eine globale Tastenkombination wird dabei **nicht**
+Der Eintrag landete in `$XDG_DATA_HOME/applications/capydeck-home.desktop` und
+startet `capydeck --home`. Eine globale Tastenkombination wird dabei **nicht**
 registriert.
 
 ## Nativer Controller-Home-Chord (0.5.1)
 
-Während CouchDeck läuft, erkennt der bestehende gilrs-Thread global eine
+Während CapyDeck läuft, erkennt der bestehende gilrs-Thread global eine
 Controller-Kombination – auch bei minimiertem Fenster:
 
 - Standard: **Start + Select 2 Sekunden halten**
@@ -167,22 +167,22 @@ Controller-Kombination – auch bei minimiertem Fenster:
 
 Der Chord ist standardmäßig aktiv und wird im Bibliotheks-Footer sowie unter
 Admin → Einstellungen angezeigt. Er löst dieselbe Aktivierung aus wie
-`couchdeck --home`; auf KDE/Wayland wird der bestehende KWin-Fallback genutzt.
+`capydeck --home`; auf KDE/Wayland wird der bestehende KWin-Fallback genutzt.
 
 Wichtig:
 
-- CouchDeck liest Gamepad-Events nur read-only und greift nicht exklusiv zu.
+- CapyDeck liest Gamepad-Events nur read-only und greift nicht exklusiv zu.
 - Kein `uinput`, kein eigener Input-Treiber, kein Root-Daemon.
-- CouchDeck muss laufen; wenn es beendet ist, gibt es keinen Chord-Listener.
+- CapyDeck muss laufen; wenn es beendet ist, gibt es keinen Chord-Listener.
 - Der Chord wird nur für die Home-Aktion ausgewertet; normale Bibliotheks-
   navigation bleibt auf das fokussierte Fenster beschränkt.
 
 ### Berechtigung
 
 Der Zugriff erfolgt auf `/dev/input/event*` (typisch `root:input`, Modus 0660).
-CouchDeck kann die Rechte nicht umgehen.
+CapyDeck kann die Rechte nicht umgehen.
 
-- Beim Start prüft CouchDeck den Zugriff und bietet einen Dialog an:
+- Beim Start prüft CapyDeck den Zugriff und bietet einen Dialog an:
   „Jetzt einrichten“ startet die Admin-Einrichtung über Polkit; „Später“
   unterdrückt den Hinweis für weitere Starts.
 - Das Installationsskript fragt ebenfalls nach der Installation, ob der Benutzer
@@ -190,17 +190,17 @@ CouchDeck kann die Rechte nicht umgehen.
 - Der CLI-Fallback bleibt verfügbar:
 
   ```bash
-  ./CouchDeck-0.5.2-x86_64.AppImage --setup-input-permissions
+  ./CapyDeck-0.6.0-x86_64.AppImage --setup-input-permissions
   ```
 
 - Die Einrichtung nutzt `pkexec` (Polkit) oder, bei einem Terminal, `sudo`.
 - Nach dem Hinzufügen zur Gruppe ist eine **Neuanmeldung** erforderlich.
 - Admin → Einstellungen zeigt den aktuellen Status.
-- Die Gruppe `input` kann auch Tastatur-/Mausereignisse lesen; wer das vermeiden will, nutzt stattdessen eine restriktive udev-`uaccess`-Regel nur für `ID_INPUT_JOYSTICK`. CouchDeck installiert keine solche Regel automatisch.
+- Die Gruppe `input` kann auch Tastatur-/Mausereignisse lesen; wer das vermeiden will, nutzt stattdessen eine restriktive udev-`uaccess`-Regel nur für `ID_INPUT_JOYSTICK`. CapyDeck installiert keine solche Regel automatisch.
 
 ## Desktop-Shortcuts
 
-Der Shortcut ist eine **manuelle Benutzerentscheidung**. CouchDeck registriert
+Der Shortcut ist eine **manuelle Benutzerentscheidung**. CapyDeck registriert
 keine globale Tastenkombination automatisch.
 
 ### KDE Plasma
@@ -209,7 +209,7 @@ Systemeinstellungen → Kurzbefehle → Benutzerdefinierte Kurzbefehle → Neuer
 globaler Kurzbefehl:
 
 ```text
-/home/USER/.local/bin/couchdeck --home
+/home/USER/.local/bin/capydeck --home
 ```
 
 Der vollständige Pfad ist zuverlässiger als ein PATH-Aufruf.
@@ -219,8 +219,8 @@ Der vollständige Pfad ist zuverlässiger als ein PATH-Aufruf.
 Einstellungen → Tastatur → Tastenkürzel → Benutzerdefiniert:
 
 ```text
-Name:    CouchDeck aktivieren
-Befehl:  /home/USER/.local/bin/couchdeck --home
+Name:    CapyDeck aktivieren
+Befehl:  /home/USER/.local/bin/capydeck --home
 Tasten:  z. B. Super+Alt+C
 ```
 
@@ -229,30 +229,30 @@ Tasten:  z. B. Super+Alt+C
 Einstellungen → Tastatur → Tastenkürzel → Hinzufügen:
 
 ```text
-Befehl: /home/USER/.local/bin/couchdeck --home
+Befehl: /home/USER/.local/bin/capydeck --home
 ```
 
 Für AppImage-Nutzer zeigt der Pfad auf die AppImage-Datei:
 
 ```text
-/home/USER/Applications/CouchDeck-0.5.2-x86_64.AppImage --home
+/home/USER/Applications/CapyDeck-0.6.0-x86_64.AppImage --home
 ```
 
 ## Steam Input
 
 Steam Input kann eine Controller-Kombination auf eine Desktop-Tastenkombination
-abbilden; diese startet `couchdeck --home`. Die vollständige Anleitung steht in
-[`STEAM-INPUT.md`](STEAM-INPUT.md). CouchDeck überwacht keine Controller-Eingaben
+abbilden; diese startet `capydeck --home`. Die vollständige Anleitung steht in
+[`STEAM-INPUT.md`](STEAM-INPUT.md). CapyDeck überwacht keine Controller-Eingaben
 global, schreibt keine Steam-Konfiguration und registriert keinen systemweiten
 Hotkey automatisch.
 
 ## Diagnose
 
 ```bash
-couchdeck --diagnose-window
-couchdeck --home
-couchdeck --activate
-couchdeck --setup-input-permissions
+capydeck --diagnose-window
+capydeck --home
+capydeck --activate
+capydeck --setup-input-permissions
 ```
 
 Relevante Logzeilen:
@@ -284,7 +284,7 @@ Fehlerfälle:
 Die folgenden Fälle wurden auf **Manjaro/KDE 6.7.5/Wayland** mit isolierten
 XDG-Verzeichnissen geprüft:
 
-1. CouchDeck fokussiert: `--activate` → IPC angenommen, keine sichtbare Störung.
+1. CapyDeck fokussiert: `--activate` → IPC angenommen, keine sichtbare Störung.
 2. Minimiertes Windowed-Fenster: `--activate` ohne Token → KWin-Fallback,
    Fenster sichtbar und fokussiert.
 3. Minimiertes Fullscreen-Fenster: `--activate` ohne Token → Fullscreen bleibt

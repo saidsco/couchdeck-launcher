@@ -1,5 +1,26 @@
 # Changelog
 
+## 0.6.0 – 2026-11-28
+
+### CapyDeck Rebrand
+
+- Produkt- und Repository-Name: **CouchDeck → CapyDeck**.
+- Binary, App-ID, Fenstertitel, UI-Texte und I18n auf `capydeck`/`CapyDeck` umgestellt.
+- Neue XDG-Pfade: `~/.config/capydeck`, `~/.local/share/capydeck`, `~/.cache/capydeck`, `~/.local/state/capydeck`.
+- Desktop-, Autostart- und Home-Launcher-Dateien heißen jetzt `capydeck.desktop` bzw. `capydeck-home.desktop`.
+- Instanz-Lock, Aktivierungs-Socket, Log und verwaltete Desktop-Dateien verwenden `capydeck`-Namen.
+- Neues CapyDeck-Logo und PNG-Icons (`capydeck.png`, `capydeck-512.png`, `capydeck-1024.png`); das alte SVG-Icon entfällt.
+- Release-Artefakte heißen `capydeck-<version>-linux-x86_64.tar.gz` und `CapyDeck-<version>-x86_64.AppImage`.
+- Repository: `https://github.com/saidsco/capydeck`.
+- Keine Datenmigration und keine Legacy-Aliase; es gibt keine bestehenden Benutzerdaten. Historische Einträge unter 0.5.x und früher beschreiben den früheren Namen CouchDeck.
+
+### Tests / Doku
+
+- README, README-de, AGENTS, Release-/Installationsdokumentation und Testmatrizen auf CapyDeck aktualisiert.
+- Installer/Uninstaller und AppImage-Paketierung auf die neuen Pfade und PNG-Icons umgestellt.
+- Kein Release-/Tag-Schritt ohne gesonderte Freigabe.
+
+
 ## 0.5.2 – 2026-11-25
 
 ### Automatische Controller-Home-Berechtigung

@@ -1,7 +1,7 @@
 [Desktop Entry]
 Type=Application
 Name=Steam-Spiel (Original, ggf. reparieren)
-Comment=CouchDeck erkennt den rungameid-Shortcut und kann nach Bestätigung eine separate Flatpak-Variante erzeugen
+Comment=CapyDeck erkennt den rungameid-Shortcut und kann nach Bestätigung eine separate Flatpak-Variante erzeugen
 Exec=steam steam://rungameid/REPLACE_WITH_NUMERIC_APP_ID
 Icon=steam
 Terminal=false

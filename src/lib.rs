@@ -1,4 +1,4 @@
-//! CouchDeck – a controller-first fullscreen game launcher.
+//! CapyDeck – a controller-first fullscreen game launcher.
 //!
 //! The crate is split into a library (this file) and a thin binary so that the
 //! non-UI parts can be unit tested without opening a window.

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Small native GTK4 app for CapyDeck/CouchDeck Direct/Managed session spikes.
+"""Small native GTK4 app for CapyDeck Direct/Managed session spikes.
 
 Modes:
   stay      - show one window and keep running

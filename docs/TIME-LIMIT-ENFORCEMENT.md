@@ -17,7 +17,7 @@ genehmigende Funktion.
 ## Grundsätze
 
 1. Eine gesendete Schließanforderung ist **kein** erfolgreiches Beenden.
-2. Wenn eine Sitzung nicht zuverlässig beendet werden kann, muss CouchDeck das
+2. Wenn eine Sitzung nicht zuverlässig beendet werden kann, muss CapyDeck das
    transparent anzeigen.
 3. Notfall-Terminierung nur für die eigene, verifizierte Session.
 4. Kein `pkill`, keine Prozessnamen-Suche, keine fremden Prozesse.
@@ -112,7 +112,7 @@ verifizierter Identität und ausdrücklicher Aktion/Policy ausgelöst.
 
 Ryujinx zeigt standardmäßig einen Bestätigungsdialog
 (`ContentDialogOverlayWindow`). Ein Close-Request öffnet nur den Dialog; das
-Spiel läuft weiter. Ohne Eingabeinjektion kann CouchDeck den Dialog nicht
+Spiel läuft weiter. Ohne Eingabeinjektion kann CapyDeck den Dialog nicht
 bestätigen.
 
 Deshalb:
@@ -267,5 +267,5 @@ UI-Thread.
    sonst verweigern.
 10. Elternfreigabe nach Ablauf: Restzeit positiv, Starts wieder erlaubt.
 11. Close-Request während des Ladens: Timeout, kein falsches „beendet“.
-12. CouchDeck-Absturz während `Stopping`: Recovery zeigt `Unknown`, keine
+12. CapyDeck-Absturz während `Stopping`: Recovery zeigt `Unknown`, keine
     erfundene Endzeit.

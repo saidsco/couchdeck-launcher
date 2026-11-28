@@ -92,7 +92,7 @@ pub fn backup_file(path: &Path) -> io::Result<PathBuf> {
 fn temp_path(parent: &Path) -> PathBuf {
     let n = TEMP_COUNTER.fetch_add(1, Ordering::Relaxed);
     parent.join(format!(
-        ".couchdeck-{}-{}-{n}.tmp",
+        ".capydeck-{}-{}-{n}.tmp",
         std::process::id(),
         timestamp()
     ))
@@ -165,7 +165,7 @@ pub fn load_library(paths: &XdgPaths) -> LibraryLoad {
         let backup = backup_file(&path).ok();
         return LibraryLoad::Corrupt {
             message: format!(
-                "library.json verwendet Schema {}, CouchDeck unterstützt höchstens Schema {}. Bitte eine neuere CouchDeck-Version verwenden.",
+                "library.json verwendet Schema {}, CapyDeck unterstützt höchstens Schema {}. Bitte eine neuere CapyDeck-Version verwenden.",
                 library.schema_version, LIBRARY_SCHEMA_VERSION
             ),
             backup,
@@ -257,7 +257,7 @@ pub fn load_secrets(paths: &XdgPaths) -> SecretsLoad {
             if secrets.schema_version > SECRETS_SCHEMA_VERSION {
                 let backup = backup_file(&path).ok();
                 return SecretsLoad::Corrupt {
-                    message: "PIN-Datei stammt von einer neueren CouchDeck-Version.".into(),
+                    message: "PIN-Datei stammt von einer neueren CapyDeck-Version.".into(),
                     backup,
                 };
             }

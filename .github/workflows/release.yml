@@ -58,7 +58,7 @@ jobs:
       - name: Upload release assets
         uses: actions/upload-artifact@v4
         with:
-          name: couchdeck-release-assets
+          name: capydeck-release-assets
           path: |
             dist/*.tar.gz
             dist/*.AppImage
@@ -70,7 +70,7 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ steps.version.outputs.tag }}
-          name: CouchDeck ${{ steps.version.outputs.version }}
+          name: CapyDeck ${{ steps.version.outputs.version }}
           body_path: dist/RELEASE_NOTES.md
           files: |
             dist/*.tar.gz

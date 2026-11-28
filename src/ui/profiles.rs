@@ -6,13 +6,13 @@ use eframe::egui::{
 };
 use std::time::Duration;
 
-use crate::app::CouchDeckApp;
+use crate::app::CapyDeckApp;
 use crate::model::Profile;
 use crate::ui::{
     self, paint_texture, primary_button, secondary_button, truncate, ACCENT, CARD, MUTED, OK, TEXT,
 };
 
-pub fn draw(ui: &mut egui::Ui, app: &mut CouchDeckApp) {
+pub fn draw(ui: &mut egui::Ui, app: &mut CapyDeckApp) {
     let ctx = ui.ctx().clone();
     let scale = ui::ui_scale(&ctx);
     let screen = ctx.screen_rect();
@@ -53,7 +53,7 @@ pub fn draw(ui: &mut egui::Ui, app: &mut CouchDeckApp) {
 
 fn draw_cards(
     ui: &mut egui::Ui,
-    app: &mut CouchDeckApp,
+    app: &mut CapyDeckApp,
     profiles: &[Profile],
     rect: Rect,
     scale: f32,
@@ -183,7 +183,7 @@ fn draw_cards(
 
 fn draw_profile_card(
     ui: &mut egui::Ui,
-    app: &mut CouchDeckApp,
+    app: &mut CapyDeckApp,
     profile: &Profile,
     rect: Rect,
     focused: bool,
@@ -289,7 +289,7 @@ fn draw_profile_card(
     }
 }
 
-fn draw_footer(ui: &mut egui::Ui, app: &mut CouchDeckApp, rect: Rect, scale: f32) {
+fn draw_footer(ui: &mut egui::Ui, app: &mut CapyDeckApp, rect: Rect, scale: f32) {
     ui.scope_builder(
         UiBuilder::new().max_rect(rect).id_salt("profiles-footer"),
         |ui| {

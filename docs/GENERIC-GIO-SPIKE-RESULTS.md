@@ -190,7 +190,7 @@ sofort abbrechen oder den Startauftrag an eine andere Instanz weiterreichen.
 - Bei Single-Instance-Anwendungen: möglicherweise kein neuer Prozess.
 - Bei mehreren Kindern: nur der direkte Startprozess.
 
-### Was daraus für CouchDeck folgt
+### Was daraus für CapyDeck folgt
 
 - Der externe `gio launch`-Pfad bleibt für generische Desktop-Dateien
   unverändert. Die bestehende GIO-Kompatibilität darf nicht eingeschränkt

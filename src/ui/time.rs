@@ -2,14 +2,14 @@
 
 use eframe::egui::{self, Color32, RichText, Vec2};
 
-use crate::app::{CouchDeckApp, ExtraTimeDialog, Overlay, TimeExpiredState};
+use crate::app::{CapyDeckApp, ExtraTimeDialog, Overlay, TimeExpiredState};
 use crate::ui::{
     self, dialogs::show_modal, primary_button, secondary_button, MUTED, TEXT, WARNING,
 };
 
 pub fn draw_time_expired(
     ctx: &egui::Context,
-    app: &mut CouchDeckApp,
+    app: &mut CapyDeckApp,
     mut state: TimeExpiredState,
 ) -> Option<Overlay> {
     let scale = ui::ui_scale(ctx);
@@ -83,7 +83,7 @@ pub fn draw_time_expired(
 
 pub fn draw_extra_time(
     ctx: &egui::Context,
-    app: &mut CouchDeckApp,
+    app: &mut CapyDeckApp,
     mut dialog: ExtraTimeDialog,
 ) -> Option<Overlay> {
     let scale = ui::ui_scale(ctx);

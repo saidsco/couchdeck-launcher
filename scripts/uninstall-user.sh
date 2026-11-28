@@ -11,13 +11,12 @@ elif [[ $# -gt 0 ]]; then
   exit 2
 fi
 
-rm -f "$HOME/.local/bin/couchdeck"
-rm -f "$HOME/.local/share/applications/couchdeck.desktop"
-rm -f "${XDG_DATA_HOME:-$HOME/.local/share}/applications/couchdeck-home.desktop"
-rm -f "$HOME/.local/share/icons/hicolor/scalable/apps/couchdeck.svg"
-rm -f "$HOME/.local/share/icons/hicolor/256x256/apps/couchdeck.png"
-rm -f "$HOME/.local/share/icons/hicolor/512x512/apps/couchdeck.png"
-rm -f "${XDG_CONFIG_HOME:-$HOME/.config}/autostart/couchdeck.desktop"
+rm -f "$HOME/.local/bin/capydeck"
+rm -f "$HOME/.local/share/applications/capydeck.desktop"
+rm -f "${XDG_DATA_HOME:-$HOME/.local/share}/applications/capydeck-home.desktop"
+rm -f "$HOME/.local/share/icons/hicolor/256x256/apps/capydeck.png"
+rm -f "$HOME/.local/share/icons/hicolor/512x512/apps/capydeck.png"
+rm -f "${XDG_CONFIG_HOME:-$HOME/.config}/autostart/capydeck.desktop"
 
 if command -v update-desktop-database >/dev/null 2>&1; then
   update-desktop-database "$HOME/.local/share/applications" >/dev/null 2>&1 || true
@@ -31,23 +30,23 @@ fi
 if [[ $PURGE -eq 1 ]]; then
   cat <<EOF
 ACHTUNG: --purge löscht Bibliothek, Profile, PIN-Hash, importierte Bilder,
-Einstellungen, Cache und Logs von CouchDeck.
+Einstellungen, Cache und Logs von CapyDeck.
 Betroffene Ordner:
-  ${XDG_CONFIG_HOME:-$HOME/.config}/couchdeck
-  ${XDG_DATA_HOME:-$HOME/.local/share}/couchdeck
-  ${XDG_CACHE_HOME:-$HOME/.cache}/couchdeck
-  ${XDG_STATE_HOME:-$HOME/.local/state}/couchdeck
+  ${XDG_CONFIG_HOME:-$HOME/.config}/capydeck
+  ${XDG_DATA_HOME:-$HOME/.local/share}/capydeck
+  ${XDG_CACHE_HOME:-$HOME/.cache}/capydeck
+  ${XDG_STATE_HOME:-$HOME/.local/state}/capydeck
 EOF
   read -r -p "Zum Bestätigen 'LOESCHEN' eingeben: " answer
   if [[ "$answer" != "LOESCHEN" ]]; then
     echo "Abbruch: Daten wurden nicht gelöscht." >&2
     exit 1
   fi
-  rm -rf "${XDG_CONFIG_HOME:-$HOME/.config}/couchdeck"
-  rm -rf "${XDG_DATA_HOME:-$HOME/.local/share}/couchdeck"
-  rm -rf "${XDG_CACHE_HOME:-$HOME/.cache}/couchdeck"
-  rm -rf "${XDG_STATE_HOME:-$HOME/.local/state}/couchdeck"
-  echo "CouchDeck-Benutzerdaten gelöscht."
+  rm -rf "${XDG_CONFIG_HOME:-$HOME/.config}/capydeck"
+  rm -rf "${XDG_DATA_HOME:-$HOME/.local/share}/capydeck"
+  rm -rf "${XDG_CACHE_HOME:-$HOME/.cache}/capydeck"
+  rm -rf "${XDG_STATE_HOME:-$HOME/.local/state}/capydeck"
+  echo "CapyDeck-Benutzerdaten gelöscht."
 else
   echo "Binary, Menüeinträge, Icons und Autostart-Eintrag entfernt."
   echo "Bibliothek, Profile, Artwork und Einstellungen wurden bewusst nicht gelöscht."

@@ -6,9 +6,9 @@
 use std::fs;
 use std::time::Duration;
 
-use couchdeck::desktop::gio_available;
-use couchdeck::launch::spawn_gio_launch;
-use couchdeck::paths::XdgPaths;
+use capydeck::desktop::gio_available;
+use capydeck::launch::spawn_gio_launch;
+use capydeck::paths::XdgPaths;
 
 #[test]
 fn gio_launches_desktop_file_with_spaces_and_quoted_exec() {

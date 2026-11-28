@@ -6,14 +6,14 @@ use eframe::egui::{
 };
 use std::time::Duration;
 
-use crate::app::CouchDeckApp;
+use crate::app::CapyDeckApp;
 use crate::model::GameEntry;
 use crate::ui::{
     self, paint_texture, primary_button, secondary_button, truncate, TileImage, ACCENT, CARD,
     MUTED, TEXT,
 };
 
-pub fn draw(ui: &mut egui::Ui, app: &mut CouchDeckApp) {
+pub fn draw(ui: &mut egui::Ui, app: &mut CapyDeckApp) {
     let ctx = ui.ctx().clone();
     let scale = ui::ui_scale(&ctx);
     let screen = ctx.screen_rect();
@@ -70,7 +70,7 @@ struct GridMetrics {
 }
 
 fn grid_metrics(
-    app: &CouchDeckApp,
+    app: &CapyDeckApp,
     ctx: &egui::Context,
     games: &[GameEntry],
     rect: Rect,
@@ -106,7 +106,7 @@ fn grid_metrics(
 
 fn draw_grid(
     ui: &mut egui::Ui,
-    app: &mut CouchDeckApp,
+    app: &mut CapyDeckApp,
     games: &[GameEntry],
     rect: Rect,
     scale: f32,
@@ -206,7 +206,7 @@ fn draw_grid(
 #[allow(clippy::too_many_arguments)]
 fn draw_tile(
     ui: &mut egui::Ui,
-    app: &mut CouchDeckApp,
+    app: &mut CapyDeckApp,
     game: &GameEntry,
     rect: Rect,
     focused: bool,
@@ -327,7 +327,7 @@ fn draw_tile(
     }
 }
 
-fn draw_empty(ui: &mut egui::Ui, app: &mut CouchDeckApp, rect: Rect, scale: f32) {
+fn draw_empty(ui: &mut egui::Ui, app: &mut CapyDeckApp, rect: Rect, scale: f32) {
     let card_size = Vec2::new(rect.width().min(680.0 * scale), 300.0 * scale);
     let card = Rect::from_center_size(rect.center(), card_size);
     let painter = ui.painter();
@@ -405,7 +405,7 @@ fn draw_empty(ui: &mut egui::Ui, app: &mut CouchDeckApp, rect: Rect, scale: f32)
 
 fn draw_footer(
     ui: &mut egui::Ui,
-    app: &mut CouchDeckApp,
+    app: &mut CapyDeckApp,
     rect: Rect,
     scale: f32,
     game: Option<GameEntry>,
